@@ -1,0 +1,5 @@
+{
+  "name": "Batch Image Generator",
+  "description": "A versatile batch image generator that uses AI to transform your character images with a wide range of creative prompts and styles.",
+  "requestFramePermissions": []
+}

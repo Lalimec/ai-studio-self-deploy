@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en" class="bg-[var(--color-bg-base)]">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Studio</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/piexifjs/piexif.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mp4box@0.5.2/dist/mp4box.all.min.js"></script>
+  <script type="importmap">
+{
+  "imports": {
+    "react/": "https://aistudiocdn.com/react@^19.1.1/",
+    "react": "https://aistudiocdn.com/react@^19.1.1",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.1.1/",
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.21.0",
+    "react-icons/lu": "https://cdn.jsdelivr.net/npm/react-icons@5.5.0/lu/index.mjs",
+    "react-icons/": "https://esm.sh/react-icons@5/",
+    "jszip": "https://esm.sh/jszip@3.10.1",
+    "@vitejs/plugin-react": "https://aistudiocdn.com/@vitejs/plugin-react@^5.0.4",
+    "vite": "https://aistudiocdn.com/vite@^7.1.9",
+    "path": "https://aistudiocdn.com/path@^0.12.7",
+    "webworker": "https://aistudiocdn.com/webworker@^0.8.4",
+    "esnext": "https://aistudiocdn.com/esnext@^3.3.1",
+    "dom": "https://aistudiocdn.com/dom@^0.0.3"
+  }
+}
+</script>
+<style>
+  :root {
+    /* Core Accent Palette */
+    --color-primary: #f97316; /* orange-500 */
+    --color-primary-hover: #ea580c; /* orange-600 */
+    --color-primary-accent: #fb923c; /* orange-400 */
+    --color-primary-accent-dark: #c2410c; /* orange-700 */
+    --color-primary-ring: #f97316;
+    --color-secondary: #fb923c; /* Mapped to light accent */
+    --color-secondary-hover: #f97316; /* Mapped to primary accent */
+
+    /* Grayscale Backgrounds */
+    --color-bg-base: #0a0a0a; /* neutral-950 */
+    --color-bg-surface: #171717; /* neutral-900 */
+    --color-bg-surface-light: #262626; /* neutral-800 */
+    --color-bg-muted: #262626; /* neutral-800 */
+    --color-bg-muted-hover: #404040; /* neutral-700 */
+    --color-bg-inverse: #fafafa; /* neutral-50 */
+    --color-bg-overlay: rgba(0, 0, 0, 0.7);
+    --color-bg-flash: rgba(251, 146, 60, 0.2); /* orange-400 with alpha */
+
+    /* Grayscale Text */
+    --color-text-main: #fafafa; /* neutral-50 */
+    --color-text-light: #e5e5e5; /* neutral-200 */
+    --color-text-dim: #a3a3a3; /* neutral-400 */
+    --color-text-dimmer: #737373; /* neutral-500 */
+    --color-text-inverse: #262626; /* neutral-800 */
+    --color-text-on-primary: #ffffff;
+
+    /* Grayscale Borders */
+    --color-border-default: #404040; /* neutral-700 */
+    --color-border-muted: #262626; /* neutral-800 */
+    --color-border-primary-accent: #fb923c; /* orange-400 */
+    --color-border-secondary-alpha-50: rgba(249, 115, 22, 0.5); /* orange-500 with alpha */
+
+    /* Status & Actions */
+    --color-destructive: #ef4444; /* red-500 */
+    --color-destructive-hover: #dc2626; /* red-600 */
+    --color-success: #22c55e; /* green-500 */
+    --color-success-hover: #16a34a; /* green-600 */
+    --color-success-accent: #4ade80; /* green-400 */
+    --color-warning: #f59e0b; /* amber-500 */
+    --color-warning-accent: #facc15; /* yellow-400 */
+    --color-warning-bg: rgba(245, 158, 11, 0.1);
+    --color-warning-border: #d97706; /* amber-600 */
+    --color-action-prepare: var(--color-primary); /* Mapped to primary */
+    --color-action-prepare-hover: var(--color-primary-hover); /* Mapped to primary */
+    --color-action-generate: var(--color-primary); /* Mapped to primary */
+    --color-action-generate-hover: var(--color-primary-hover); /* Mapped to primary */
+
+    /* UI Elements */
+    --color-scrollbar-thumb: #404040; /* neutral-700 */
+    --color-scrollbar-thumb-hover: #525252; /* neutral-600 */
+    --color-shadow-primary: var(--color-primary);
+    --color-shadow-destructive: var(--color-destructive);
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  .animate-fade-in {
+    animation: fadeIn 0.5s ease-in-out forwards;
+  }
+  @keyframes flash {
+    0%, 100% { background-color: transparent; }
+    50% { background-color: var(--color-bg-flash); }
+  }
+  .animate-flash {
+    animation: flash 0.6s ease-out;
+  }
+  /* Custom scrollbar for Video Studio prompt box */
+  .prompt-textarea::-webkit-scrollbar {
+    width: 8px;
+  }
+  .prompt-textarea::-webkit-scrollbar-track {
+    background: var(--color-bg-surface);
+  }
+  .prompt-textarea::-webkit-scrollbar-thumb {
+    background-color: var(--color-scrollbar-thumb);
+    border-radius: 10px;
+    border: 2px solid var(--color-bg-surface);
+  }
+  .prompt-textarea::-webkit-scrollbar-thumb:hover {
+    background-color: var(--color-scrollbar-thumb-hover);
+  }
+  /* For Firefox */
+  .prompt-textarea {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-scrollbar-thumb) var(--color-bg-surface); /* thumb and track color */
+  }
+  /* Custom scrollbar for Image Studio */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 8px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: var(--color-bg-base);
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: var(--color-scrollbar-thumb);
+    border-radius: 10px;
+    border: 2px solid var(--color-bg-base);
+    background-clip: content-box;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background-color: var(--color-scrollbar-thumb-hover);
+  }
+  /* For Firefox */
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-scrollbar-thumb) var(--color-bg-base); /* thumb color track color */
+  }
+  /* Global scrollbar styles */
+  html {
+    scrollbar-gutter: stable;
+    scrollbar-width: thin; /* For Firefox */
+    scrollbar-color: var(--color-scrollbar-thumb) var(--color-bg-base); /* For Firefox */
+  }
+  html::-webkit-scrollbar,
+  body::-webkit-scrollbar {
+    width: 6px;
+  }
+  html::-webkit-scrollbar-track,
+  body::-webkit-scrollbar-track {
+    background: var(--color-bg-base);
+  }
+  html::-webkit-scrollbar-thumb,
+  body::-webkit-scrollbar-thumb {
+    background-color: var(--color-scrollbar-thumb);
+    border-radius: 3px;
+  }
+  html::-webkit-scrollbar-thumb:hover,
+  body::-webkit-scrollbar-thumb:hover {
+    background-color: var(--color-scrollbar-thumb-hover);
+  }
+</style>
+</head>
+  <body class="bg-[var(--color-bg-base)] text-[var(--color-text-main)]">
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>

@@ -1,0 +1,67 @@
+// This service uses an n8n webhook to stitch multiple videos together.
+
+type ProgressCallback = (progress: number, message: string) => void;
+
+const STITCH_ENDPOINT = 'https://n8n.cemil.al/webhook/5533f0bb-064a-4757-adcb-56793505fdf3/ffmpeg/stitch';
+
+/**
+ * Stitches multiple videos together using a remote service.
+ * @param videoUrls An array of URLs for the videos to stitch.
+ * @param onProgress A callback to report progress updates.
+ * @returns A promise that resolves to a Blob of the stitched MP4 video.
+ */
+export async function stitchVideos(videoUrls: string[], onProgress: ProgressCallback): Promise<Blob> {
+    if (videoUrls.length < 2) {
+        throw new Error("At least two videos are required to stitch.");
+    }
+
+    onProgress(10, "Sending request to stitching service...");
+
+    const response = await fetch(STITCH_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ video_urls: videoUrls }),
+    });
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Stitching service error response:", errorText);
+        throw new Error(`Stitching service failed with status ${response.status}.`);
+    }
+
+    onProgress(50, "Stitching in progress... this can take a moment.");
+    
+    const contentType = response.headers.get('content-type');
+    
+    if (contentType && contentType.includes('application/json')) {
+        const result = await response.json();
+        const stitchedUrl = result.url || result.stitched_video_url;
+
+        if (!stitchedUrl || typeof stitchedUrl !== 'string') {
+            throw new Error("Stitching service did not return a valid video URL in the JSON response.");
+        }
+        
+        onProgress(75, "Downloading stitched video...");
+
+        const videoResponse = await fetch(stitchedUrl);
+        if (!videoResponse.ok) {
+            throw new Error(`Failed to download stitched video from URL: ${videoResponse.statusText}`);
+        }
+
+        const videoBlob = await videoResponse.blob();
+        onProgress(100, "Stitching complete!");
+        return videoBlob;
+
+    } else if (contentType && contentType.includes('video/')) {
+        // The response is the video file itself
+        onProgress(90, "Receiving stitched video file...");
+        const videoBlob = await response.blob();
+        onProgress(100, "Stitching complete!");
+        return videoBlob;
+    } else {
+        // Fallback for unexpected content type
+        const responseText = await response.text();
+        console.error("Unexpected stitcher response:", responseText);
+        throw new Error(`Unexpected response from stitching service. Content-Type: ${contentType}`);
+    }
+}

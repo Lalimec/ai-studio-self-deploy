@@ -1,0 +1,19 @@
+/// <reference lib="dom" />
+import React from 'react';
+import { PiSparkleFillIcon } from '../Icons';
+
+interface GenerateButtonProps {
+    onClick: () => void;
+    disabled: boolean;
+}
+
+export const GenerateButton: React.FC<GenerateButtonProps> = ({ onClick, disabled }) => (
+    <button
+        onClick={onClick}
+        disabled={disabled}
+        className="w-full flex items-center justify-center gap-3 rounded-xl bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-secondary)] px-6 py-4 text-lg font-semibold text-[var(--color-text-on-primary)] shadow-lg transition-all duration-300 ease-in-out hover:scale-105 hover:shadow-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary-ring)] disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100 disabled:shadow-lg"
+    >
+        <PiSparkleFillIcon className="w-6 h-6" />
+        Generate Image(s)
+    </button>
+);
