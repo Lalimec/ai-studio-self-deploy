@@ -1,7 +1,7 @@
 /// <reference lib="dom" />
 import { useState, useCallback, useEffect } from 'react';
 import { StudioImage, TimelinePair, Toast as ToastType, TimelinePairWithImages, ImageForVideoProcessing } from '../types';
-import { translateTextToEnglish, generateTimelineTransitionPrompt, prepareAllTimelinePrompts } from '../services/timelineStudioService';
+import { translateTextToEnglish, generateTimelineTransitionPrompt, prepareAllTimelinePrompts, enhanceGeneralPrompt } from '../services/timelineStudioService';
 import { dataUrlToBlob } from '../services/geminiClient';
 import { generateAllVideos, generateSingleVideoForImage } from '../services/videoService';
 import { generateSetId, generateShortId, getTimestamp } from '../services/imageUtils';
@@ -313,7 +313,7 @@ export const useTimelineStudio = ({ addToast, setConfirmAction, setDownloadProgr
         setIsPreparingAll(true);
         addToast("Enhancing general instruction...", "info");
         try {
-            const newPrompt = await translateTextToEnglish(generalPrompt); // Re-using translate as a general refiner
+            const newPrompt = await enhanceGeneralPrompt(generalPrompt);
             setGeneralPrompt(newPrompt);
             addToast("Instruction enhanced!", "success");
         } catch(e) {

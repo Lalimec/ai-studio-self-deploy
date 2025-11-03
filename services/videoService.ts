@@ -144,9 +144,16 @@ export const generateSingleVideoForImage = async (image: ImageForVideoProcessing
 // --- FIX: Added missing functions that were being imported in various hooks ---
 
 export const generateVideoPromptForImage = async (
-    imageBlob: { base64: string, mimeType: string }
+    imageBlob: { base64: string, mimeType: string },
+    guidance?: string
 ): Promise<string> => {
-  const prompt = `Analyze the person, their clothing, and the setting in this image. Create a short, descriptive video prompt (around 25-35 words) for an AI video generator. The camera should be 'stationary' or 'static'. Focus on subtle, natural movements, like a gentle smile, a shift in gaze, or a slight head turn. The style should be natural and engaging. Example: 'A person with brown hair smiles gently while looking at the camera, with soft light on their face, camera remains stationary.'`;
+  let prompt = `Analyze the person, their clothing, and the setting in this image. Create a short, descriptive video prompt (around 25-35 words) for an AI video generator. The camera should be 'stationary' or 'static'. Focus on subtle, natural movements, like a gentle smile, a shift in gaze, or a slight head turn. The style should be natural and engaging.`;
+
+  if (guidance && guidance.trim()) {
+      prompt += ` IMPORTANT: The prompt must also adhere to this high-level instruction: "${guidance}".`;
+  }
+
+  prompt += ` Example: 'A person with brown hair smiles gently while looking at the camera, with soft light on their face, camera remains stationary.'`;
 
   const response: GenerateContentResponse = await ai.models.generateContent({
     model: textModel,
@@ -182,7 +189,7 @@ export const enhanceVideoPromptForImage = async (
 
 // FIX: Added missing enhancePrompt function for use in Video Studio general prompt enhancement.
 export const enhancePrompt = async (prompt: string): Promise<string> => {
-    const userPrompt = `Enhance the following image prompt to be more vivid, descriptive, and effective for an AI image generator: "${prompt}"`;
+    const userPrompt = `Enhance the following high-level instruction to be more evocative and clear for guiding an AI video generator that animates static images. The instruction should describe a mood, style, or type of subtle motion. Example: "a slow, happy expression" becomes "The person's expression slowly blossoms into a warm, gentle smile, conveying a sense of serene happiness." Return ONLY the enhanced instruction. The instruction to enhance is: "${prompt}"`;
     const response: GenerateContentResponse = await ai.models.generateContent({ model: textModel, contents: userPrompt });
     return response.text;
 };
@@ -214,7 +221,7 @@ export const rewriteVideoPromptForImage = async (
 };
 
 export const translateTextToEnglish = async (text: string): Promise<string> => {
-    const systemInstruction = `You are an AI prompt assistant. Your task is to translate the given text into English and refine it to be a clear and effective prompt for an AI model. Return ONLY the final, refined prompt string, with no additional commentary, explanations, or introductory phrases.`;
+    const systemInstruction = `You are an AI prompt assistant. Your task is to translate the given text into English and refine it into a clear and effective prompt for an AI video generator that animates a static image. The prompt should describe a short, subtle animation. Return ONLY the final, refined prompt string, with no additional commentary, explanations, or introductory phrases.`;
     const response: GenerateContentResponse = await ai.models.generateContent({ 
         model: textModel, 
         contents: `Text to translate: "${text}"`,
@@ -228,13 +235,14 @@ export const translateTextToEnglish = async (text: string): Promise<string> => {
 export const prepareVideoPrompts = async (
   images: (GeneratedImage | StudioImage | GeneratedBabyImage)[],
   onProgress: (filename: string, prompt: string) => void,
-  onError: (errorMessage: string) => void
+  onError: (errorMessage: string) => void,
+  guidance?: string
 ): Promise<void> => {
   const processSingleTask = async (task: (GeneratedImage | StudioImage | GeneratedBabyImage)) => {
     const filename = 'id' in task ? task.id : task.filename;
     try {
       const imageBlob = dataUrlToBlob(task.src);
-      const videoPrompt = await generateVideoPromptForImage(imageBlob);
+      const videoPrompt = await generateVideoPromptForImage(imageBlob, guidance);
       onProgress(filename, videoPrompt);
     } catch (error) {
       console.error(`Failed to generate video prompt for "${filename}":`, error);

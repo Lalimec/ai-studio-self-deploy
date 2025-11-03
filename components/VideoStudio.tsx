@@ -133,7 +133,8 @@ const VideoStudio: React.FC<VideoStudioProps> = (props) => {
     const { 
         studioImages, isBusy, isGeneratingVideos, isPreparing,
         handleImagesUpload, handleClearAll, handleGenerateAllVideos, handlePrepareAll, sessionId,
-        handleDownloadAll, handleDownloadSingle
+        handleDownloadAll, handleDownloadSingle, generalPrompt, setGeneralPrompt,
+        handleEnhanceGeneralPrompt, handleTranslateGeneralPrompt, handleRewriteAllPrompts,
     } = logic;
     
     const [isDragging, setIsDragging] = useState(false);
@@ -214,7 +215,7 @@ const VideoStudio: React.FC<VideoStudioProps> = (props) => {
                     </div>
                     <div
                         className={`relative w-full border-4 border-dashed rounded-xl p-12 sm:p-20 transition-colors ${isDragging ? 'border-[var(--color-primary-accent)] bg-[var(--color-bg-surface-light)]' : 'border-[var(--color-border-default)] hover:border-[var(--color-primary)]'}`}
-                        onDragEnter={onDragEnter} onDragLeave={onDragLeave} onDragOver={onDragOver} onDrop={onDrop}
+                        onDragEnter={onDragEnter} onDragLeave={onDragLeave} onDragOver={onDrop} onDrop={onDrop}
                     >
                         <div className="flex flex-col items-center text-[var(--color-text-dim)] pointer-events-none">
                              <UploadIcon className="h-16 w-16 mb-4" />
@@ -275,6 +276,29 @@ const VideoStudio: React.FC<VideoStudioProps> = (props) => {
                     </button>
                 </div>
             </header>
+            
+            <div className="flex items-start gap-4 mb-6">
+                <div className="relative flex-grow">
+                    <textarea
+                        value={generalPrompt}
+                        onChange={(e) => setGeneralPrompt(e.target.value)}
+                        placeholder='Provide a high-level instruction for all video prompts (e.g., "a slow, happy expression," "look surprised"). This will be used by "Prepare All" and "Rewrite Prompts".'
+                        className="prompt-textarea w-full h-24 bg-[var(--color-bg-surface-light)] border-2 border-[var(--color-border-default)] rounded-lg p-3 pr-12 text-base text-[var(--color-text-light)] focus:ring-2 focus:ring-[var(--color-primary-ring)] focus:border-[var(--color-primary)] transition-colors resize-none disabled:opacity-50"
+                        disabled={isBusy}
+                    />
+                    <div className="absolute top-3 right-3 flex flex-col gap-2">
+                         <button onClick={handleEnhanceGeneralPrompt} disabled={isBusy || !generalPrompt} className="text-[var(--color-text-dim)] hover:text-[var(--color-primary-accent)] disabled:opacity-50 disabled:cursor-not-allowed" title="Enhance: Refine this prompt using AI">
+                            <PrepareMagicIcon className="w-5 h-5" />
+                        </button>
+                        <button onClick={handleTranslateGeneralPrompt} disabled={isBusy || !generalPrompt} className="text-[var(--color-text-dim)] hover:text-[var(--color-primary-accent)] disabled:opacity-50 disabled:cursor-not-allowed" title="Translate to English & Refine">
+                            <TranslateIcon className="w-5 h-5" />
+                        </button>
+                    </div>
+                </div>
+                <button onClick={handleRewriteAllPrompts} disabled={isBusy || studioImages.length === 0} className="flex items-center justify-center gap-2 h-24 bg-[var(--color-bg-muted-hover)] hover:bg-[var(--color-border-default)] text-[var(--color-text-main)] font-bold py-2 px-6 rounded-lg transition-colors disabled:bg-[var(--color-bg-surface-light)] disabled:text-[var(--color-text-dimmer)] text-base">
+                    <PrepareMagicIcon className={`w-5 h-5 ${isPreparing ? 'animate-spin' : ''}`} />{isPreparing ? 'Rewriting...' : 'Rewrite Prompts'}
+                </button>
+            </div>
             
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                 {studioImages.map(image => (

@@ -25,6 +25,12 @@ export const researchAdContext = async (
   return response.text;
 };
 
+export const enhanceAdInstructions = async (instruction: string): Promise<string> => {
+    const userPrompt = `You are an expert AI Ad concept writer. Enhance the following user instruction to be more creative, specific, and effective for generating a diverse set of ad variations. Focus on target audience, mood, and actionable changes. Example: "make it for young people" becomes "Adapt the ad for a Gen Z audience by incorporating vibrant, trendy colors, a more casual and authentic subject pose, and dynamic, social-media-style text overlays." Return ONLY the enhanced instruction. The instruction to enhance is: "${instruction}"`;
+    const response = await ai.models.generateContent({ model: 'gemini-2.5-flash', contents: userPrompt });
+    return response.text;
+};
+
 export const generateAdPrompts = async (
     options: {
         adImage: AdImageState;

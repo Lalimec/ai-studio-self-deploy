@@ -86,7 +86,7 @@ export const prepareAllTimelinePrompts = async (
 
 // FIX: Added the missing `translateTextToEnglish` function.
 export const translateTextToEnglish = async (text: string): Promise<string> => {
-    const systemInstruction = `You are an AI prompt assistant. Your task is to translate the given text into English and refine it to be a clear and effective prompt for an AI model. Return ONLY the final, refined prompt string, with no additional commentary, explanations, or introductory phrases.`;
+    const systemInstruction = `You are an AI prompt assistant. Your task is to translate the given text into English and refine it into a clear and effective prompt for an AI video generator that creates a smooth transition between two images. The prompt should describe the motion from a start frame to an end frame. Return ONLY the final, refined prompt string, with no additional commentary, explanations, or introductory phrases.`;
     const response = await ai.models.generateContent({
         model: textModel,
         contents: `Text to translate: "${text}"`,
@@ -94,5 +94,11 @@ export const translateTextToEnglish = async (text: string): Promise<string> => {
             systemInstruction
         }
     });
+    return response.text;
+};
+
+export const enhanceGeneralPrompt = async (text: string): Promise<string> => {
+    const userPrompt = `Enhance the following high-level instruction for an AI video generator. The instruction should guide the creation of smooth transitions between a sequence of images, focusing on style, mood, or transition type. Example: "morph quickly" becomes "A rapid, seamless morphing transition with a subtle flash of light, blending the two scenes instantly." Return ONLY the enhanced instruction. The instruction to enhance is: "${text}"`;
+    const response = await ai.models.generateContent({ model: textModel, contents: userPrompt });
     return response.text;
 };

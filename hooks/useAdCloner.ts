@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { AdImageState, AdSubjectImageState, AdClonerSettings, AdClonerGenerationResult, Toast, AdClonerVariation, VariationState } from '../types';
-import { researchAdContext, generateAdPrompts, generateAdVariationImage, refineAdImage, getNewAdVariations } from '../services/adClonerService';
+import { researchAdContext, generateAdPrompts, generateAdVariationImage, refineAdImage, getNewAdVariations, enhanceAdInstructions } from '../services/adClonerService';
 import { dataUrlToBlob } from '../services/geminiClient';
 import { enhancePrompt, generatePromptVariation, translateToEnglish } from '../services/geminiService';
 import { generateSetId, getTimestamp, sanitizeFilename } from '../services/imageUtils';
@@ -545,7 +545,7 @@ export const useAdCloner = ({ addToast, setConfirmAction, withMultiDownloadWarni
         if (!userInstructions.trim()) return;
         setIsEnhancingInstructions(true);
         try {
-            const enhanced = await enhancePrompt(userInstructions);
+            const enhanced = await enhanceAdInstructions(userInstructions);
             setUserInstructions(enhanced);
             addToast("Instructions enhanced!", "success");
         } catch (e) {

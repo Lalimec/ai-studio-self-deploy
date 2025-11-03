@@ -89,7 +89,7 @@ export const useVideoStudio = ({ addToast, setConfirmAction, setDownloadProgress
         addToast("Generating new prompt...", "info");
         try {
             const imageBlob = dataUrlToBlob(image.src);
-            const prompt = await generateVideoPromptForImage(imageBlob);
+            const prompt = await generateVideoPromptForImage(imageBlob, generalPrompt);
             setStudioImages(prev => prev.map(img => img.id === id ? { ...img, videoPrompt: prompt, isPreparing: false } : img));
             addToast("New prompt generated!", "success");
         } catch(err) {
@@ -126,7 +126,8 @@ export const useVideoStudio = ({ addToast, setConfirmAction, setDownloadProgress
           // Passing `unpreparedImages` directly works because `StudioImage[]` is assignable to the function's parameter type.
           await prepareVideoPrompts(unpreparedImages,
             (returnedId, prompt) => setStudioImages(prev => prev.map(img => img.id === returnedId ? { ...img, videoPrompt: prompt, isPreparing: false } : img)),
-            (errorMessage) => addToast(errorMessage, 'error')
+            (errorMessage) => addToast(errorMessage, 'error'),
+            generalPrompt
           );
           addToast("Video prompt preparation complete!", "success");
         } catch (err) {
