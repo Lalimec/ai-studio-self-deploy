@@ -3,6 +3,7 @@ import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { generateFigureImage, translateToEnglish, generatePromptList, generatePromptVariation, enhancePrompt } from '../services/geminiService';
 import { ImageStudioRunResult, ImageStudioGenerationResult, AppFile, Toast } from '../types';
 import { fileToBase64, blobToDataUrl, generateSetId, generateShortId, sanitizeFilename, getTimestamp, embedPromptInJpeg, embedPromptInPng } from '../services/imageUtils';
+import { uploadImageFromDataUrl } from '../services/imageUploadService';
 import { runConcurrentTasks } from '../services/apiUtils';
 import { logUserAction } from '../services/loggingService';
 
@@ -12,7 +13,8 @@ export const useImageStudioLogic = (
     addToast: (message: string, type: Toast['type']) => void,
     setConfirmAction: React.Dispatch<React.SetStateAction<any>>,
     setDownloadProgress: React.Dispatch<React.SetStateAction<{ visible: boolean; message: string; progress: number }>>,
-    withMultiDownloadWarning: (action: () => void) => void
+    withMultiDownloadWarning: (action: () => void) => void,
+    useNanoBananaWebhook: boolean
 ) => {
     const [numberOfVersions, setNumberOfVersions] = useState<number>(1);
     const [promptContents, setPromptContents] = useState<string[]>(['']);
@@ -531,15 +533,24 @@ export const useImageStudioLogic = (
             }
         }
     }, []);
-
+    
     const createGenerationTask = useCallback((imageIndex: number, promptIndex: number, prompts: string[], timestamp: number) => {
         return async (): Promise<ImageStudioRunResult> => {
             const file = imageFiles[imageIndex].file;
             const prompt = prompts[promptIndex];
             const finalPrompt = [prependPrompt, prompt, appendPrompt].filter(Boolean).join(' ').trim();
+            
             try {
-                const imageBase64 = await fileToBase64(file);
-                const imageUrl = await generateFigureImage(model, finalPrompt, imageBase64, file.type, { width, height, imageSizePreset, aspectRatio: aspectRatio || undefined });
+                const base64 = await fileToBase64(file);
+                const imageSource = { base64, mimeType: file.type };
+
+                const imageUrl = await generateFigureImage(
+                    model, 
+                    finalPrompt, 
+                    [imageSource],
+                    { width, height, imageSizePreset, aspectRatio: aspectRatio || undefined },
+                    useNanoBananaWebhook
+                );
                 return { url: imageUrl, originalImageIndex: imageIndex, originalPromptIndex: promptIndex, prompt: finalPrompt, batchTimestamp: timestamp };
             } catch (error) {
                  const contextualError = error instanceof Error ? error : new Error("Unknown error during generation");
@@ -547,7 +558,7 @@ export const useImageStudioLogic = (
                  throw contextualError;
             }
         };
-    }, [imageFiles, prependPrompt, appendPrompt, model, width, height, imageSizePreset, aspectRatio]);
+    }, [imageFiles, prependPrompt, appendPrompt, model, width, height, imageSizePreset, aspectRatio, useNanoBananaWebhook]);
     
     const runGenerations = useCallback(async (tasks: (() => Promise<ImageStudioRunResult>)[]) => {
         if (tasks.length === 0) return;

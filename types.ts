@@ -1,3 +1,4 @@
+/// <reference lib="dom" />
 import { Hairstyle } from './Hairstyle';
 
 export enum Gender {
@@ -82,6 +83,7 @@ export type GeneratedImage = {
   videoSrc?: string;
   isGeneratingVideo?: boolean;
   videoGenerationFailed?: boolean;
+  publicUrl?: string;
 };
 
 export type StudioImage = {
@@ -89,6 +91,7 @@ export type StudioImage = {
   src: string; // data URL
   file?: File;
   filename: string;
+  publicUrl?: string; // To cache the uploaded URL
   isPreparing?: boolean;
   videoPrompt?: string;
   isGeneratingVideo?: boolean;
@@ -106,7 +109,8 @@ export type ImageForVideoProcessing = {
 export type Toast = {
   id: number;
   message: string;
-  type: 'error' | 'success' | 'info';
+  // FIX: Add 'warning' to the Toast type to allow for warning notifications.
+  type: 'error' | 'success' | 'info' | 'warning';
 };
 
 // --- BABY STUDIO TYPES ---
@@ -154,6 +158,7 @@ export type GeneratedBabyImage = {
     videoSrc?: string;
     isGeneratingVideo?: boolean;
     videoGenerationFailed?: boolean;
+    publicUrl?: string;
 };
 
 export type ParentImageState = {
@@ -161,6 +166,7 @@ export type ParentImageState = {
     file: File | null;
     originalSrc: string | null;
     croppedSrc: string | null;
+    publicUrl?: string; // To cache the uploaded URL
     isPreparing?: boolean;
     videoPrompt?: string;
     isGeneratingVideo?: boolean;
@@ -212,6 +218,7 @@ export type ImageStudioResultImage = {
     isPreparing?: boolean;
     videoSrc?: string;
     isGeneratingVideo?: boolean;
+    publicUrl?: string;
 };
 
 // --- TIMELINE STUDIO TYPES ---
@@ -237,6 +244,7 @@ export type AdImageState = {
   file: File | null;
   originalSrc: string | null;
   croppedSrc: string | null;
+  publicUrl?: string;
 };
 
 export type AdSubjectImageState = AdImageState & {
@@ -288,6 +296,14 @@ export type VariationState = {
     isEnhancingRefine: boolean;
     isGeneratingRefineVariation: boolean;
     isTranslatingRefine: boolean;
+};
+
+// --- GLOBAL SETTINGS ---
+export type NanoBananaWebhookSettings = {
+    hair: boolean;
+    baby: boolean;
+    image: boolean;
+    adCloner: boolean;
 };
 
 // --- SHARED DISPLAY TYPE ---

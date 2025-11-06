@@ -118,7 +118,7 @@ const BabyStudio: React.FC<BabyStudioProps> = ({
     handlePrepareParent, handleGenerateVideoForParent, handleDownloadParent, handleDownloadAll
   } = logic;
 
-  const isGenerateDisabled = !parent1.croppedSrc || !parent2.croppedSrc || logic.isBusy;
+  const isGenerateDisabled = !parent1.croppedSrc || !parent2.croppedSrc;
   const areBabyVideoActionsDisabled = isPreparing || isGeneratingVideos || pendingImageCount > 0 || generatedImages.length === 0;
   const isParentDataLocked = pendingImageCount > 0;
 

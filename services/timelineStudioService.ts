@@ -1,8 +1,7 @@
 import { TimelinePairWithImages } from '../types';
 import { processWithConcurrency } from './apiUtils';
 import { ai, dataUrlToBlob } from './geminiClient';
-// FIX: The textModel was not exported from videoService. After adding the export, this import now works.
-import { textModel } from './videoService';
+import { Constance } from './endpoints';
 
 const parseGenerationError = (error: Error, task: { filename: string }): string => {
   const prefix = `Failed on image ${task.filename}`;
@@ -47,7 +46,7 @@ The video MUST begin with the subject, pose, and expression from the start image
 Generate ONLY the video prompt.`;
 
   const response = await ai.models.generateContent({
-    model: textModel,
+    model: Constance.models.text.flash,
     contents: {
       parts: [
         { text: "Start Image:" },
@@ -88,7 +87,7 @@ export const prepareAllTimelinePrompts = async (
 export const translateTextToEnglish = async (text: string): Promise<string> => {
     const systemInstruction = `You are an AI prompt assistant. Your task is to translate the given text into English and refine it into a clear and effective prompt for an AI video generator that creates a smooth transition between two images. The prompt should describe the motion from a start frame to an end frame. Return ONLY the final, refined prompt string, with no additional commentary, explanations, or introductory phrases.`;
     const response = await ai.models.generateContent({
-        model: textModel,
+        model: Constance.models.text.flash,
         contents: `Text to translate: "${text}"`,
         config: {
             systemInstruction
@@ -99,6 +98,6 @@ export const translateTextToEnglish = async (text: string): Promise<string> => {
 
 export const enhanceGeneralPrompt = async (text: string): Promise<string> => {
     const userPrompt = `Enhance the following high-level instruction for an AI video generator. The instruction should guide the creation of smooth transitions between a sequence of images, focusing on style, mood, or transition type. Example: "morph quickly" becomes "A rapid, seamless morphing transition with a subtle flash of light, blending the two scenes instantly." Return ONLY the enhanced instruction. The instruction to enhance is: "${text}"`;
-    const response = await ai.models.generateContent({ model: textModel, contents: userPrompt });
+    const response = await ai.models.generateContent({ model: Constance.models.text.flash, contents: userPrompt });
     return response.text;
 };

@@ -18,16 +18,20 @@ const Toast: React.FC<ToastProps> = ({ toast, onRemove }) => {
     };
   }, [toast.id, onRemove]);
   
+  // FIX: Add 'warning' background color to support the new toast type.
   const bgColor = {
       error: 'bg-[var(--color-destructive)]',
       success: 'bg-[var(--color-success)]',
       info: 'bg-[var(--color-primary)]',
+      warning: 'bg-[var(--color-warning)]',
   }[toast.type];
 
+  // FIX: Add an icon for the 'warning' toast type for better user feedback.
   const icon = {
       error: <AlertCircleIcon className="w-6 h-6" />,
       success: null, // Add success icon later if needed
       info: null, // Add info icon later if needed
+      warning: <AlertCircleIcon className="w-6 h-6" />,
   }[toast.type];
 
   return (

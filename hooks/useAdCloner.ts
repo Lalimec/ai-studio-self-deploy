@@ -17,9 +17,10 @@ type AdClonerHookProps = {
     setConfirmAction: (action: any) => void;
     setDownloadProgress: React.Dispatch<React.SetStateAction<{ visible: boolean; message: string; progress: number }>>;
     withMultiDownloadWarning: (action: () => void) => void;
+    useNanoBananaWebhook: boolean;
 };
 
-export const useAdCloner = ({ addToast, setConfirmAction, withMultiDownloadWarning, setDownloadProgress }: AdClonerHookProps) => {
+export const useAdCloner = ({ addToast, setConfirmAction, withMultiDownloadWarning, setDownloadProgress, useNanoBananaWebhook }: AdClonerHookProps) => {
     const [adImage, setAdImage] = useState<AdImageState>(initialAdState);
     const [subjectImages, setSubjectImages] = useState<AdSubjectImageState[]>([]);
     const [sessionId, setSessionId] = useState<string | null>(null);
@@ -175,12 +176,21 @@ export const useAdCloner = ({ addToast, setConfirmAction, withMultiDownloadWarni
         setVariationState(index, { isLoading: true });
         if (!isBatch) addToast(`Generating image for Variation ${index + 1}...`, 'info');
         try {
+            const imageSources: { base64: string; mimeType: string; }[] = [];
+            if(adImage.croppedSrc) {
+                imageSources.push(dataUrlToBlob(adImage.croppedSrc));
+            }
+            subjectImages.forEach(img => {
+                if(img.croppedSrc) {
+                    imageSources.push(dataUrlToBlob(img.croppedSrc));
+                }
+            });
             const imageUrl = await generateAdVariationImage({
-                originalAdImage: adImage,
-                subjectImages,
+                imageSources,
                 instructionalPrompt: generationResult.variations[index].prompt,
                 imageModel: settings.imageModel,
-                aspectRatio
+                aspectRatio,
+                useNanoBananaWebhook,
             });
             setVariationState(index, (currentState) => {
                 const newHistory = [...currentState.imageHistory, imageUrl];
@@ -238,11 +248,15 @@ export const useAdCloner = ({ addToast, setConfirmAction, withMultiDownloadWarni
         setVariationState(index, { isLoading: true });
         addToast(`Applying edits to Variation ${index + 1}...`, 'info');
         try {
+            const imageSources: { base64: string; mimeType: string; }[] = [dataUrlToBlob(currentImageSrc)];
+            if (state.refineImage.src) {
+                imageSources.push(dataUrlToBlob(state.refineImage.src));
+            }
             const imageUrl = await refineAdImage({
-                currentImageSrc,
+                imageSources,
                 refineText: state.refineText,
-                refineImageState: state.refineImage,
                 aspectRatio,
+                useNanoBananaWebhook,
             });
             
             setVariationState(index, (currentState) => {

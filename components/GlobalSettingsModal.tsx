@@ -1,14 +1,39 @@
 import React from 'react';
 import { CloseIcon } from './Icons';
+import { NanoBananaWebhookSettings } from '../types';
 
 interface GlobalSettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
   showBetaFeatures: boolean;
   onToggleBetaFeatures: (enabled: boolean) => void;
+  nanoBananaWebhookSettings: NanoBananaWebhookSettings;
+  onToggleNanoBananaWebhookSetting: (studio: keyof NanoBananaWebhookSettings, enabled: boolean) => void;
 }
 
-const GlobalSettingsModal: React.FC<GlobalSettingsModalProps> = ({ isOpen, onClose, showBetaFeatures, onToggleBetaFeatures }) => {
+const Toggle: React.FC<{id: string, label: string, checked: boolean, onChange: (e: React.ChangeEvent<HTMLInputElement>) => void}> = ({id, label, checked, onChange}) => (
+    <div className="flex items-center justify-between">
+        <label htmlFor={id} className="font-medium text-[var(--color-text-light)] cursor-pointer">
+            {label}
+        </label>
+        <label htmlFor={id} className="relative inline-flex items-center cursor-pointer">
+            <input 
+                type="checkbox" 
+                id={id} 
+                className="sr-only peer" 
+                checked={checked}
+                onChange={onChange}
+            />
+            <div className="w-11 h-6 bg-[var(--color-bg-muted)] rounded-full peer peer-focus:ring-2 peer-focus:ring-[var(--color-primary-ring)] peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[var(--color-primary)]"></div>
+        </label>
+    </div>
+);
+
+
+const GlobalSettingsModal: React.FC<GlobalSettingsModalProps> = ({ 
+    isOpen, onClose, showBetaFeatures, onToggleBetaFeatures, 
+    nanoBananaWebhookSettings, onToggleNanoBananaWebhookSetting 
+}) => {
     if (!isOpen) return null;
 
     return (
@@ -46,6 +71,41 @@ const GlobalSettingsModal: React.FC<GlobalSettingsModalProps> = ({ isOpen, onClo
                             />
                             <div className="w-11 h-6 bg-[var(--color-bg-muted)] rounded-full peer peer-focus:ring-2 peer-focus:ring-[var(--color-primary-ring)] peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[var(--color-primary)]"></div>
                         </label>
+                    </div>
+
+                    <div className="pt-4 border-t border-[var(--color-border-muted)]">
+                        <h3 className="font-semibold text-[var(--color-text-light)] mb-2">Nano Banana Endpoint Control</h3>
+                        <p className="text-sm text-[var(--color-text-dim)] mb-4">
+                            Choose whether to use the n8n webhook or the native Gemini API for each studio.
+                        </p>
+                        <div className="space-y-4">
+                            <Toggle
+                                id="hair-webhook-toggle"
+                                label="Hair Studio"
+                                checked={nanoBananaWebhookSettings.hair}
+                                onChange={(e) => onToggleNanoBananaWebhookSetting('hair', e.target.checked)}
+                            />
+                            <Toggle
+                                id="baby-webhook-toggle"
+                                label="Baby Studio"
+                                checked={nanoBananaWebhookSettings.baby}
+                                onChange={(e) => onToggleNanoBananaWebhookSetting('baby', e.target.checked)}
+                            />
+                            <Toggle
+                                id="image-webhook-toggle"
+                                label="Image Studio"
+                                checked={nanoBananaWebhookSettings.image}
+                                onChange={(e) => onToggleNanoBananaWebhookSetting('image', e.target.checked)}
+                            />
+                            {showBetaFeatures && (
+                                <Toggle
+                                    id="adcloner-webhook-toggle"
+                                    label="Ad Cloner Studio"
+                                    checked={nanoBananaWebhookSettings.adCloner}
+                                    onChange={(e) => onToggleNanoBananaWebhookSetting('adCloner', e.target.checked)}
+                                />
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>

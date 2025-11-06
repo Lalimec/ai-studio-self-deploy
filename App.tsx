@@ -3,7 +3,8 @@ import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import JSZip from 'jszip';
 import { 
     GeneratedImage, GeneratedBabyImage, Toast as ToastType, 
-    DisplayImage, StudioImage, ImageStudioResultImage, VariationState
+    DisplayImage, StudioImage, ImageStudioResultImage, VariationState,
+    NanoBananaWebhookSettings
 } from './types';
 
 import { useHairStudio } from './hooks/useHairStudio';
@@ -69,6 +70,40 @@ function App() {
     }
   });
 
+  const [nanoBananaWebhookSettings, setNanoBananaWebhookSettings] = useState<NanoBananaWebhookSettings>(() => {
+    try {
+        const stored = localStorage.getItem('nanoBananaWebhookSettings');
+        if (stored) {
+            const parsed = JSON.parse(stored);
+            return {
+                hair: parsed.hair !== undefined ? parsed.hair : true,
+                baby: parsed.baby !== undefined ? parsed.baby : true,
+                image: parsed.image !== undefined ? parsed.image : true,
+                adCloner: parsed.adCloner !== undefined ? parsed.adCloner : true,
+            };
+        }
+    } catch (error) {
+        console.error("Could not load Nano Banana webhook settings from localStorage", error);
+    }
+    // Default settings
+    return {
+        hair: true,
+        baby: true,
+        image: true,
+        adCloner: true,
+    };
+  });
+
+  const handleSetNanoBananaWebhookSetting = (studio: keyof NanoBananaWebhookSettings, enabled: boolean) => {
+    const newSettings = { ...nanoBananaWebhookSettings, [studio]: enabled };
+    setNanoBananaWebhookSettings(newSettings);
+    try {
+        localStorage.setItem('nanoBananaWebhookSettings', JSON.stringify(newSettings));
+    } catch (error) {
+        console.error("Could not save Nano Banana webhook settings to localStorage", error);
+    }
+  };
+
   const handleSetShowBetaFeatures = (enabled: boolean) => {
     setShowBetaFeatures(enabled);
     try {
@@ -110,12 +145,12 @@ function App() {
   }, []);
 
   // --- Studio Hooks ---
-  const hairStudioLogic = useHairStudio({ addToast, setConfirmAction, withMultiDownloadWarning, setDownloadProgress });
-  const babyStudioLogic = useBabyStudio({ addToast, setConfirmAction, withMultiDownloadWarning, setDownloadProgress });
+  const hairStudioLogic = useHairStudio({ addToast, setConfirmAction, withMultiDownloadWarning, setDownloadProgress, useNanoBananaWebhook: nanoBananaWebhookSettings.hair });
+  const babyStudioLogic = useBabyStudio({ addToast, setConfirmAction, withMultiDownloadWarning, setDownloadProgress, useNanoBananaWebhook: nanoBananaWebhookSettings.baby });
   const videoStudioLogic = useVideoStudio({ addToast, setConfirmAction, setDownloadProgress, withMultiDownloadWarning });
   const timelineStudioLogic = useTimelineStudio({ addToast, setConfirmAction, setDownloadProgress, withMultiDownloadWarning });
-  const imageStudioLogic = useImageStudioLogic(addToast, setConfirmAction, setDownloadProgress, withMultiDownloadWarning);
-  const adClonerLogic = useAdCloner({ addToast, setConfirmAction, withMultiDownloadWarning, setDownloadProgress });
+  const imageStudioLogic = useImageStudioLogic(addToast, setConfirmAction, setDownloadProgress, withMultiDownloadWarning, nanoBananaWebhookSettings.image);
+  const adClonerLogic = useAdCloner({ addToast, setConfirmAction, withMultiDownloadWarning, setDownloadProgress, useNanoBananaWebhook: nanoBananaWebhookSettings.adCloner });
   
   useEffect(() => {
     const isModalOpen = isCropping || timelineStudioLogic.isCropping || lightboxIndex !== null || confirmAction || showHelpModal || downloadProgress.visible || timelineStudioLogic.showCropChoice || timelineStudioLogic.isLightboxOpen || !!imageStudioLogic.pendingFiles || imageStudioLogic.croppingFiles || adClonerLogic.settingsModalOpen || showGlobalSettings;
@@ -138,10 +173,6 @@ function App() {
 
       if (cropper?.type === 'hair') {
         hairStudioLogic.setOriginalFile(file);
-// FIX: Explicitly set the 'id' property when updating parent state to prevent type widening issues.
-// The TypeScript compiler was incorrectly inferring the 'id' as a generic 'string' due to type pollution
-// from another part of the code, causing a type mismatch. By explicitly setting `id: 'parent1'` or `id: 'parent2'`,
-// we ensure the object conforms to the `ParentImageState` type.
       } else if (cropper?.type === 'parent1') {
         babyStudioLogic.setParent1(p => ({ ...p, id: 'parent1', file, originalSrc: src, filename: file.name }));
       } else if (cropper?.type === 'parent2') {
@@ -173,9 +204,6 @@ function App() {
       setIsCropping(false);
       if (activeCropper?.type === 'hair' && !hairStudioLogic.croppedImage) {
           hairStudioLogic.setOriginalFile(null);
-// FIX: When resetting parent1's state, explicitly create a new state object with `id: 'parent1'`.
-// This prevents a TypeScript error caused by type widening, where the `id` might be inferred as a generic `string`
-// instead of the required literal type. This makes the logic consistent with how parent2 is handled.
       } else if (activeCropper?.type === 'parent1' && !babyStudioLogic.parent1.croppedSrc) {
           babyStudioLogic.setParent1({...babyStudioLogic.initialParentState, id: 'parent1'});
       } else if (activeCropper?.type === 'parent2' && !babyStudioLogic.parent2.croppedSrc) {
@@ -458,7 +486,6 @@ function App() {
         <ImageStudioConfirmationDialog
             isOpen={!!imageStudioLogic.pendingFiles}
             onCancel={imageStudioLogic.handleCancelUpload}
-            // FIX: Use imageStudioLogic instead of logic
             onConfirm={imageStudioLogic.handleConfirmClearAndUpload}
         />
       )}
@@ -489,6 +516,8 @@ function App() {
             onClose={() => setShowGlobalSettings(false)}
             showBetaFeatures={showBetaFeatures}
             onToggleBetaFeatures={handleSetShowBetaFeatures}
+            nanoBananaWebhookSettings={nanoBananaWebhookSettings}
+            onToggleNanoBananaWebhookSetting={handleSetNanoBananaWebhookSetting}
         />
       )}
     </div>

@@ -1,8 +1,7 @@
 // This service uses an n8n webhook to stitch multiple videos together.
+import { Constance } from './endpoints';
 
 type ProgressCallback = (progress: number, message: string) => void;
-
-const STITCH_ENDPOINT = 'https://n8n.cemil.al/webhook/5533f0bb-064a-4757-adcb-56793505fdf3/ffmpeg/stitch';
 
 /**
  * Stitches multiple videos together using a remote service.
@@ -17,7 +16,7 @@ export async function stitchVideos(videoUrls: string[], onProgress: ProgressCall
 
     onProgress(10, "Sending request to stitching service...");
 
-    const response = await fetch(STITCH_ENDPOINT, {
+    const response = await fetch(Constance.endpoints.videoStitcher, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ video_urls: videoUrls }),

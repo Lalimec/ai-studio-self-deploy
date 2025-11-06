@@ -3,7 +3,8 @@ import { useState, useCallback, useEffect } from 'react';
 import { StudioImage, TimelinePair, Toast as ToastType, TimelinePairWithImages, ImageForVideoProcessing } from '../types';
 import { translateTextToEnglish, generateTimelineTransitionPrompt, prepareAllTimelinePrompts, enhanceGeneralPrompt } from '../services/timelineStudioService';
 import { dataUrlToBlob } from '../services/geminiClient';
-import { generateAllVideos, generateSingleVideoForImage } from '../services/videoService';
+import { uploadImageFromDataUrl } from '../services/imageUploadService';
+import { generateAllVideos, generateSingleVideoForImage, VideoTask } from '../services/videoService';
 import { generateSetId, generateShortId, getTimestamp } from '../services/imageUtils';
 import { stitchVideos } from '../services/videoStitcher';
 import { logUserAction } from '../services/loggingService';
@@ -279,12 +280,24 @@ export const useTimelineStudio = ({ addToast, setConfirmAction, setDownloadProgr
         }
     };
 
+    const ensurePublicUrlForImage = async (imageId: string): Promise<string | null> => {
+        const image = timelineImages.find(img => img.id === imageId);
+        if (!image) return null;
+        if (image.publicUrl) return image.publicUrl;
+
+        try {
+            const url = await uploadImageFromDataUrl(image.src, image.filename);
+            setTimelineImages(prev => prev.map(img => img.id === imageId ? { ...img, publicUrl: url } : img));
+            return url;
+        } catch (error) {
+            addToast(`Failed to upload image ${image.filename}: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
+            return null;
+        }
+    };
+
     const handleGenerateSingleVideo = async (pairId: string) => {
         const pair = timelinePairs.find(p => p.id === pairId);
-        const startImage = pair ? findImageById(pair.startImageId) : undefined;
-        const endImage = pair ? findImageById(pair.endImageId) : undefined;
-
-        if (!pair || !pair.videoPrompt || !startImage || !endImage || pair.isGeneratingVideo || pair.isPreparing) {
+        if (!pair || !pair.videoPrompt || pair.isGeneratingVideo || pair.isPreparing) {
             addToast("Pair must have a prompt and not be busy.", "error");
             return;
         }
@@ -293,13 +306,20 @@ export const useTimelineStudio = ({ addToast, setConfirmAction, setDownloadProgr
         setTimelinePairs(prev => prev.map(p => p.id === pairId ? { ...p, isGeneratingVideo: true, videoGenerationFailed: false } : p));
         addToast(`Generating video... This can take a few minutes.`, 'info');
         try {
-            const imageForService: ImageForVideoProcessing = {
-                src: startImage.src,
-                endSrc: endImage.src,
-                filename: pair.id,
+            const startImageUrl = await ensurePublicUrlForImage(pair.startImageId);
+            const endImageUrl = await ensurePublicUrlForImage(pair.endImageId);
+
+            if (!startImageUrl || !endImageUrl) {
+                throw new Error("Failed to get public URLs for start or end images.");
+            }
+
+            const videoSrc = await generateSingleVideoForImage({
+                startImageUrl,
+                endImageUrl,
                 videoPrompt: pair.videoPrompt,
-            };
-            const videoSrc = await generateSingleVideoForImage(imageForService);
+                filename: pair.id,
+            });
+
             setTimelinePairs(prev => prev.map(p => p.id === pairId ? { ...p, videoSrc, isGeneratingVideo: false, videoGenerationFailed: false } : p));
             addToast("Video generated!", "success");
         } catch (err) {
@@ -422,32 +442,41 @@ export const useTimelineStudio = ({ addToast, setConfirmAction, setDownloadProgr
         addToast(`Generating ${pairsToProcess.length} transition videos... This may take some time.`, 'info');
         setTimelinePairs(prev => prev.map(p => pairsToProcess.some(proc => proc.id === p.id) ? { ...p, isGeneratingVideo: true, videoGenerationFailed: false } : p));
 
-        const imagesForService: ImageForVideoProcessing[] = pairsToProcess.map(p => {
-            const startImage = findImageById(p.startImageId)!;
-            const endImage = findImageById(p.endImageId)!;
-            return {
-                src: startImage.src,
-                endSrc: endImage.src,
-                filename: p.id, // Use pair ID to map back
-                videoPrompt: p.videoPrompt,
-            };
-        }).filter(item => item.src && item.endSrc);
-
         try {
-            await generateAllVideos(
-                imagesForService,
-                (pairId, videoSrc) => {
-                    setTimelinePairs(prev => prev.map(p => p.id === pairId ? { ...p, videoSrc, isGeneratingVideo: false, videoGenerationFailed: false } : p));
-                },
-                (errorMsg) => {
-                    const pairIdMatch = errorMsg.match(/Failed on (.*?):/);
-                    if (pairIdMatch && pairIdMatch[1]) {
-                        const failedPairId = pairIdMatch[1];
-                        setTimelinePairs(prev => prev.map(p => p.id === failedPairId ? { ...p, isGeneratingVideo: false, videoGenerationFailed: true } : p));
-                    }
-                    addToast(errorMsg, 'error');
+            const videoTasks: VideoTask[] = [];
+            for (const pair of pairsToProcess) {
+                const startImageUrl = await ensurePublicUrlForImage(pair.startImageId);
+                const endImageUrl = await ensurePublicUrlForImage(pair.endImageId);
+                if (startImageUrl && endImageUrl && pair.videoPrompt) {
+                    videoTasks.push({
+                        startImageUrl,
+                        endImageUrl,
+                        videoPrompt: pair.videoPrompt,
+                        filename: pair.id,
+                    });
                 }
-            );
+            }
+
+            if(videoTasks.length !== pairsToProcess.length) {
+                addToast("Some images failed to upload and were skipped.", "warning");
+            }
+            
+            if(videoTasks.length > 0) {
+                await generateAllVideos(
+                    videoTasks,
+                    (pairId, videoSrc) => {
+                        setTimelinePairs(prev => prev.map(p => p.id === pairId ? { ...p, videoSrc, isGeneratingVideo: false, videoGenerationFailed: false } : p));
+                    },
+                    (errorMsg) => {
+                        const pairIdMatch = errorMsg.match(/Failed on (.*?):/);
+                        if (pairIdMatch && pairIdMatch[1]) {
+                            const failedPairId = pairIdMatch[1];
+                            setTimelinePairs(prev => prev.map(p => p.id === failedPairId ? { ...p, isGeneratingVideo: false, videoGenerationFailed: true } : p));
+                        }
+                        addToast(errorMsg, 'error');
+                    }
+                );
+            }
             addToast("All transition videos generated!", "success");
         } catch (err) {
             addToast(err instanceof Error ? err.message : 'An unknown error occurred during video generation.', 'error');

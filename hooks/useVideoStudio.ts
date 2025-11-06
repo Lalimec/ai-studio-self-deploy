@@ -11,8 +11,10 @@ import {
     generateSingleVideoForImage,
     enhancePrompt,
     rewriteVideoPromptForImage,
+    VideoTask,
 } from '../services/videoService';
 import { dataUrlToBlob } from '../services/geminiClient';
+import { uploadImageFromDataUrl } from '../services/imageUploadService';
 import { generateSetId, generateShortId, getTimestamp } from '../services/imageUtils';
 import { logUserAction } from '../services/loggingService';
 import { processWithConcurrency } from '../services/apiUtils';
@@ -80,6 +82,21 @@ export const useVideoStudio = ({ addToast, setConfirmAction, setDownloadProgress
     const handleUpdatePrompt = (id: string, newPrompt: string) => {
         setStudioImages(prev => prev.map(img => img.id === id ? { ...img, videoPrompt: newPrompt } : img));
     };
+
+    const ensurePublicUrl = async (imageId: string): Promise<string | null> => {
+        const image = studioImages.find(img => img.id === imageId);
+        if (!image) return null;
+        if (image.publicUrl) return image.publicUrl;
+
+        try {
+            const url = await uploadImageFromDataUrl(image.src, image.filename);
+            setStudioImages(prev => prev.map(img => img.id === imageId ? { ...img, publicUrl: url } : img));
+            return url;
+        } catch (error) {
+            addToast(`Failed to upload image ${image.filename}: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
+            return null;
+        }
+    };
     
     const handlePrepareSingleImage = async (id: string) => {
         const image = studioImages.find(img => img.id === id);
@@ -141,10 +158,21 @@ export const useVideoStudio = ({ addToast, setConfirmAction, setDownloadProgress
     const handleGenerateSingleVideo = async (id: string) => {
         const image = studioImages.find(img => img.id === id);
         if (!image || !image.videoPrompt || image.isGeneratingVideo || image.isPreparing) return;
+        
         logUserAction('GENERATE_VIDEO_SINGLE_VIDEOSTUDIO', { id, sessionId });
         setStudioImages(prev => prev.map(img => img.id === id ? { ...img, isGeneratingVideo: true, videoGenerationFailed: false } : img));
+        
         try {
-            const videoSrc = await generateSingleVideoForImage(image);
+            const publicUrl = await ensurePublicUrl(id);
+            if (!publicUrl) {
+                throw new Error("Failed to get public URL for the image.");
+            }
+
+            const videoSrc = await generateSingleVideoForImage({
+                startImageUrl: publicUrl,
+                videoPrompt: image.videoPrompt,
+                filename: image.id,
+            });
             setStudioImages(prev => prev.map(img => img.id === id ? { ...img, videoSrc, isGeneratingVideo: false, videoGenerationFailed: false } : img));
             addToast("Video generated!", "success");
         } catch (err) {
@@ -156,32 +184,47 @@ export const useVideoStudio = ({ addToast, setConfirmAction, setDownloadProgress
     const handleGenerateAllVideos = async () => {
         const toProcess = studioImages.filter(i => !!i.videoPrompt && !i.videoSrc && !i.isGeneratingVideo);
         if (toProcess.length === 0) return addToast("No images ready to generate videos.", "info");
+        
         logUserAction('GENERATE_VIDEO_ALL_VIDEOSTUDIO', { count: toProcess.length, sessionId });
         setIsGeneratingVideos(true);
         setStudioImages(p => p.map(i => toProcess.some(pr => pr.id === i.id) ? {...i, isGeneratingVideo: true, videoGenerationFailed: false} : i));
         addToast(`Generating ${toProcess.length} videos...`, "info");
 
-        const imagesForService: ImageForVideoProcessing[] = toProcess.map(img => ({
-            ...img,
-            filename: img.id, // Use ID for mapping back
-        }));
-
         try {
-            await generateAllVideos(imagesForService,
-                (returnedId, videoSrc) => {
-                    setStudioImages(p => p.map(i => i.id === returnedId ? {...i, videoSrc, isGeneratingVideo: false, videoGenerationFailed: false } : i))
-                },
-                (error) => {
-                    const idMatch = error.match(/Failed on (.*?):/);
-                    if (idMatch && idMatch[1]) {
-                        const failedId = idMatch[1];
-                        setStudioImages(p => p.map(i => i.id === failedId ? {...i, isGeneratingVideo: false, videoGenerationFailed: true} : i));
-                    }
-                    addToast(error, 'error');
+            const videoTasks: VideoTask[] = [];
+            for (const image of toProcess) {
+                const publicUrl = await ensurePublicUrl(image.id);
+                if (publicUrl && image.videoPrompt) {
+                    videoTasks.push({
+                        startImageUrl: publicUrl,
+                        videoPrompt: image.videoPrompt,
+                        filename: image.id,
+                    });
                 }
-            );
-        } catch(e) { addToast(e instanceof Error ? e.message : 'Error generating all videos.', 'error'); }
-        finally {
+            }
+
+            if(videoTasks.length !== toProcess.length) {
+                addToast("Some images failed to upload and were skipped.", "warning");
+            }
+            
+            if(videoTasks.length > 0) {
+                await generateAllVideos(videoTasks,
+                    (returnedId, videoSrc) => {
+                        setStudioImages(p => p.map(i => i.id === returnedId ? {...i, videoSrc, isGeneratingVideo: false, videoGenerationFailed: false } : i))
+                    },
+                    (error) => {
+                        const idMatch = error.match(/Failed on (.*?):/);
+                        if (idMatch && idMatch[1]) {
+                            const failedId = idMatch[1];
+                            setStudioImages(p => p.map(i => i.id === failedId ? {...i, isGeneratingVideo: false, videoGenerationFailed: true} : i));
+                        }
+                        addToast(error, 'error');
+                    }
+                );
+            }
+        } catch(e) { 
+            addToast(e instanceof Error ? e.message : 'Error generating all videos.', 'error'); 
+        } finally {
             setIsGeneratingVideos(false);
             setStudioImages(p => p.map(i => ({...i, isGeneratingVideo: false})));
         }

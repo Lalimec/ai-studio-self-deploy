@@ -2,6 +2,8 @@ import { GoogleGenAI, Modality, Type } from '@google/genai';
 import { AdImageState, AdSubjectImageState, AdClonerSettings, AdClonerGenerationResult, AdClonerVariation } from '../types';
 import { ai, dataUrlToBlob } from './geminiClient';
 import { SYSTEM_PROMPT, RESPONSE_SCHEMA, variationPromptSchema } from '../prompts/adClonerSystemPrompt';
+import { Constance } from './endpoints';
+import { generateFigureImage } from './geminiService';
 
 
 export const researchAdContext = async (
@@ -10,7 +12,7 @@ export const researchAdContext = async (
   const prompt = `Analyze this ad image to understand its context. What is the product, service, or topic being advertised? What is the overall theme and target audience? Provide a concise summary based on your analysis and web search.`;
   
   const response = await ai.models.generateContent({
-    model: 'gemini-2.5-flash',
+    model: Constance.models.text.flash,
     contents: {
       parts: [
         { inlineData: { data: adImageBlob.base64, mimeType: adImageBlob.mimeType } },
@@ -27,7 +29,7 @@ export const researchAdContext = async (
 
 export const enhanceAdInstructions = async (instruction: string): Promise<string> => {
     const userPrompt = `You are an expert AI Ad concept writer. Enhance the following user instruction to be more creative, specific, and effective for generating a diverse set of ad variations. Focus on target audience, mood, and actionable changes. Example: "make it for young people" becomes "Adapt the ad for a Gen Z audience by incorporating vibrant, trendy colors, a more casual and authentic subject pose, and dynamic, social-media-style text overlays." Return ONLY the enhanced instruction. The instruction to enhance is: "${instruction}"`;
-    const response = await ai.models.generateContent({ model: 'gemini-2.5-flash', contents: userPrompt });
+    const response = await ai.models.generateContent({ model: Constance.models.text.flash, contents: userPrompt });
     return response.text;
 };
 
@@ -144,92 +146,36 @@ export const getNewAdVariations = async (options: {
 };
 
 export const generateAdVariationImage = async (options: {
-    originalAdImage: AdImageState;
-    subjectImages: AdSubjectImageState[];
+    imageSources: Array<{ base64: string; mimeType: string }>;
     instructionalPrompt: string;
     imageModel: AdClonerSettings['imageModel'];
     aspectRatio: string | null;
+    useNanoBananaWebhook: boolean;
 }): Promise<string> => {
-    const { originalAdImage, subjectImages, instructionalPrompt, imageModel: model, aspectRatio } = options;
+    const { imageSources, instructionalPrompt, imageModel: model, aspectRatio, useNanoBananaWebhook } = options;
 
-    if (!originalAdImage.croppedSrc) {
-        throw new Error("Original ad image is required.");
-    }
-    const adBlob = dataUrlToBlob(originalAdImage.croppedSrc);
-
-    const parts: any[] = [
-        { text: instructionalPrompt },
-        { inlineData: { data: adBlob.base64, mimeType: adBlob.mimeType } },
-    ];
-
-    if (subjectImages.length > 0) {
-        subjectImages.forEach((img) => {
-            if (img.croppedSrc) {
-                const subjectBlob = dataUrlToBlob(img.croppedSrc);
-                parts.push({ inlineData: { data: subjectBlob.base64, mimeType: subjectBlob.mimeType } });
-            }
-        });
-    }
-    
-    const config: any = {
-        responseModalities: [Modality.IMAGE, Modality.TEXT],
-    };
-    if (aspectRatio) {
-        config.imageConfig = { aspectRatio };
-    }
-
-    const response = await ai.models.generateContent({
-        model, // 'gemini-2.5-flash-image'
-        contents: { parts },
-        config,
-    });
-    
-    for (const part of response.candidates?.[0]?.content.parts ?? []) {
-        if (part.inlineData) {
-            return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
-        }
-    }
-
-    throw new Error("Ad variation image generation failed. The model did not return an image.");
+    return generateFigureImage(
+        'nano-banana', // This service is specific to Nano Banana for now
+        instructionalPrompt,
+        imageSources,
+        { aspectRatio: aspectRatio || undefined },
+        useNanoBananaWebhook
+    );
 };
 
 export const refineAdImage = async (options: {
-    currentImageSrc: string;
+    imageSources: Array<{ base64: string; mimeType: string }>;
     refineText: string;
-    refineImageState: { file: File | null; src: string | null };
     aspectRatio: string | null;
+    useNanoBananaWebhook: boolean;
 }): Promise<string> => {
-    const { currentImageSrc, refineText, refineImageState, aspectRatio } = options;
-
-    const currentImageBlob = dataUrlToBlob(currentImageSrc);
-    const parts: any[] = [
-        { inlineData: { data: currentImageBlob.base64, mimeType: currentImageBlob.mimeType } },
-        { text: refineText },
-    ];
+    const { imageSources, refineText, aspectRatio, useNanoBananaWebhook } = options;
     
-    if (refineImageState.src) {
-        const refineImageBlob = dataUrlToBlob(refineImageState.src);
-        parts.push({ inlineData: { data: refineImageBlob.base64, mimeType: refineImageBlob.mimeType } });
-    }
-
-    const config: any = {
-        responseModalities: [Modality.IMAGE, Modality.TEXT],
-    };
-    if (aspectRatio) {
-        config.imageConfig = { aspectRatio };
-    }
-    
-    const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash-image',
-        contents: { parts },
-        config,
-    });
-
-    for (const part of response.candidates?.[0]?.content.parts ?? []) {
-        if (part.inlineData) {
-            return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
-        }
-    }
-
-    throw new Error("Image refinement failed. The model did not return an image.");
+    return generateFigureImage(
+        'nano-banana',
+        refineText,
+        imageSources,
+        { aspectRatio: aspectRatio || undefined },
+        useNanoBananaWebhook
+    );
 };

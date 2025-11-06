@@ -12,9 +12,12 @@ import {
 import { processWithConcurrency } from './apiUtils';
 import { ai, dataUrlToBlob } from './geminiClient';
 import { ImageForVideoProcessing } from '../types';
+import { Constance } from './endpoints';
+import { generateFigureImage } from './geminiService';
+import { uploadImageFromDataUrl } from './imageUploadService';
 
-const imageModel = 'gemini-2.5-flash-image';
-const textModel = 'gemini-2.5-flash';
+const imageModel = Constance.models.image.flash;
+const textModel = Constance.models.text.flash;
 
 type BabyGenerationTask = {
     description: string;
@@ -147,39 +150,18 @@ Ensure the resulting child's features are a plausible and natural blend of both 
 };
 
 export const generateBabyImage = async (
-    parent1Blob: { base64: string; mimeType: string },
-    parent2Blob: { base64: string; mimeType: string },
+    imageSources: Array<{ base64: string; mimeType: string }>,
     prompt: string,
-    aspectRatio: AspectRatio
+    aspectRatio: AspectRatio,
+    useNanoBananaWebhook: boolean
 ): Promise<string> => {
-     const config: any = {
-        responseModalities: [Modality.IMAGE, Modality.TEXT],
-     };
-     if (aspectRatio && aspectRatio !== 'auto') {
-        config.imageConfig = { aspectRatio };
-     }
-
-     const response: GenerateContentResponse = await ai.models.generateContent({
-        model: imageModel,
-        contents: {
-          parts: [
-            { text: "This is Parent 1:" },
-            { inlineData: { data: parent1Blob.base64, mimeType: parent1Blob.mimeType } },
-            { text: "This is Parent 2:" },
-            { inlineData: { data: parent2Blob.base64, mimeType: parent2Blob.mimeType } },
-            { text: prompt },
-          ],
-        },
-        config,
-      });
-
-      for (const part of response.candidates?.[0]?.content.parts ?? []) {
-        if (part.inlineData) {
-          return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
-        }
-      }
-
-      throw new Error('Image generation failed. The model did not return an image for the baby.');
+    return generateFigureImage(
+        Constance.models.image.nanoBanana,
+        prompt,
+        imageSources,
+        { aspectRatio: aspectRatio !== 'auto' ? aspectRatio : undefined },
+        useNanoBananaWebhook
+    );
 };
 
 export const generateBabyImages = async (
@@ -190,20 +172,21 @@ export const generateBabyImages = async (
   options: BabyGenerationOptions,
   sessionId: string,
   timestamp: string,
+  useNanoBananaWebhook: boolean,
   onImageGenerated: (result: Omit<GeneratedBabyImage, 'videoPrompt' | 'isPreparing' | 'videoSrc' | 'isGeneratingVideo' | 'isRegenerating'>) => void,
   onError: (errorMessage: string) => void
 ): Promise<void> => {
-  const parent1Blob = dataUrlToBlob(parent1DataUrl);
-  const parent2Blob = dataUrlToBlob(parent2DataUrl);
   const tasks = createBabyGenerationTasks(options, parent1File.name, parent2File.name, sessionId, timestamp);
 
   if (tasks.length === 0) {
     throw new Error('Could not create any generation tasks. Please check your options.');
   }
 
+  const imageSources = [dataUrlToBlob(parent1DataUrl), dataUrlToBlob(parent2DataUrl)];
+
   const processSingleTask = async (task: BabyGenerationTask) => {
     try {
-      const imageUrl = await generateBabyImage(parent1Blob, parent2Blob, task.prompt, options.aspectRatio);
+      const imageUrl = await generateBabyImage(imageSources, task.prompt, options.aspectRatio, useNanoBananaWebhook);
       onImageGenerated({ 
         src: imageUrl,
         description: task.description,

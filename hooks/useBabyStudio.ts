@@ -6,22 +6,24 @@ import {
     generateBabyImages, prepareBabyVideoPrompts, generateVideoPromptForBabyImage
 } from '../services/babyStudioService';
 import { dataUrlToBlob } from '../services/geminiClient';
-import { generateAllVideos, generateSingleVideoForImage, generateVideoPromptForImage } from '../services/videoService';
+import { uploadImageFromDataUrl } from '../services/imageUploadService';
+import { generateAllVideos, generateSingleVideoForImage, generateVideoPromptForImage, VideoTask } from '../services/videoService';
 import { getTimestamp, generateSetId, sanitizeFilename } from '../services/imageUtils';
 import { logUserAction } from '../services/loggingService';
 
 declare const JSZip: any;
 
-const initialParentState: Omit<ParentImageState, 'id'> = { file: null, originalSrc: null, croppedSrc: null, videoPrompt: undefined, videoSrc: undefined, isPreparing: false, isGeneratingVideo: false, filename: undefined };
+const initialParentState: Omit<ParentImageState, 'id'> = { file: null, originalSrc: null, croppedSrc: null, videoPrompt: undefined, videoSrc: undefined, isPreparing: false, isGeneratingVideo: false, filename: undefined, publicUrl: undefined };
 
 type BabyStudioHookProps = {
     addToast: (message: string, type: ToastType['type']) => void;
     setConfirmAction: (action: any) => void;
     withMultiDownloadWarning: (action: () => void) => void;
     setDownloadProgress: (progress: { visible: boolean; message: string; progress: number }) => void;
+    useNanoBananaWebhook: boolean;
 };
 
-export const useBabyStudio = ({ addToast, setConfirmAction, withMultiDownloadWarning, setDownloadProgress }: BabyStudioHookProps) => {
+export const useBabyStudio = ({ addToast, setConfirmAction, withMultiDownloadWarning, setDownloadProgress, useNanoBananaWebhook }: BabyStudioHookProps) => {
     const [parent1, setParent1] = useState<ParentImageState>({...initialParentState, id: 'parent1'});
     const [parent2, setParent2] = useState<ParentImageState>({...initialParentState, id: 'parent2'});
     const [options, setOptions] = useState<BabyGenerationOptions>({
@@ -46,7 +48,7 @@ export const useBabyStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
 
         const applyCrop = () => {
             const updater = (p: ParentImageState): ParentImageState => {
-                const newState: ParentImageState = { ...p, croppedSrc: croppedImageDataUrl };
+                const newState: ParentImageState = { ...p, croppedSrc: croppedImageDataUrl, publicUrl: undefined }; // Invalidate public URL on recrop
                 if (!newState.filename && newState.file) {
                     newState.filename = `parent_image_${newState.id}_${newState.file.name}`;
                 }
@@ -116,7 +118,7 @@ export const useBabyStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
 
         generateBabyImages(
             parent1.croppedSrc, parent2.croppedSrc, parent1.file, parent2.file,
-            currentOptions, sessionId, timestamp,
+            currentOptions, sessionId, timestamp, useNanoBananaWebhook,
             (newImage) => {
                 setGeneratedImages(prev => [newImage, ...prev]);
                 setPendingImageCount(prev => Math.max(0, prev - 1));
@@ -196,57 +198,118 @@ export const useBabyStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
             setParent2(p => p.isPreparing ? {...p, isPreparing: false} : p);
         }
     };
+
+    const ensurePublicUrlForParent = async (parentId: 'parent1' | 'parent2'): Promise<string | null> => {
+        const parent = parentId === 'parent1' ? parent1 : parent2;
+        const setParent = parentId === 'parent1' ? setParent1 : setParent2;
+
+        if (parent.publicUrl) return parent.publicUrl;
+        if (!parent.croppedSrc) return null;
+
+        try {
+            const url = await uploadImageFromDataUrl(parent.croppedSrc, parent.filename);
+            setParent(p => ({ ...p, publicUrl: url }));
+            return url;
+        } catch (error) {
+            addToast(`Failed to upload image for ${parentId}: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
+            return null;
+        }
+    };
+
+    const ensurePublicUrlForBaby = async (filename: string): Promise<string | null> => {
+        const image = generatedImages.find(img => img.filename === filename);
+        if (!image) return null;
+        if (image.publicUrl) return image.publicUrl;
+
+        try {
+            const url = await uploadImageFromDataUrl(image.src, image.filename);
+            setGeneratedImages(prev => prev.map(img => img.filename === filename ? { ...img, publicUrl: url } : img));
+            return url;
+        } catch (error) {
+            addToast(`Failed to upload baby image ${image.filename}: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
+            return null;
+        }
+    };
     
     const handleGenerateAllVideos = async () => {
-        const babiesToProcess: ImageForVideoProcessing[] = generatedImages.filter(img => !!img.videoPrompt && !img.videoSrc && !img.isGeneratingVideo);
+        const babiesToProcess = generatedImages.filter(img => !!img.videoPrompt && !img.videoSrc && !img.isGeneratingVideo);
         
-        const parentsToProcess: ImageForVideoProcessing[] = [];
+        const parentsToProcess: ParentImageState[] = [];
         if (parent1.videoPrompt && !parent1.videoSrc && !parent1.isGeneratingVideo) {
-            parentsToProcess.push({ src: parent1.croppedSrc!, filename: parent1.id, videoPrompt: parent1.videoPrompt });
+            parentsToProcess.push(parent1);
         }
         if (parent2.videoPrompt && !parent2.videoSrc && !parent2.isGeneratingVideo) {
-            parentsToProcess.push({ src: parent2.croppedSrc!, filename: parent2.id, videoPrompt: parent2.videoPrompt });
+            parentsToProcess.push(parent2);
         }
     
-        const allToProcess = [...babiesToProcess, ...parentsToProcess];
+        const allToProcessCount = babiesToProcess.length + parentsToProcess.length;
     
-        if (allToProcess.length === 0) {
+        if (allToProcessCount === 0) {
             return addToast("All prepared items have videos or are currently generating.", "info");
         }
     
-        logUserAction('GENERATE_BABY_VIDEO_ALL', { count: allToProcess.length, sessionId });
+        logUserAction('GENERATE_BABY_VIDEO_ALL', { count: allToProcessCount, sessionId });
         setIsGeneratingVideos(true);
         setGeneratedImages(prev => prev.map(img => babiesToProcess.some(p => p.filename === img.filename) ? { ...img, isGeneratingVideo: true, videoGenerationFailed: false } : img));
         parentsToProcess.forEach(p => {
-            const setParent = p.filename === 'parent1' ? setParent1 : setParent2;
+            const setParent = p.id === 'parent1' ? setParent1 : setParent2;
             setParent(prev => ({ ...prev, isGeneratingVideo: true, videoGenerationFailed: false }));
         });
-        addToast(`Generating ${allToProcess.length} videos...`, "info");
+        addToast(`Generating ${allToProcessCount} videos...`, "info");
     
         try {
-            await generateAllVideos(allToProcess,
-                (filename, videoSrc) => {
-                    if (filename === 'parent1' || filename === 'parent2') {
-                        const setParent = filename === 'parent1' ? setParent1 : setParent2;
-                        setParent(p => ({ ...p, videoSrc, isGeneratingVideo: false, videoGenerationFailed: false }));
-                    } else {
-                        setGeneratedImages(prev => prev.map(img => img.filename === filename ? { ...img, videoSrc, isGeneratingVideo: false, videoGenerationFailed: false } : img));
-                    }
-                },
-                (error) => {
-                    const filenameMatch = error.match(/Failed on (.*?):/);
-                    if (filenameMatch && filenameMatch[1]) {
-                        const failedFilename = filenameMatch[1];
-                        if (failedFilename === 'parent1' || failedFilename === 'parent2') {
-                            const setParent = failedFilename === 'parent1' ? setParent1 : setParent2;
-                            setParent(p => ({ ...p, isGeneratingVideo: false, videoGenerationFailed: true }));
-                        } else {
-                            setGeneratedImages(prev => prev.map(img => img.filename === failedFilename ? { ...img, isGeneratingVideo: false, videoGenerationFailed: true } : img));
-                        }
-                    }
-                    addToast(error, 'error');
+            const videoTasks: VideoTask[] = [];
+            const allItems: (GeneratedBabyImage | ParentImageState)[] = [...babiesToProcess, ...parentsToProcess];
+
+            for (const item of allItems) {
+                const isParent = 'id' in item && (item.id === 'parent1' || item.id === 'parent2');
+                const filename = isParent ? (item as ParentImageState).id : (item as GeneratedBabyImage).filename;
+                let publicUrl: string | null = null;
+
+                if (isParent) {
+                    publicUrl = await ensurePublicUrlForParent((item as ParentImageState).id);
+                } else {
+                    publicUrl = await ensurePublicUrlForBaby((item as GeneratedBabyImage).filename);
                 }
-            );
+                
+                if(publicUrl && item.videoPrompt) {
+                     videoTasks.push({
+                        startImageUrl: publicUrl,
+                        videoPrompt: item.videoPrompt,
+                        filename: filename,
+                    });
+                }
+            }
+            
+            if (videoTasks.length !== allToProcessCount) {
+                addToast("Some images failed to upload and were skipped.", "warning");
+            }
+
+            if(videoTasks.length > 0) {
+                 await generateAllVideos(videoTasks,
+                    (filename, videoSrc) => {
+                        if (filename === 'parent1' || filename === 'parent2') {
+                            const setParent = filename === 'parent1' ? setParent1 : setParent2;
+                            setParent(p => ({ ...p, videoSrc, isGeneratingVideo: false, videoGenerationFailed: false }));
+                        } else {
+                            setGeneratedImages(prev => prev.map(img => img.filename === filename ? { ...img, videoSrc, isGeneratingVideo: false, videoGenerationFailed: false } : img));
+                        }
+                    },
+                    (error) => {
+                        const filenameMatch = error.match(/Failed on (.*?):/);
+                        if (filenameMatch && filenameMatch[1]) {
+                            const failedFilename = filenameMatch[1];
+                            if (failedFilename === 'parent1' || failedFilename === 'parent2') {
+                                const setParent = failedFilename === 'parent1' ? setParent1 : setParent2;
+                                setParent(p => ({ ...p, isGeneratingVideo: false, videoGenerationFailed: true }));
+                            } else {
+                                setGeneratedImages(prev => prev.map(img => img.filename === failedFilename ? { ...img, isGeneratingVideo: false, videoGenerationFailed: true } : img));
+                            }
+                        }
+                        addToast(error, 'error');
+                    }
+                );
+            }
             addToast("Video generation complete!", "success");
         } catch (err) { addToast(err instanceof Error ? err.message : 'Error during video generation.', 'error'); }
         finally {
@@ -284,7 +347,15 @@ export const useBabyStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
         setGeneratedImages(prev => prev.map(img => img.filename === filename ? { ...img, isGeneratingVideo: true, videoGenerationFailed: false } : img));
         addToast(`Generating video... This can take a few minutes.`, 'info');
         try {
-            const videoSrc = await generateSingleVideoForImage(image);
+            const publicUrl = await ensurePublicUrlForBaby(filename);
+            if (!publicUrl) {
+                throw new Error("Failed to get public URL for the baby image.");
+            }
+            const videoSrc = await generateSingleVideoForImage({
+                startImageUrl: publicUrl,
+                videoPrompt: image.videoPrompt,
+                filename: image.filename,
+            });
             setGeneratedImages(prev => prev.map(img => img.filename === filename ? { ...img, videoSrc, isGeneratingVideo: false, videoGenerationFailed: false } : img));
             addToast("Video generated!", "success");
         } catch (err) {
@@ -330,12 +401,15 @@ export const useBabyStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
         addToast(`Generating video for ${parentId}... This may take a few minutes.`, 'info');
 
         try {
-            const imageForService: ImageForVideoProcessing = {
-                src: parent.croppedSrc,
-                filename: parent.filename || `${parentId}.jpg`,
+            const publicUrl = await ensurePublicUrlForParent(parentId);
+            if (!publicUrl) {
+                throw new Error("Failed to get public URL for the parent image.");
+            }
+            const videoSrc = await generateSingleVideoForImage({
+                startImageUrl: publicUrl,
                 videoPrompt: parent.videoPrompt,
-            };
-            const videoSrc = await generateSingleVideoForImage(imageForService);
+                filename: parent.filename || `${parentId}.jpg`,
+            });
             setParent(p => ({ ...p, videoSrc, isGeneratingVideo: false, videoGenerationFailed: false }));
             addToast(`Video for ${parentId} generated!`, "success");
         } catch (err) {

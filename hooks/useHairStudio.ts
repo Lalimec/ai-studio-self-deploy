@@ -7,12 +7,13 @@ import {
 } from '../services/hairStudioService';
 import { 
     prepareVideoPrompts, 
-    generateVideoPromptForImage, enhanceVideoPromptForImage
+    generateVideoPromptForImage, enhanceVideoPromptForImage, VideoTask
 } from '../services/videoService';
 import { dataUrlToBlob } from '../services/geminiClient';
 import { generateAllVideos, generateSingleVideoForImage } from '../services/videoService';
 import { getTimestamp, generateSetId, sanitizeFilename } from '../services/imageUtils';
 import { logUserAction } from '../services/loggingService';
+import { uploadImageFromDataUrl } from '../services/imageUploadService';
 
 declare const JSZip: any;
 
@@ -21,9 +22,10 @@ type HairStudioHookProps = {
     setConfirmAction: (action: any) => void;
     withMultiDownloadWarning: (action: () => void) => void;
     setDownloadProgress: (progress: { visible: boolean; message: string; progress: number }) => void;
+    useNanoBananaWebhook: boolean;
 };
 
-export const useHairStudio = ({ addToast, setConfirmAction, withMultiDownloadWarning, setDownloadProgress }: HairStudioHookProps) => {
+export const useHairStudio = ({ addToast, setConfirmAction, withMultiDownloadWarning, setDownloadProgress, useNanoBananaWebhook }: HairStudioHookProps) => {
     const [originalFile, setOriginalFile] = useState<File | null>(null);
     const [croppedImage, setCroppedImage] = useState<string | null>(null);
     const [croppedImageAspectRatio, setCroppedImageAspectRatio] = useState<number>(4 / 5);
@@ -115,7 +117,7 @@ export const useHairStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
         setGenerationTimestamp(timestamp);
 
         generateHairstyles(
-            croppedImage, currentOptions, originalFile.name, timestamp, sessionId,
+            croppedImage, currentOptions, originalFile.name, timestamp, sessionId, useNanoBananaWebhook,
             (newImage) => {
                 setGeneratedImages((prev) => [{
                     src: newImage.imageUrl,
@@ -161,8 +163,7 @@ export const useHairStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
 
         try {
             const newTimestamp = getTimestamp();
-// FIX: The variable `croppedImageDataUrl` was undefined. Replaced with the correct state variable `croppedImage`.
-            const newImage = await regenerateSingleHairstyle(croppedImage, options, originalFile.name, newTimestamp, sessionId);
+            const newImage = await regenerateSingleHairstyle(croppedImage, options, originalFile.name, newTimestamp, sessionId, useNanoBananaWebhook);
             setGeneratedImages(prev => prev.map(img =>
                 img.filename === filename ? {
                     src: newImage.imageUrl,
@@ -170,7 +171,8 @@ export const useHairStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
                     color: newImage.color,
                     filename: newImage.filename,
                     imageGenerationPrompt: newImage.imageGenerationPrompt,
-                    isRegenerating: false
+                    isRegenerating: false,
+                    publicUrl: undefined, // Invalidate public URL on regenerate
                 } : img
             ));
             addToast(`Successfully regenerated style.`, "success");
@@ -179,6 +181,21 @@ export const useHairStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
             setGeneratedImages(prev => prev.map(img =>
                 img.filename === filename ? { ...img, isRegenerating: false } : img
             ));
+        }
+    };
+
+    const ensurePublicUrl = async (filename: string): Promise<string | null> => {
+        const image = generatedImages.find(img => img.filename === filename);
+        if (!image) return null;
+        if (image.publicUrl) return image.publicUrl;
+
+        try {
+            const url = await uploadImageFromDataUrl(image.src, image.filename);
+            setGeneratedImages(prev => prev.map(img => img.filename === filename ? { ...img, publicUrl: url } : img));
+            return url;
+        } catch (error) {
+            addToast(`Failed to upload image ${image.filename}: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
+            return null;
         }
     };
 
@@ -209,7 +226,15 @@ export const useHairStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
         setGeneratedImages(prev => prev.map(img => img.filename === filename ? { ...img, isGeneratingVideo: true, videoGenerationFailed: false } : img));
         addToast(`Generating video... This can take a few minutes.`, 'info');
         try {
-            const videoSrc = await generateSingleVideoForImage(image);
+            const publicUrl = await ensurePublicUrl(filename);
+            if (!publicUrl) {
+                throw new Error("Failed to get public URL for the image.");
+            }
+            const videoSrc = await generateSingleVideoForImage({
+                startImageUrl: publicUrl,
+                videoPrompt: image.videoPrompt,
+                filename: image.filename,
+            });
             setGeneratedImages(prev => prev.map(img => img.filename === filename ? { ...img, videoSrc, isGeneratingVideo: false, videoGenerationFailed: false } : img));
             addToast("Video generated!", "success");
         } catch (err) {
@@ -258,17 +283,34 @@ export const useHairStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
         setGeneratedImages(prev => prev.map(img => imagesToProcess.some(p => p.filename === img.filename) ? { ...img, isGeneratingVideo: true, videoGenerationFailed: false } : img));
         addToast(`Generating ${imagesToProcess.length} videos... This may take some time.`, "info");
         try {
-            await generateAllVideos(imagesToProcess,
-                (filename, videoSrc) => setGeneratedImages(prev => prev.map(img => img.filename === filename ? { ...img, videoSrc, isGeneratingVideo: false, videoGenerationFailed: false } : img)),
-                (errorMessage) => {
-                    const filenameMatch = errorMessage.match(/Failed on (.*?):/);
-                    if (filenameMatch && filenameMatch[1]) {
-                        const failedFilename = filenameMatch[1];
-                        setGeneratedImages(prev => prev.map(img => img.filename === failedFilename ? { ...img, isGeneratingVideo: false, videoGenerationFailed: true } : img));
-                    }
-                    addToast(errorMessage, 'error');
+            const videoTasks: VideoTask[] = [];
+            for (const image of imagesToProcess) {
+                const publicUrl = await ensurePublicUrl(image.filename);
+                if (publicUrl && image.videoPrompt) {
+                    videoTasks.push({
+                        startImageUrl: publicUrl,
+                        videoPrompt: image.videoPrompt,
+                        filename: image.filename,
+                    });
                 }
-            );
+            }
+            if (videoTasks.length !== imagesToProcess.length) {
+                addToast("Some images failed to upload and were skipped.", "warning");
+            }
+
+            if (videoTasks.length > 0) {
+                await generateAllVideos(videoTasks,
+                    (filename, videoSrc) => setGeneratedImages(prev => prev.map(img => img.filename === filename ? { ...img, videoSrc, isGeneratingVideo: false, videoGenerationFailed: false } : img)),
+                    (errorMessage) => {
+                        const filenameMatch = errorMessage.match(/Failed on (.*?):/);
+                        if (filenameMatch && filenameMatch[1]) {
+                            const failedFilename = filenameMatch[1];
+                            setGeneratedImages(prev => prev.map(img => img.filename === failedFilename ? { ...img, isGeneratingVideo: false, videoGenerationFailed: true } : img));
+                        }
+                        addToast(errorMessage, 'error');
+                    }
+                );
+            }
             addToast("Video generation complete!", "success");
         } catch (err) {
             addToast(err instanceof Error ? err.message : 'An unknown error occurred during video generation.', 'error');
