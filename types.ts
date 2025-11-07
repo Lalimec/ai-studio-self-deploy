@@ -304,7 +304,77 @@ export type NanoBananaWebhookSettings = {
     baby: boolean;
     image: boolean;
     adCloner: boolean;
+    videoAnalyzer: boolean;
 };
+
+// --- VIDEO ANALYZER TYPES ---
+export type AnalysisModel = 'gemini-2.5-pro' | 'gemini-2.5-flash';
+export type ImageModel =
+    'imagen-4.0-ultra-generate-001' |
+    'imagen-4.0-generate-001' |
+    'imagen-4.0-fast-generate-001' |
+    'gemini-2.5-flash-image' |
+    'nano-banana' |
+    'seedream' |
+    'flux-kontext-pro';
+
+export type VideoAnalyzerSettings = {
+    analysisModel: AnalysisModel;
+    imageModel: ImageModel;
+    aspectRatio: AspectRatio;
+    sceneImageModel: ImageModel;
+    sceneAspectRatio: AspectRatio;
+    additionalInstructions: string;
+    nanoBananaPrompt: string;
+    sceneInstructions: string;
+};
+
+export interface StoryboardScene {
+    timestamp: string;
+    description: string;
+    visuals: string;
+    assets: string;
+    still_prompt: string;
+    video_prompt: string;
+    generated_images?: string[];
+    manual_offset_ms?: number;
+}
+
+export interface VideoAnalysis {
+    analysis: string;
+    concept_approaches: string;
+    storyboard: StoryboardScene[];
+    overall_video_style_prompt: string;
+}
+
+export interface AdIdea {
+    id?: string;
+    title: string;
+    description: string;
+    layout: string;
+    cta: string;
+    text: {
+        headline: string;
+        body: string;
+        disclaimer: string;
+    };
+    subjects: string;
+    environment: string;
+    vibe: string;
+    creatives: string;
+    generation_prompt: string;
+    generatedImages?: string[];
+}
+
+export class JsonParseError extends Error {
+    public rawResponse: string;
+
+    constructor(message: string, rawResponse: string) {
+        super(message);
+        this.name = 'JsonParseError';
+        this.rawResponse = rawResponse;
+    }
+}
 
 // --- SHARED DISPLAY TYPE ---
 export type DisplayImage = GeneratedImage | StudioImage | GeneratedBabyImage | ImageStudioResultImage;

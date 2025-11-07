@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(done)",
+      "Bash(npm run build:*)",
+      "Bash(cat:*)",
+      "Bash(timeout 10 npm run dev:*)",
+      "Bash(mkdir:*)",
+      "Bash(dir /s F:GitReposai-studioWorktreeai-studio-v1.1 2)",
+      "Bash(nul)",
+      "Bash(cp:*)",
+      "Bash(test:*)",
+      "Bash(git remote:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

@@ -675,3 +675,22 @@ export const ASPECT_RATIO_PRESETS = [
     { label: '3:2', width: 2048, height: 1365 },
     { label: '16:9', width: 2048, height: 1152 },
 ];
+
+// --- VIDEO ANALYZER CONSTANTS ---
+
+import { AnalysisModel, ImageModel } from './types';
+
+export const imageModels: { id: ImageModel; name: string; requiresImage: boolean }[] = [
+    { id: 'imagen-4.0-ultra-generate-001', name: 'Imagen 4 Ultra', requiresImage: false },
+    { id: 'imagen-4.0-generate-001', name: 'Imagen 4', requiresImage: false },
+    { id: 'imagen-4.0-fast-generate-001', name: 'Imagen 4 Fast', requiresImage: false },
+    { id: 'gemini-2.5-flash-image', name: 'Nano Banana (Gemini Edit)', requiresImage: true },
+    { id: 'nano-banana', name: 'Nano Banana (Webhook)', requiresImage: true },
+    { id: 'seedream', name: 'Seedream 4.0', requiresImage: true },
+    { id: 'flux-kontext-pro', name: 'Flux Kontext Pro', requiresImage: true },
+];
+
+export const analysisModels: { id: AnalysisModel; name: string }[] = [
+    { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro' },
+    { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash' },
+];

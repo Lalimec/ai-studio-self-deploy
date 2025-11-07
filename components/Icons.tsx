@@ -1,10 +1,10 @@
 import React from 'react';
-import { 
-  LuUpload, 
-  LuDownload, 
-  LuShuffle, 
-  LuChevronLeft, 
-  LuChevronRight, 
+import {
+  LuUpload,
+  LuDownload,
+  LuShuffle,
+  LuChevronLeft,
+  LuChevronRight,
   LuX,
   LuTrash2,
   LuWand,
@@ -30,6 +30,8 @@ import {
   LuEyeOff,
   LuCopyPlus,
   LuSearch,
+  LuFileSearch,
+  LuCopy,
 } from 'react-icons/lu';
 import { 
     PiCaretDown, PiSparkle, PiSpinner, PiTranslate, PiCheck, 
@@ -69,6 +71,8 @@ export const EyeIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <LuEy
 export const EyeOffIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <LuEyeOff {...props} />;
 export const AdClonerIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <LuCopyPlus {...props} />;
 export const SearchIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <LuSearch {...props} />;
+export const VideoAnalyzerIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <LuFileSearch {...props} />;
+export const CopyIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <LuCopy {...props} />;
 
 
 // Pi Icons for Image Studio

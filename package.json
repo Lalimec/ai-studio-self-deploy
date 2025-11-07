@@ -1,7 +1,8 @@
 {
-  "name": "ai-studio",
-  "private": true,
-  "version": "0.0.1",
+  "name": "ai-studio-self-deploy",
+  "private": false,
+  "version": "1.0.0",
+  "description": "Self-deployable AI Studio with multiple creative tools powered by Google Gemini and external AI models",
   "type": "module",
   "scripts": {
     "dev": "vite",

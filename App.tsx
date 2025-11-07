@@ -13,6 +13,7 @@ import { useVideoStudio } from './hooks/useVideoStudio';
 import { useTimelineStudio } from './hooks/useTimelineStudio';
 import { useImageStudioLogic } from './hooks/useImageStudioLogic';
 import { useAdCloner } from './hooks/useAdCloner';
+import { useVideoAnalyzerStudio } from './hooks/useVideoAnalyzerStudio';
 import { logUserAction } from './services/loggingService';
 
 import { 
@@ -38,10 +39,11 @@ import VideoStudio from './components/VideoStudio';
 import TimelineStudio from './components/TimelineStudio';
 import ImageStudio from './components/ImageStudio';
 import AdClonerStudio from './components/adCloner/AdClonerStudio';
-import { HairStudioIcon, BabyIcon, ImageStudioIcon, VideoStudioIcon, TimelineStudioIcon, PrepareMagicIcon, AdClonerIcon, SettingsIcon } from './components/Icons';
+import VideoAnalyzerStudio from './components/videoAnalyzer/VideoAnalyzerStudio';
+import { HairStudioIcon, BabyIcon, ImageStudioIcon, VideoStudioIcon, TimelineStudioIcon, PrepareMagicIcon, AdClonerIcon, VideoAnalyzerIcon, SettingsIcon } from './components/Icons';
 import { ImageStudioConfirmationDialog } from './components/imageStudio/ImageStudioConfirmationDialog';
 
-type AppMode = 'hairStudio' | 'babyStudio' | 'imageStudio' | 'adCloner' | 'videoStudio' | 'timelineStudio';
+type AppMode = 'hairStudio' | 'babyStudio' | 'imageStudio' | 'adCloner' | 'videoAnalyzer' | 'videoStudio' | 'timelineStudio';
 
 export type ActiveCropper = {
     type: 'hair' | 'parent1' | 'parent2' | 'adCloner-ad' | 'adCloner-subject' | 'adCloner-refine';
@@ -80,6 +82,7 @@ function App() {
                 baby: parsed.baby !== undefined ? parsed.baby : true,
                 image: parsed.image !== undefined ? parsed.image : true,
                 adCloner: parsed.adCloner !== undefined ? parsed.adCloner : true,
+                videoAnalyzer: parsed.videoAnalyzer !== undefined ? parsed.videoAnalyzer : true,
             };
         }
     } catch (error) {
@@ -91,6 +94,7 @@ function App() {
         baby: true,
         image: true,
         adCloner: true,
+        videoAnalyzer: true,
     };
   });
 
@@ -114,7 +118,7 @@ function App() {
   };
 
   useEffect(() => {
-    if (!showBetaFeatures && appMode === 'adCloner') {
+    if (!showBetaFeatures && (appMode === 'adCloner' || appMode === 'videoAnalyzer')) {
         setAppMode('hairStudio');
     }
   }, [showBetaFeatures, appMode]);
@@ -151,6 +155,7 @@ function App() {
   const timelineStudioLogic = useTimelineStudio({ addToast, setConfirmAction, setDownloadProgress, withMultiDownloadWarning });
   const imageStudioLogic = useImageStudioLogic(addToast, setConfirmAction, setDownloadProgress, withMultiDownloadWarning, nanoBananaWebhookSettings.image);
   const adClonerLogic = useAdCloner({ addToast, setConfirmAction, withMultiDownloadWarning, setDownloadProgress, useNanoBananaWebhook: nanoBananaWebhookSettings.adCloner });
+  const videoAnalyzerLogic = useVideoAnalyzerStudio({ addToast, setConfirmAction, setDownloadProgress, withMultiDownloadWarning, useNanoBananaWebhook: nanoBananaWebhookSettings.videoAnalyzer });
   
   useEffect(() => {
     const isModalOpen = isCropping || timelineStudioLogic.isCropping || lightboxIndex !== null || confirmAction || showHelpModal || downloadProgress.visible || timelineStudioLogic.showCropChoice || timelineStudioLogic.isLightboxOpen || !!imageStudioLogic.pendingFiles || imageStudioLogic.croppingFiles || adClonerLogic.settingsModalOpen || showGlobalSettings;
@@ -299,13 +304,15 @@ function App() {
               }));
           case 'adCloner':
               // FIX: Added explicit 'VariationState' type annotation to the 'state' parameter to resolve 'unknown' type errors.
-              return Object.values(adClonerLogic.variationStates).flatMap((state: VariationState) => 
+              return Object.values(adClonerLogic.variationStates).flatMap((state: VariationState) =>
                   state.activeImageIndex > -1 ? [{
                       src: state.imageHistory[state.activeImageIndex],
                       filename: 'ad-cloner-image.jpg',
                       imageGenerationPrompt: 'See variation details for prompt.'
                   }] : []
               );
+          case 'videoAnalyzer':
+              return [];
           default:
               return [];
       }
@@ -374,6 +381,7 @@ function App() {
             <NavButton mode="babyStudio" label="Baby" icon={<BabyIcon className="h-6 w-6" />} />
             <NavButton mode="imageStudio" label="Image" icon={<ImageStudioIcon className="h-6 w-6" />} />
             {showBetaFeatures && <NavButton mode="adCloner" label="Ad Cloner" icon={<AdClonerIcon className="h-6 w-6" />} />}
+            {showBetaFeatures && <NavButton mode="videoAnalyzer" label="Video Analyzer" icon={<VideoAnalyzerIcon className="h-6 w-6" />} />}
             <NavButton mode="videoStudio" label="Video" icon={<VideoStudioIcon className="h-6 w-6" />} />
             <NavButton mode="timelineStudio" label="Timeline" icon={<TimelineStudioIcon className="h-6 w-6" />} />
         </div>
@@ -384,6 +392,7 @@ function App() {
             {appMode === 'imageStudio' && 'Batch generate image variations with multiple models.'}
             {appMode === 'timelineStudio' && 'Create video transitions between a sequence of images.'}
             {appMode === 'adCloner' && showBetaFeatures && 'Deconstruct and generate creative variations of any ad.'}
+            {appMode === 'videoAnalyzer' && showBetaFeatures && 'Analyze video ads and generate creative variations.'}
         </p>
       </header>
       
@@ -435,8 +444,14 @@ function App() {
               onUpload={handleImageUpload}
               onShowHelp={() => setShowHelpModal(true)}
             />
+        ) : appMode === 'videoAnalyzer' && showBetaFeatures ? (
+            <VideoAnalyzerStudio
+                logic={videoAnalyzerLogic}
+                onShowHelp={() => setShowHelpModal(true)}
+                onImageClick={handleImageClick}
+            />
         ) : (
-            <ImageStudio 
+            <ImageStudio
                 logic={imageStudioLogic}
                 onImageClick={handleImageClick}
                 onShowHelp={() => setShowHelpModal(true)}
