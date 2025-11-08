@@ -1,12 +1,12 @@
 import { useState, useCallback } from 'react';
-import { 
-    GenerationOptions, Gender, PoseStyle, ColorOption, GeneratedImage, Toast as ToastType, AdornmentOption 
+import {
+    GenerationOptions, Gender, PoseStyle, ColorOption, GeneratedImage, Toast as ToastType, AdornmentOption, VideoSettings
 } from '../types';
-import { 
+import {
     generateHairstyles, regenerateSingleHairstyle
 } from '../services/hairStudioService';
-import { 
-    prepareVideoPrompts, 
+import {
+    prepareVideoPrompts,
     generateVideoPromptForImage, enhanceVideoPromptForImage, VideoTask
 } from '../services/videoService';
 import { dataUrlToBlob } from '../services/geminiClient';
@@ -23,9 +23,10 @@ type HairStudioHookProps = {
     withMultiDownloadWarning: (action: () => void) => void;
     setDownloadProgress: (progress: { visible: boolean; message: string; progress: number }) => void;
     useNanoBananaWebhook: boolean;
+    videoSettings: VideoSettings;
 };
 
-export const useHairStudio = ({ addToast, setConfirmAction, withMultiDownloadWarning, setDownloadProgress, useNanoBananaWebhook }: HairStudioHookProps) => {
+export const useHairStudio = ({ addToast, setConfirmAction, withMultiDownloadWarning, setDownloadProgress, useNanoBananaWebhook, videoSettings }: HairStudioHookProps) => {
     const [originalFile, setOriginalFile] = useState<File | null>(null);
     const [croppedImage, setCroppedImage] = useState<string | null>(null);
     const [croppedImageAspectRatio, setCroppedImageAspectRatio] = useState<number>(4 / 5);
@@ -234,6 +235,7 @@ export const useHairStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
                 startImageUrl: publicUrl,
                 videoPrompt: image.videoPrompt,
                 filename: image.filename,
+                videoSettings,
             });
             setGeneratedImages(prev => prev.map(img => img.filename === filename ? { ...img, videoSrc, isGeneratingVideo: false, videoGenerationFailed: false } : img));
             addToast("Video generated!", "success");
@@ -291,6 +293,7 @@ export const useHairStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
                         startImageUrl: publicUrl,
                         videoPrompt: image.videoPrompt,
                         filename: image.filename,
+                        videoSettings,
                     });
                 }
             }

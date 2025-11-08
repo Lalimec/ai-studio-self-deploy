@@ -1,9 +1,9 @@
 /// <reference lib="dom" />
 import { useState, useCallback } from 'react';
-import { StudioImage, Toast as ToastType, ImageForVideoProcessing } from '../types';
+import { StudioImage, Toast as ToastType, ImageForVideoProcessing, VideoSettings } from '../types';
 // FIX: Consolidate multiple imports from videoService and add the missing 'prepareVideoPrompts' function.
-import { 
-    generateVideoPromptForImage, 
+import {
+    generateVideoPromptForImage,
     enhanceVideoPromptForImage,
     translateTextToEnglish,
     prepareVideoPrompts,
@@ -26,9 +26,10 @@ type VideoStudioHookProps = {
     setConfirmAction: (action: any) => void;
     setDownloadProgress: (progress: { visible: boolean; message: string; progress: number }) => void;
     withMultiDownloadWarning: (action: () => void) => void;
+    videoSettings: VideoSettings;
 };
 
-export const useVideoStudio = ({ addToast, setConfirmAction, setDownloadProgress, withMultiDownloadWarning }: VideoStudioHookProps) => {
+export const useVideoStudio = ({ addToast, setConfirmAction, setDownloadProgress, withMultiDownloadWarning, videoSettings }: VideoStudioHookProps) => {
     const [studioImages, setStudioImages] = useState<StudioImage[]>([]);
     const [sessionId, setSessionId] = useState<string | null>(null);
     const [isPreparing, setIsPreparing] = useState(false);
@@ -172,6 +173,7 @@ export const useVideoStudio = ({ addToast, setConfirmAction, setDownloadProgress
                 startImageUrl: publicUrl,
                 videoPrompt: image.videoPrompt,
                 filename: image.id,
+                videoSettings,
             });
             setStudioImages(prev => prev.map(img => img.id === id ? { ...img, videoSrc, isGeneratingVideo: false, videoGenerationFailed: false } : img));
             addToast("Video generated!", "success");
@@ -199,6 +201,7 @@ export const useVideoStudio = ({ addToast, setConfirmAction, setDownloadProgress
                         startImageUrl: publicUrl,
                         videoPrompt: image.videoPrompt,
                         filename: image.id,
+                        videoSettings,
                     });
                 }
             }

@@ -694,3 +694,37 @@ export const analysisModels: { id: AnalysisModel; name: string }[] = [
     { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro' },
     { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash' },
 ];
+
+// --- VIDEO MODEL CONSTANTS ---
+
+import { VideoModel, VideoResolution, VideoDuration, VideoAspectRatio } from './types';
+
+export const videoModels: { id: VideoModel; name: string; description: string }[] = [
+    { id: 'seedance-v1-pro', name: 'Seedance v1 Pro', description: 'High-quality video generation with great motion control' },
+    { id: 'clink-2.5', name: 'Clink 2.5', description: 'Advanced video model with improved temporal consistency' },
+    { id: 'video-model-alpha', name: 'Video Model Alpha', description: 'Experimental video generation model (placeholder)' },
+    { id: 'video-model-beta', name: 'Video Model Beta', description: 'Next-generation video synthesis (placeholder)' },
+];
+
+export const videoResolutions: { label: string; value: VideoResolution }[] = [
+    { label: '480p', value: '480p' },
+    { label: '720p', value: '720p' },
+    { label: '1080p', value: '1080p' },
+    { label: '1440p', value: '1440p' },
+];
+
+export const videoDurations: { label: string; value: VideoDuration }[] = [
+    { label: '3 seconds', value: '3' },
+    { label: '5 seconds', value: '5' },
+    { label: '10 seconds', value: '10' },
+    { label: '15 seconds', value: '15' },
+];
+
+export const videoAspectRatios: { label: string; value: VideoAspectRatio }[] = [
+    { label: 'Auto', value: 'auto' },
+    { label: '1:1', value: '1:1' },
+    { label: '16:9', value: '16:9' },
+    { label: '9:16', value: '9:16' },
+    { label: '4:3', value: '4:3' },
+    { label: '3:4', value: '3:4' },
+];

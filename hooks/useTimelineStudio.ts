@@ -1,6 +1,6 @@
 /// <reference lib="dom" />
 import { useState, useCallback, useEffect } from 'react';
-import { StudioImage, TimelinePair, Toast as ToastType, TimelinePairWithImages, ImageForVideoProcessing } from '../types';
+import { StudioImage, TimelinePair, Toast as ToastType, TimelinePairWithImages, ImageForVideoProcessing, VideoSettings } from '../types';
 import { translateTextToEnglish, generateTimelineTransitionPrompt, prepareAllTimelinePrompts, enhanceGeneralPrompt } from '../services/timelineStudioService';
 import { dataUrlToBlob } from '../services/geminiClient';
 import { uploadImageFromDataUrl } from '../services/imageUploadService';
@@ -16,9 +16,10 @@ type TimelineStudioHookProps = {
     setConfirmAction: (action: any) => void;
     setDownloadProgress: (progress: { visible: boolean; message: string; progress: number }) => void;
     withMultiDownloadWarning: (action: () => void) => void;
+    videoSettings: VideoSettings;
 };
 
-export const useTimelineStudio = ({ addToast, setConfirmAction, setDownloadProgress, withMultiDownloadWarning }: TimelineStudioHookProps) => {
+export const useTimelineStudio = ({ addToast, setConfirmAction, setDownloadProgress, withMultiDownloadWarning, videoSettings }: TimelineStudioHookProps) => {
     const [timelineImages, setTimelineImages] = useState<StudioImage[]>([]);
     const [timelinePairs, setTimelinePairs] = useState<TimelinePair[]>([]);
     const [timelineAspectRatio, setTimelineAspectRatio] = useState<number>(4 / 5);
@@ -318,6 +319,7 @@ export const useTimelineStudio = ({ addToast, setConfirmAction, setDownloadProgr
                 endImageUrl,
                 videoPrompt: pair.videoPrompt,
                 filename: pair.id,
+                videoSettings,
             });
 
             setTimelinePairs(prev => prev.map(p => p.id === pairId ? { ...p, videoSrc, isGeneratingVideo: false, videoGenerationFailed: false } : p));
@@ -453,6 +455,7 @@ export const useTimelineStudio = ({ addToast, setConfirmAction, setDownloadProgr
                         endImageUrl,
                         videoPrompt: pair.videoPrompt,
                         filename: pair.id,
+                        videoSettings,
                     });
                 }
             }
