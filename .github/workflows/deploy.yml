@@ -5,11 +5,12 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# Only run if commit message contains #deploy or triggered manually
+
 env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
   SERVICE_NAME: ai-studio
   REGION: us-central1
-  REGISTRY: gcr.io
 
 jobs:
   deploy:
@@ -24,46 +25,80 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Check if deployment should run
+        id: should_deploy
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "Manual trigger - proceeding with deployment"
+            echo "deploy=true" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.event.head_commit.message }}" == *"#deploy"* ]]; then
+            echo "Commit message contains #deploy - proceeding with deployment"
+            echo "deploy=true" >> $GITHUB_OUTPUT
+          else
+            echo "Skipping deployment - commit message does not contain #deploy"
+            echo "deploy=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Deployment skipped
+        if: steps.should_deploy.outputs.deploy == 'false'
+        run: |
+          echo "### Deployment Skipped ⏭️" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Commit message does not contain \`#deploy\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "To trigger deployment, either:" >> $GITHUB_STEP_SUMMARY
+          echo "- Include \`#deploy\` in your commit message" >> $GITHUB_STEP_SUMMARY
+          echo "- Manually trigger the workflow from the Actions tab" >> $GITHUB_STEP_SUMMARY
+
       - name: Set up Node.js
+        if: steps.should_deploy.outputs.deploy == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: '18'
           cache: 'npm'
 
       - name: Install dependencies
+        if: steps.should_deploy.outputs.deploy == 'true'
         run: npm ci
 
       - name: Run build
+        if: steps.should_deploy.outputs.deploy == 'true'
         run: npm run build
 
       - name: Authenticate to Google Cloud
+        if: steps.should_deploy.outputs.deploy == 'true'
         id: auth
         uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
 
       - name: Set up Cloud SDK
+        if: steps.should_deploy.outputs.deploy == 'true'
         uses: google-github-actions/setup-gcloud@v2
 
-      - name: Configure Docker for GCR
+      - name: Configure Docker for Artifact Registry
+        if: steps.should_deploy.outputs.deploy == 'true'
         run: |
-          gcloud auth configure-docker gcr.io
+          gcloud auth configure-docker us-docker.pkg.dev
 
       - name: Build Docker image
+        if: steps.should_deploy.outputs.deploy == 'true'
         run: |
-          docker build -t $REGISTRY/$PROJECT_ID/$SERVICE_NAME:$GITHUB_SHA \
-                       -t $REGISTRY/$PROJECT_ID/$SERVICE_NAME:latest .
+          docker build -t us-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/$SERVICE_NAME:$GITHUB_SHA \
+                       -t us-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/$SERVICE_NAME:latest .
 
-      - name: Push Docker image to GCR
+      - name: Push Docker image to Artifact Registry
+        if: steps.should_deploy.outputs.deploy == 'true'
         run: |
-          docker push $REGISTRY/$PROJECT_ID/$SERVICE_NAME:$GITHUB_SHA
-          docker push $REGISTRY/$PROJECT_ID/$SERVICE_NAME:latest
+          docker push us-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/$SERVICE_NAME:$GITHUB_SHA
+          docker push us-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/$SERVICE_NAME:latest
 
       - name: Deploy to Cloud Run
+        if: steps.should_deploy.outputs.deploy == 'true'
         id: deploy
         run: |
           gcloud run deploy $SERVICE_NAME \
-            --image $REGISTRY/$PROJECT_ID/$SERVICE_NAME:$GITHUB_SHA \
+            --image us-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/$SERVICE_NAME:$GITHUB_SHA \
             --platform managed \
             --region $REGION \
             --allow-unauthenticated \
@@ -71,10 +106,11 @@ jobs:
             --memory 512Mi \
             --cpu 1 \
             --max-instances 10 \
-            --port 8080 \
+            --port 3000 \
             --quiet
 
       - name: Get Service URL
+        if: steps.should_deploy.outputs.deploy == 'true'
         run: |
           SERVICE_URL=$(gcloud run services describe $SERVICE_NAME \
             --platform managed \
@@ -84,11 +120,12 @@ jobs:
           echo "SERVICE_URL=$SERVICE_URL" >> $GITHUB_OUTPUT
 
       - name: Show deployment summary
+        if: steps.should_deploy.outputs.deploy == 'true'
         run: |
           echo "### Deployment Successful! :rocket:" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Service:** $SERVICE_NAME" >> $GITHUB_STEP_SUMMARY
           echo "**Region:** $REGION" >> $GITHUB_STEP_SUMMARY
-          echo "**Image:** $REGISTRY/$PROJECT_ID/$SERVICE_NAME:$GITHUB_SHA" >> $GITHUB_STEP_SUMMARY
+          echo "**Image:** us-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/$SERVICE_NAME:$GITHUB_SHA" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "Access your application at: $(gcloud run services describe $SERVICE_NAME --platform managed --region $REGION --format 'value(status.url)')" >> $GITHUB_STEP_SUMMARY
