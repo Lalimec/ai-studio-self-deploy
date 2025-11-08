@@ -36,10 +36,35 @@ The GitHub Actions workflow automatically:
 
 ---
 
+## Command Line Syntax
+
+**All commands below are shown in bash syntax** (for Linux/macOS).
+
+**If you're using Windows PowerShell**, make these changes:
+- Replace `\` (line continuation) with `` ` `` (backtick)
+- Replace `$VARIABLE` with `$env:VARIABLE`
+- Replace `export VARIABLE=value` with `$env:VARIABLE="value"`
+
+**Example:**
+```bash
+# Bash (Linux/macOS)
+gcloud run deploy ai-studio \
+  --region us-central1
+```
+
+```powershell
+# PowerShell (Windows)
+gcloud run deploy ai-studio `
+  --region us-central1
+```
+
+---
+
 ## Step 1: Set Up Google Cloud Project
 
 ### 1.1 Create or Select a Project
 
+**Bash (Linux/macOS):**
 ```bash
 # Create a new project
 gcloud projects create ai-studio-self-deploy --name="AI Studio Self Deploy"
@@ -50,6 +75,19 @@ gcloud projects list
 # Set the project
 export PROJECT_ID="ai-studio-self-deploy"
 gcloud config set project $PROJECT_ID
+```
+
+**PowerShell (Windows):**
+```powershell
+# Create a new project
+gcloud projects create ai-studio-self-deploy --name="AI Studio Self Deploy"
+
+# Or list existing projects
+gcloud projects list
+
+# Set the project
+$env:PROJECT_ID="ai-studio-self-deploy"
+gcloud config set project $env:PROJECT_ID
 ```
 
 ### 1.2 Enable Required APIs
@@ -84,6 +122,7 @@ Make sure billing is enabled for your project:
 
 ### 2.1 Create the Service Account
 
+**Bash (Linux/macOS):**
 ```bash
 # Set variables
 export PROJECT_ID="ai-studio-self-deploy"
@@ -96,8 +135,22 @@ gcloud iam service-accounts create $SA_NAME \
   --description="Service account for deploying from GitHub Actions"
 ```
 
+**PowerShell (Windows):**
+```powershell
+# Set variables
+$env:PROJECT_ID="ai-studio-self-deploy"
+$env:SA_NAME="github-actions-deployer"
+$env:SA_EMAIL="$env:SA_NAME@$env:PROJECT_ID.iam.gserviceaccount.com"
+
+# Create service account
+gcloud iam service-accounts create $env:SA_NAME `
+  --display-name="GitHub Actions Deployer" `
+  --description="Service account for deploying from GitHub Actions"
+```
+
 ### 2.2 Grant Required Roles
 
+**Bash (Linux/macOS):**
 ```bash
 # Cloud Run Admin (to deploy services)
 gcloud projects add-iam-policy-binding $PROJECT_ID \
@@ -120,8 +173,32 @@ gcloud projects add-iam-policy-binding $PROJECT_ID \
   --role="roles/cloudbuild.builds.editor"
 ```
 
+**PowerShell (Windows):**
+```powershell
+# Cloud Run Admin (to deploy services)
+gcloud projects add-iam-policy-binding $env:PROJECT_ID `
+  --member="serviceAccount:$env:SA_EMAIL" `
+  --role="roles/run.admin"
+
+# Storage Admin (to push/pull container images)
+gcloud projects add-iam-policy-binding $env:PROJECT_ID `
+  --member="serviceAccount:$env:SA_EMAIL" `
+  --role="roles/storage.admin"
+
+# Service Account User (to act as service account)
+gcloud projects add-iam-policy-binding $env:PROJECT_ID `
+  --member="serviceAccount:$env:SA_EMAIL" `
+  --role="roles/iam.serviceAccountUser"
+
+# Cloud Build Editor (to build containers)
+gcloud projects add-iam-policy-binding $env:PROJECT_ID `
+  --member="serviceAccount:$env:SA_EMAIL" `
+  --role="roles/cloudbuild.builds.editor"
+```
+
 ### 2.3 Create and Download Key
 
+**Bash (Linux/macOS):**
 ```bash
 # Create JSON key
 gcloud iam service-accounts keys create ~/gcp-key.json \
@@ -133,10 +210,24 @@ cat ~/gcp-key.json
 # IMPORTANT: Keep this file secure and delete after adding to GitHub
 ```
 
+**PowerShell (Windows):**
+```powershell
+# Create JSON key
+gcloud iam service-accounts keys create $HOME\gcp-key.json `
+  --iam-account=$env:SA_EMAIL
+
+# Display the key (you'll need this for GitHub)
+Get-Content $HOME\gcp-key.json
+
+# IMPORTANT: Keep this file secure and delete after adding to GitHub
+```
+
 **⚠️ Security Warning:**
 - Never commit this JSON key to your repository
 - Store it securely in GitHub Secrets only
-- Delete the local file after use: `rm ~/gcp-key.json`
+- Delete the local file after use:
+  - Bash: `rm ~/gcp-key.json`
+  - PowerShell: `Remove-Item $HOME\gcp-key.json`
 
 ---
 

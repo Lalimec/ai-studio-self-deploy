@@ -184,11 +184,10 @@ README.md
 
 ### Step 6: Build and Deploy to Cloud Run
 
-```bash
-# Set your Gemini API key as a secret
-echo -n "your_gemini_api_key_here" | gcloud secrets create gemini-api-key --data-file=-
+**For Linux/macOS (bash):**
 
-# Build and deploy in one command
+```bash
+# Build and deploy in one command (recommended - simplest method)
 gcloud run deploy ai-studio \
   --source . \
   --platform managed \
@@ -211,13 +210,51 @@ gcloud run deploy ai-studio \
   --set-env-vars GEMINI_API_KEY=your_key_here
 ```
 
+**For Windows (PowerShell):**
+
+```powershell
+# Build and deploy in one command (recommended - simplest method)
+gcloud run deploy ai-studio `
+  --source . `
+  --platform managed `
+  --region us-central1 `
+  --allow-unauthenticated `
+  --set-env-vars GEMINI_API_KEY=your_key_here `
+  --memory 512Mi `
+  --cpu 1 `
+  --max-instances 10 `
+  --port 8080
+
+# Or build separately and deploy
+gcloud builds submit --tag gcr.io/$env:PROJECT_ID/ai-studio
+
+gcloud run deploy ai-studio `
+  --image gcr.io/$env:PROJECT_ID/ai-studio `
+  --platform managed `
+  --region us-central1 `
+  --allow-unauthenticated `
+  --set-env-vars GEMINI_API_KEY=your_key_here
+```
+
+**Note:** Replace `your_key_here` with your actual Gemini API key.
+
 ### Step 7: Get Your Deployment URL
 
+**Linux/macOS:**
 ```bash
 # Get service URL
 gcloud run services describe ai-studio \
   --platform managed \
   --region us-central1 \
+  --format 'value(status.url)'
+```
+
+**Windows PowerShell:**
+```powershell
+# Get service URL
+gcloud run services describe ai-studio `
+  --platform managed `
+  --region us-central1 `
   --format 'value(status.url)'
 ```
 
