@@ -39,3 +39,4 @@ gha-creds-*.json
 cemil-scripts-*.json
 
 .claude
+settings.local.json
