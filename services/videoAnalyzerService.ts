@@ -151,12 +151,12 @@ export const analyzeVideo = async (
   model: AnalysisModel,
   onProgress: (message: string) => void
 ): Promise<{ analysis: VideoAnalysis, processedFile: { uri: string, mimeType: string } }> => {
-    // Use inline data (base64) for videos up to 30MB
+    // Use inline data (base64) for videos up to 50MB
     // This avoids File API header issues entirely
-    const MAX_INLINE_SIZE = 30 * 1024 * 1024; // 30MB
+    const MAX_INLINE_SIZE = 50 * 1024 * 1024; // 50MB
 
     if (videoFile.size > MAX_INLINE_SIZE) {
-        throw new Error(`Video file is too large (${(videoFile.size / 1024 / 1024).toFixed(1)}MB). Maximum size is 30MB. Please use a smaller video or compress it.`);
+        throw new Error(`Video file is too large (${(videoFile.size / 1024 / 1024).toFixed(1)}MB). Maximum size is 50MB. Please use a smaller video or compress it.`);
     }
 
     // Always use inline data for simplicity and to avoid File API issues
