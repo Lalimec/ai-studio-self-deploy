@@ -92,7 +92,33 @@ self.addEventListener('fetch', (event) => {
       const promise = fetch(new Request(proxyUrl, requestOptions))
         .then((response) => {
           console.log(`Service Worker: Successfully proxied request to ${proxyUrl}, Status: ${response.status}`);
-          return response;
+
+          // CRITICAL: Rename headers back from X-Upload-* to X-Goog-Upload-*
+          // The proxy renamed them to avoid Cloud Run stripping, now we restore for SDK
+          const headers = new Headers(response.headers);
+
+          const headerRenames = {
+            'X-Upload-URL': 'X-Goog-Upload-URL',
+            'X-Upload-Status': 'X-Goog-Upload-Status',
+            'X-Upload-Chunk-Granularity': 'X-Goog-Upload-Chunk-Granularity',
+            'X-Upload-Control-URL': 'X-Goog-Upload-Control-URL',
+          };
+
+          // Rename headers back to what the SDK expects
+          for (const [oldName, newName] of Object.entries(headerRenames)) {
+            if (headers.has(oldName)) {
+              const value = headers.get(oldName);
+              headers.set(newName, value);
+              console.log(`Service Worker: Renamed header ${oldName} → ${newName} = ${value}`);
+            }
+          }
+
+          // Create a new response with the renamed headers
+          return new Response(response.body, {
+            status: response.status,
+            statusText: response.statusText,
+            headers: headers
+          });
         })
         .catch((error) => {
           // Log more error details
