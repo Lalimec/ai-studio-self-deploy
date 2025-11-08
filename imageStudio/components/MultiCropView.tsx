@@ -1,6 +1,6 @@
 /// <reference lib="dom" />
-import React, { useState, useRef, useEffect, useMemo } from 'react';
-import ImageCropper, { ImageCropperRef } from '../ImageCrop';
+import React, { useState, useRef, useEffect } from 'react';
+import EmbeddedImageCropper, { ImageCropperRef } from './EmbeddedImageCropper';
 import { dataURLtoFile } from '../utils/fileUtils';
 import { CROP_RATIOS } from '../constants';
 import { PiCheck, PiSpinner } from 'react-icons/pi';
@@ -15,15 +15,31 @@ export const MultiCropView: React.FC<MultiCropViewProps> = ({ files, onConfirm, 
     const [aspectRatio, setAspectRatio] = useState(CROP_RATIOS.find(r => r.label === '4:5')?.value || 4/5);
     const cropperRefs = useRef<(ImageCropperRef | null)[]>([]);
     const [isProcessing, setIsProcessing] = useState(false);
+    const [imageUrls, setImageUrls] = useState<string[]>([]);
 
     useEffect(() => {
         cropperRefs.current = cropperRefs.current.slice(0, files.length);
     }, [files]);
-    
-    const imageUrls = useMemo(() => files.map(file => URL.createObjectURL(file)), [files]);
+
+    // Convert Files to data URLs (same approach as single-image cropper)
     useEffect(() => {
-        return () => imageUrls.forEach(url => URL.revokeObjectURL(url));
-    }, [imageUrls]);
+        const loadImages = async () => {
+            const dataUrls = await Promise.all(
+                files.map(file => {
+                    return new Promise<string>((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                            resolve(e.target?.result as string);
+                        };
+                        reader.onerror = reject;
+                        reader.readAsDataURL(file);
+                    });
+                })
+            );
+            setImageUrls(dataUrls);
+        };
+        loadImages();
+    }, [files]);
 
     const handleConfirm = async () => {
         setIsProcessing(true);
@@ -78,18 +94,24 @@ export const MultiCropView: React.FC<MultiCropViewProps> = ({ files, onConfirm, 
                 </div>
             </div>
             <main className="flex-grow w-full max-w-7xl mx-auto">
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                    {imageUrls.map((url, index) => (
-                        <div key={url} className="flex flex-col gap-2">
-                             <ImageCropper
-                                ref={el => { cropperRefs.current[index] = el; }}
-                                imageSrc={url}
-                                aspectRatio={aspectRatio}
-                            />
-                            <p className="text-xs text-slate-500 truncate text-center" title={files[index].name}>{files[index].name}</p>
-                        </div>
-                    ))}
-                </div>
+                {imageUrls.length === 0 ? (
+                    <div className="flex items-center justify-center h-full">
+                        <div className="text-slate-500 text-lg">Loading images...</div>
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                        {imageUrls.map((url, index) => (
+                            <div key={`${files[index].name}-${index}`} className="flex flex-col gap-2">
+                                 <EmbeddedImageCropper
+                                    ref={el => { cropperRefs.current[index] = el; }}
+                                    imageSrc={url}
+                                    aspectRatio={aspectRatio}
+                                />
+                                <p className="text-xs text-slate-500 truncate text-center" title={files[index].name}>{files[index].name}</p>
+                            </div>
+                        ))}
+                    </div>
+                )}
             </main>
         </div>
     );

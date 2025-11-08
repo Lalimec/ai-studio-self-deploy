@@ -23,14 +23,27 @@ const CROP_RATIOS = [
 const ImageCropper: React.FC<ImageCropperProps> = ({ imageSrc, onCropConfirm, onCancel }) => {
   const [scale, setScale] = useState(1);
   const [minScale, setMinScale] = useState(1);
+  const [sliderValue, setSliderValue] = useState(0); // 0-100 for natural feeling
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
   const [isPanning, setIsPanning] = useState(false);
   const [aspectRatio, setAspectRatio] = useState(4 / 5);
-  
+
+  const maxScale = 3; // Reduced from 5 for more reasonable zoom range
   const imageRef = useRef<HTMLImageElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const panStartRef = useRef({ x: 0, y: 0 });
+
+  // Convert slider value (0-100) to scale (minScale to maxScale) using exponential curve
+  const sliderToScale = useCallback((slider: number): number => {
+    return minScale * Math.pow(maxScale / minScale, slider / 100);
+  }, [minScale]);
+
+  // Convert scale to slider value (0-100)
+  const scaleToSlider = useCallback((scaleVal: number): number => {
+    if (minScale >= maxScale) return 0;
+    return 100 * Math.log(scaleVal / minScale) / Math.log(maxScale / minScale);
+  }, [minScale]);
 
   const clampPosition = useCallback((pos: { x: number; y: number }, currentScale: number) => {
     if (!containerRef.current || !imageSize.width || !imageSize.height) return { x: 0, y: 0 };
@@ -64,13 +77,14 @@ const ImageCropper: React.FC<ImageCropperProps> = ({ imageSrc, onCropConfirm, on
 
     const cropBoxWidth = Math.min(containerWidth, containerHeight * currentAspectRatio);
     const cropBoxHeight = cropBoxWidth / currentAspectRatio;
-    
+
     const scaleX = cropBoxWidth / imageSize.width;
     const scaleY = cropBoxHeight / imageSize.height;
     const newMinScale = Math.max(scaleX, scaleY);
-    
+
     setMinScale(newMinScale);
     setScale(newMinScale);
+    setSliderValue(0); // Reset slider to minimum
     setPosition({ x: 0, y: 0 });
   }, [imageSize.width, imageSize.height]);
   
@@ -126,21 +140,24 @@ const ImageCropper: React.FC<ImageCropperProps> = ({ imageSrc, onCropConfirm, on
   const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
-    const zoomFactor = 0.001; // Controls sensitivity
+    const zoomFactor = 0.0003; // Much slower zoom for finer control
     const newScale = scale * (1 - e.deltaY * zoomFactor);
-    const clampedScale = Math.max(minScale, Math.min(5, newScale));
+    const clampedScale = Math.max(minScale, Math.min(maxScale, newScale));
     setScale(clampedScale);
+    setSliderValue(scaleToSlider(clampedScale));
     setPosition(prev => clampPosition(prev, clampedScale));
   };
-  
+
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     e.preventDefault();
     panStartRef.current = { x: e.clientX - position.x, y: e.clientY - position.y };
     setIsPanning(true);
   };
-  
+
   const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newScale = parseFloat(e.target.value);
+    const newSliderValue = parseFloat(e.target.value);
+    const newScale = sliderToScale(newSliderValue);
+    setSliderValue(newSliderValue);
     setScale(newScale);
     setPosition(prev => clampPosition(prev, newScale));
   };
@@ -215,10 +232,10 @@ const ImageCropper: React.FC<ImageCropperProps> = ({ imageSrc, onCropConfirm, on
           <input
             id="zoom-slider"
             type="range"
-            min={minScale}
-            max={5}
-            step={0.01}
-            value={scale}
+            min={0}
+            max={100}
+            step={0.1}
+            value={sliderValue}
             onChange={handleSliderChange}
             className="w-full h-2 bg-[var(--color-border-default)] rounded-lg appearance-none cursor-pointer accent-[var(--color-primary)]"
             title="Adjust image zoom"

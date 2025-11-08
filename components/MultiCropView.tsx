@@ -30,20 +30,42 @@ export const MultiCropView: React.FC<MultiCropViewProps> = ({ files, onConfirm, 
     const [aspectRatio, setAspectRatio] = useState(CROP_RATIOS.find(r => r.label === '4:5')?.value || 4/5);
     const cropperRefs = useRef<(ImageCropperRef | null)[]>([]);
     const [isProcessing, setIsProcessing] = useState(false);
+    const [imageUrls, setImageUrls] = useState<string[]>([]);
 
     useEffect(() => {
         cropperRefs.current = cropperRefs.current.slice(0, files.length);
     }, [files]);
-    
-    const imageUrls = useMemo(() => files.map(file => URL.createObjectURL(file)), [files]);
+
+    // Convert Files to data URLs (like the single-image cropper does)
     useEffect(() => {
-        return () => imageUrls.forEach(url => URL.revokeObjectURL(url));
-    }, [imageUrls]);
+        const loadImages = async () => {
+            const dataUrls = await Promise.all(
+                files.map(file => {
+                    return new Promise<string>((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                            resolve(e.target?.result as string);
+                        };
+                        reader.onerror = reject;
+                        reader.readAsDataURL(file);
+                    });
+                })
+            );
+            setImageUrls(dataUrls);
+        };
+        loadImages();
+    }, [files]);
 
     const handleConfirm = async () => {
         setIsProcessing(true);
         try {
-            const cropPromises = cropperRefs.current.map(ref => ref?.crop() || Promise.reject("Missing cropper ref"));
+            const cropPromises = cropperRefs.current.map((ref, index) => {
+                if (!ref) {
+                    throw new Error(`Missing cropper ref for image ${index + 1}`);
+                }
+                return ref.crop();
+            });
+
             const dataUrls = await Promise.all(cropPromises);
             const croppedFiles = dataUrls.map((dataUrl, index) => {
                 const originalFile = files[index];
@@ -52,6 +74,7 @@ export const MultiCropView: React.FC<MultiCropViewProps> = ({ files, onConfirm, 
             onConfirm(croppedFiles, aspectRatio);
         } catch (error) {
             console.error("Failed to crop images:", error);
+            alert(`Cropping failed: ${error}\n\nPlease try again.`);
             setIsProcessing(false);
         }
     };
@@ -92,18 +115,24 @@ export const MultiCropView: React.FC<MultiCropViewProps> = ({ files, onConfirm, 
                 </div>
             </div>
             <main className="flex-grow w-full max-w-7xl mx-auto overflow-y-auto custom-scrollbar">
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                    {imageUrls.map((url, index) => (
-                        <div key={url} className="flex flex-col gap-2">
-                             <EmbeddedImageCropper
-                                ref={el => { cropperRefs.current[index] = el; }}
-                                imageSrc={url}
-                                aspectRatio={aspectRatio}
-                            />
-                            <p className="text-xs text-[var(--color-text-dimmer)] truncate text-center" title={files[index].name}>{files[index].name}</p>
-                        </div>
-                    ))}
-                </div>
+                {imageUrls.length === 0 ? (
+                    <div className="flex items-center justify-center h-full">
+                        <div className="text-[var(--color-text-dim)] text-lg">Loading images...</div>
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                        {imageUrls.map((url, index) => (
+                            <div key={`${files[index].name}-${index}`} className="flex flex-col gap-2">
+                                 <EmbeddedImageCropper
+                                    ref={el => { cropperRefs.current[index] = el; }}
+                                    imageSrc={url}
+                                    aspectRatio={aspectRatio}
+                                />
+                                <p className="text-xs text-[var(--color-text-dimmer)] truncate text-center" title={files[index].name}>{files[index].name}</p>
+                            </div>
+                        ))}
+                    </div>
+                )}
             </main>
         </div>
     );

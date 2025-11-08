@@ -10,16 +10,30 @@ interface ImageCropperProps {
   aspectRatio: number;
 }
 
-const ImageStudioCropper = forwardRef<ImageCropperRef, ImageCropperProps>(({ imageSrc, aspectRatio }, ref) => {
+const EmbeddedImageCropper = forwardRef<ImageCropperRef, ImageCropperProps>(({ imageSrc, aspectRatio }, ref) => {
   const [scale, setScale] = useState(1);
   const [minScale, setMinScale] = useState(1);
+  const [sliderValue, setSliderValue] = useState(0); // 0-100 for natural feeling
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
   const [isPanning, setIsPanning] = useState(false);
-  
+  const [isImageLoaded, setIsImageLoaded] = useState(false);
+
+  const maxScale = 3; // Reduced from 5 for more reasonable zoom range
   const imageRef = useRef<HTMLImageElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const panStartRef = useRef({ x: 0, y: 0 });
+
+  // Convert slider value (0-100) to scale (minScale to maxScale) using exponential curve
+  const sliderToScale = useCallback((slider: number): number => {
+    return minScale * Math.pow(maxScale / minScale, slider / 100);
+  }, [minScale]);
+
+  // Convert scale to slider value (0-100)
+  const scaleToSlider = useCallback((scaleVal: number): number => {
+    if (minScale >= maxScale) return 0;
+    return 100 * Math.log(scaleVal / minScale) / Math.log(maxScale / minScale);
+  }, [minScale]);
 
   const clampPosition = useCallback((pos: { x: number; y: number }, currentScale: number) => {
     if (!containerRef.current || !imageSize.width || !imageSize.height) return { x: 0, y: 0 };
@@ -53,23 +67,30 @@ const ImageStudioCropper = forwardRef<ImageCropperRef, ImageCropperProps>(({ ima
 
     const cropBoxWidth = Math.min(containerWidth, containerHeight * currentAspectRatio);
     const cropBoxHeight = cropBoxWidth / currentAspectRatio;
-    
+
     const scaleX = cropBoxWidth / imageSize.width;
     const scaleY = cropBoxHeight / imageSize.height;
     const newMinScale = Math.max(scaleX, scaleY);
-    
+
     setMinScale(newMinScale);
     setScale(newMinScale);
+    setSliderValue(0); // Reset slider to minimum
     setPosition({ x: 0, y: 0 });
   }, [imageSize.width, imageSize.height]);
   
   useEffect(() => {
+    // Reset loaded state when image source changes
+    setIsImageLoaded(false);
     const img = new Image();
     img.src = imageSrc;
     img.onload = () => {
         setImageSize({ width: img.naturalWidth, height: img.naturalHeight });
     };
   }, [imageSrc]);
+
+  const handleImageLoad = useCallback(() => {
+    setIsImageLoaded(true);
+  }, []);
 
   useEffect(() => {
     if (imageSize.width > 0 && containerRef.current) {
@@ -120,6 +141,10 @@ const ImageStudioCropper = forwardRef<ImageCropperRef, ImageCropperProps>(({ ima
             throw new Error("Cropper is not ready.");
         }
 
+        if (!isImageLoaded || !image.complete || image.naturalWidth === 0) {
+            throw new Error("Image has not finished loading yet.");
+        }
+
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
         if (!ctx) {
@@ -152,46 +177,55 @@ const ImageStudioCropper = forwardRef<ImageCropperRef, ImageCropperProps>(({ ima
             sourceWidth,
             sourceHeight
         );
-        
+
         return canvas.toDataURL('image/jpeg', 0.95);
     },
-  }));
+  }), [aspectRatio, scale, position, isImageLoaded]);
 
   const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
-    const zoomFactor = 0.001; // Controls sensitivity
+    const zoomFactor = 0.0003; // Much slower zoom for finer control
     const newScale = scale * (1 - e.deltaY * zoomFactor);
-    const clampedScale = Math.max(minScale, Math.min(5, newScale));
+    const clampedScale = Math.max(minScale, Math.min(maxScale, newScale));
     setScale(clampedScale);
+    setSliderValue(scaleToSlider(clampedScale));
     setPosition(prev => clampPosition(prev, clampedScale));
   };
-  
+
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     e.preventDefault();
     panStartRef.current = { x: e.clientX - position.x, y: e.clientY - position.y };
     setIsPanning(true);
   };
-  
+
   const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newScale = parseFloat(e.target.value);
+    const newSliderValue = parseFloat(e.target.value);
+    const newScale = sliderToScale(newSliderValue);
+    setSliderValue(newSliderValue);
     setScale(newScale);
     setPosition(prev => clampPosition(prev, newScale));
   };
   
   return (
-    <div className="w-full aspect-square flex flex-col items-center bg-[var(--color-bg-surface-light)] border border-[var(--color-border-default)] rounded-lg shadow-sm p-2 gap-2">
-        <div 
+    <div className="w-full aspect-square flex flex-col items-center bg-[var(--color-bg-surface)] border border-[var(--color-border-muted)] rounded-lg shadow-sm p-2 gap-2">
+        <div
           ref={containerRef}
           className="relative w-full h-full bg-black rounded-md overflow-hidden cursor-move select-none"
           onMouseDown={handleMouseDown}
           onWheelCapture={handleWheel}
         >
+          {!isImageLoaded && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-10">
+              <div className="text-white text-sm">Loading...</div>
+            </div>
+          )}
           <img
             ref={imageRef}
             src={imageSrc}
             alt="To be cropped"
             className="max-w-none"
+            onLoad={handleImageLoad}
             style={{
               transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
               transformOrigin: 'center center',
@@ -200,17 +234,18 @@ const ImageStudioCropper = forwardRef<ImageCropperRef, ImageCropperProps>(({ ima
               top: '50%',
               marginLeft: `-${imageSize.width/2}px`,
               marginTop: `-${imageSize.height/2}px`,
+              opacity: isImageLoaded ? 1 : 0,
             }}
           />
-          <div 
+          <div
             className="absolute inset-0 m-auto border-2 border-white/80 pointer-events-none"
-            style={{ 
-              aspectRatio: aspectRatio, 
-              width: 'auto', 
-              height: 'auto', 
-              maxWidth: '100%', 
-              maxHeight: '100%', 
-              boxShadow: '0 0 0 9999px rgba(0,0,0,0.5)' 
+            style={{
+              aspectRatio: aspectRatio,
+              width: 'auto',
+              height: 'auto',
+              maxWidth: '100%',
+              maxHeight: '100%',
+              boxShadow: `0 0 0 9999px var(--color-bg-overlay)`
             }}
           ></div>
         </div>
@@ -219,12 +254,12 @@ const ImageStudioCropper = forwardRef<ImageCropperRef, ImageCropperProps>(({ ima
             <input
                 id={`zoom-slider-${imageSrc}`}
                 type="range"
-                min={minScale}
-                max={5}
-                step={0.01}
-                value={scale}
+                min={0}
+                max={100}
+                step={0.1}
+                value={sliderValue}
                 onChange={handleSliderChange}
-                className="w-full h-1.5 bg-[var(--color-bg-muted-hover)] rounded-lg appearance-none cursor-pointer accent-[var(--color-primary)]"
+                className="w-full h-1.5 bg-[var(--color-border-default)] rounded-lg appearance-none cursor-pointer accent-[var(--color-primary)]"
                 title="Adjust image zoom"
             />
         </div>
@@ -232,4 +267,4 @@ const ImageStudioCropper = forwardRef<ImageCropperRef, ImageCropperProps>(({ ima
   );
 });
 
-export default ImageStudioCropper;
+export default EmbeddedImageCropper;
