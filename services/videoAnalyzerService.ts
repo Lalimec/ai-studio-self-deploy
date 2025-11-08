@@ -5,6 +5,7 @@ import { VideoAnalysis, AdIdea, AnalysisModel, ImageModel, AspectRatio, JsonPars
 import { systemInstructionForAnalysis, getSystemInstructionForConcept } from "../prompts/videoAnalyzerPrompts";
 import { generateFigureImage } from "./geminiService";
 import { Constance } from "./endpoints";
+import { uploadVideoToGCS } from "./videoUploadService";
 
 export const parseTimestamp = (timestamp: string): number => {
     const parts = timestamp.split(/[:.]/);
@@ -72,12 +73,58 @@ export const generateAnalysis = async (
     model: AnalysisModel,
     onProgress: (message: string) => void
 ): Promise<VideoAnalysis> => {
-    onProgress('File is ACTIVE. Proceeding with analysis.');
+    onProgress('Starting video analysis with Gemini...');
 
     const videoPart = {
         fileData: {
             mimeType: processedFile.mimeType,
             fileUri: processedFile.uri,
+        },
+    };
+
+    const response = await ai.models.generateContent({
+        model: model,
+        contents: [{
+            parts: [
+                videoPart,
+                { text: "Analyze this video ad based on your instructions and provide the complete JSON output." }
+            ]
+        }],
+        config: {
+            systemInstruction: systemInstructionForAnalysis,
+            tools: [{ googleSearch: {} }],
+        },
+    });
+
+    onProgress('Analysis complete. Parsing results.');
+    return parseAnalysisResponse(response.text);
+};
+
+// New function for inline data (small videos)
+export const generateAnalysisWithInlineData = async (
+    videoFile: File,
+    model: AnalysisModel,
+    onProgress: (message: string) => void
+): Promise<VideoAnalysis> => {
+    onProgress('Converting video to base64...');
+
+    const base64Data = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            const result = reader.result as string;
+            const base64 = result.split(',')[1];
+            resolve(base64);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(videoFile);
+    });
+
+    onProgress('Analyzing video with Gemini (inline mode)...');
+
+    const videoPart = {
+        inlineData: {
+            mimeType: videoFile.type,
+            data: base64Data,
         },
     };
 
@@ -105,42 +152,65 @@ export const analyzeVideo = async (
   model: AnalysisModel,
   onProgress: (message: string) => void
 ): Promise<{ analysis: VideoAnalysis, processedFile: { uri: string, mimeType: string } }> => {
-    onProgress("Uploading video with 15 FPS capture...");
-    const uploadResult = await ai.files.upload({
-        file: videoFile,
-        videoProcessingOptions: {
-            frameRateCaptureConfig: {
-                frameRate: 15,
+    // For small videos (< 20MB), use inline data to bypass File API issues
+    const MAX_INLINE_SIZE = 20 * 1024 * 1024; // 20MB
+
+    if (videoFile.size < MAX_INLINE_SIZE) {
+        onProgress("Processing video inline (small file)...");
+        const analysis = await generateAnalysisWithInlineData(videoFile, model, onProgress);
+        return {
+            analysis,
+            processedFile: {
+                uri: 'inline-data',
+                mimeType: videoFile.type
+            }
+        };
+    }
+
+    // For larger videos, use Gemini File API
+    onProgress("Uploading video to Gemini File API...");
+    try {
+        const uploadResult = await ai.files.upload({
+            file: videoFile,
+            videoProcessingOptions: {
+                frameRateCaptureConfig: {
+                    frameRate: 15,
+                },
             },
-        },
-    });
-    onProgress(`Video uploaded: ${uploadResult.name}. Waiting for processing...`);
+        });
+        onProgress(`Video uploaded: ${uploadResult.name}. Waiting for processing...`);
 
-    const fileName = uploadResult.name;
-    let file = await ai.files.get({ name: fileName });
+        const fileName = uploadResult.name;
+        let file = await ai.files.get({ name: fileName });
 
-    const maxRetries = 20;
-    let retries = 0;
+        const maxRetries = 20;
+        let retries = 0;
 
-    while (file.state === 'PROCESSING' && retries < maxRetries) {
-        await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds
-        file = await ai.files.get({ name: fileName });
-        retries++;
-        onProgress(`File state is ${file.state}, attempt ${retries}/${maxRetries}`);
+        while (file.state === 'PROCESSING' && retries < maxRetries) {
+            await new Promise(resolve => setTimeout(resolve, 5000));
+            file = await ai.files.get({ name: fileName });
+            retries++;
+            onProgress(`Processing video, attempt ${retries}/${maxRetries}...`);
+        }
+
+        if (file.state !== 'ACTIVE') {
+            throw new Error(`File processing failed. Final state: ${file.state}`);
+        }
+
+        const processedFileInfo = {
+            uri: file.uri,
+            mimeType: file.mimeType,
+        };
+
+        const analysis = await generateAnalysis(processedFileInfo, model, onProgress);
+
+        return { analysis, processedFile: processedFileInfo };
+    } catch (error: any) {
+        if (error.message?.includes('upload url') || error.message?.includes('x-google-upload-url')) {
+            throw new Error('File API upload failed due to SDK bug. Try using a smaller video (< 20MB) or wait for SDK fix. Error: ' + error.message);
+        }
+        throw error;
     }
-
-    if (file.state !== 'ACTIVE') {
-        throw new Error(`File processing failed. Final state: ${file.state}`);
-    }
-
-    const processedFileInfo = {
-        uri: file.uri,
-        mimeType: file.mimeType,
-    };
-
-    const analysis = await generateAnalysis(processedFileInfo, model, onProgress);
-
-    return { analysis, processedFile: processedFileInfo };
 };
 
 

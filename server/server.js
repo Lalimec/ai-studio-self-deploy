@@ -155,6 +155,18 @@ app.use('/api-proxy', async (req, res, next) => {
             'X-Goog-Upload-Chunk-Granularity',
             'X-Goog-Upload-Control-URL',
         ];
+
+        // Also expose all x-goog-upload-header-* headers that Cloud Run might strip
+        // These are metadata headers from Google's upload API
+        for (const header in apiResponse.headers) {
+            const lowerHeader = header.toLowerCase();
+            if (lowerHeader.startsWith('x-goog-upload-header-') ||
+                lowerHeader.startsWith('x-guploader-') ||
+                lowerHeader === 'x-google-trace') {
+                exposedHeaders.push(header);
+            }
+        }
+
         const existingExposed = res.getHeader('Access-Control-Expose-Headers');
         const allExposed = existingExposed
             ? `${existingExposed}, ${exposedHeaders.join(', ')}`
