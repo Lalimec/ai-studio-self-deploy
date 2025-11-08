@@ -79,26 +79,26 @@ jobs:
       - name: Configure Docker for Artifact Registry
         if: steps.should_deploy.outputs.deploy == 'true'
         run: |
-          gcloud auth configure-docker us-docker.pkg.dev
+          gcloud auth configure-docker us-central1-docker.pkg.dev
 
       - name: Build Docker image
         if: steps.should_deploy.outputs.deploy == 'true'
         run: |
-          docker build -t us-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/$SERVICE_NAME:$GITHUB_SHA \
-                       -t us-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/$SERVICE_NAME:latest .
+          docker build -t us-central1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/$SERVICE_NAME:$GITHUB_SHA \
+                       -t us-central1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/$SERVICE_NAME:latest .
 
       - name: Push Docker image to Artifact Registry
         if: steps.should_deploy.outputs.deploy == 'true'
         run: |
-          docker push us-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/$SERVICE_NAME:$GITHUB_SHA
-          docker push us-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/$SERVICE_NAME:latest
+          docker push us-central1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/$SERVICE_NAME:$GITHUB_SHA
+          docker push us-central1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/$SERVICE_NAME:latest
 
       - name: Deploy to Cloud Run
         if: steps.should_deploy.outputs.deploy == 'true'
         id: deploy
         run: |
           gcloud run deploy $SERVICE_NAME \
-            --image us-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/$SERVICE_NAME:$GITHUB_SHA \
+            --image us-central1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/$SERVICE_NAME:$GITHUB_SHA \
             --platform managed \
             --region $REGION \
             --allow-unauthenticated \
@@ -126,6 +126,6 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Service:** $SERVICE_NAME" >> $GITHUB_STEP_SUMMARY
           echo "**Region:** $REGION" >> $GITHUB_STEP_SUMMARY
-          echo "**Image:** us-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/$SERVICE_NAME:$GITHUB_SHA" >> $GITHUB_STEP_SUMMARY
+          echo "**Image:** us-central1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/$SERVICE_NAME:$GITHUB_SHA" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "Access your application at: $(gcloud run services describe $SERVICE_NAME --platform managed --region $REGION --format 'value(status.url)')" >> $GITHUB_STEP_SUMMARY
