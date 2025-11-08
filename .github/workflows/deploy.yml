@@ -9,7 +9,7 @@ on:
 
 env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
-  SERVICE_NAME: ai-studio
+  SERVICE_NAME: ai-studio-v2
   REGION: us-central1
 
 jobs:
