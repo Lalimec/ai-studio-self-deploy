@@ -1,8 +1,8 @@
 import { useState, useCallback } from 'react';
-import { 
-    BabyGenerationOptions, BabyAge, BabyGender, GeneratedBabyImage, Toast as ToastType, ParentImageState, ImageForVideoProcessing 
+import {
+    BabyGenerationOptions, BabyAge, BabyGender, GeneratedBabyImage, Toast as ToastType, ParentImageState, ImageForVideoProcessing, VideoSettings
 } from '../types';
-import { 
+import {
     generateBabyImages, prepareBabyVideoPrompts, generateVideoPromptForBabyImage
 } from '../services/babyStudioService';
 import { dataUrlToBlob } from '../services/geminiClient';
@@ -21,9 +21,10 @@ type BabyStudioHookProps = {
     withMultiDownloadWarning: (action: () => void) => void;
     setDownloadProgress: (progress: { visible: boolean; message: string; progress: number }) => void;
     useNanoBananaWebhook: boolean;
+    videoSettings: VideoSettings;
 };
 
-export const useBabyStudio = ({ addToast, setConfirmAction, withMultiDownloadWarning, setDownloadProgress, useNanoBananaWebhook }: BabyStudioHookProps) => {
+export const useBabyStudio = ({ addToast, setConfirmAction, withMultiDownloadWarning, setDownloadProgress, useNanoBananaWebhook, videoSettings }: BabyStudioHookProps) => {
     const [parent1, setParent1] = useState<ParentImageState>({...initialParentState, id: 'parent1'});
     const [parent2, setParent2] = useState<ParentImageState>({...initialParentState, id: 'parent2'});
     const [options, setOptions] = useState<BabyGenerationOptions>({
@@ -277,6 +278,7 @@ export const useBabyStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
                         startImageUrl: publicUrl,
                         videoPrompt: item.videoPrompt,
                         filename: filename,
+                        videoSettings,
                     });
                 }
             }
@@ -355,6 +357,7 @@ export const useBabyStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
                 startImageUrl: publicUrl,
                 videoPrompt: image.videoPrompt,
                 filename: image.filename,
+                videoSettings,
             });
             setGeneratedImages(prev => prev.map(img => img.filename === filename ? { ...img, videoSrc, isGeneratingVideo: false, videoGenerationFailed: false } : img));
             addToast("Video generated!", "success");
@@ -409,6 +412,7 @@ export const useBabyStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
                 startImageUrl: publicUrl,
                 videoPrompt: parent.videoPrompt,
                 filename: parent.filename || `${parentId}.jpg`,
+                videoSettings,
             });
             setParent(p => ({ ...p, videoSrc, isGeneratingVideo: false, videoGenerationFailed: false }));
             addToast(`Video for ${parentId} generated!`, "success");

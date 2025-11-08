@@ -1,10 +1,10 @@
 /// <reference lib="dom" />
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import JSZip from 'jszip';
-import { 
-    GeneratedImage, GeneratedBabyImage, Toast as ToastType, 
+import {
+    GeneratedImage, GeneratedBabyImage, Toast as ToastType,
     DisplayImage, StudioImage, ImageStudioResultImage, VariationState,
-    NanoBananaWebhookSettings
+    NanoBananaWebhookSettings, VideoSettings, VideoModel
 } from './types';
 
 import { useHairStudio } from './hooks/useHairStudio';
@@ -117,6 +117,37 @@ function App() {
     }
   };
 
+  // --- Video Settings State ---
+  const [videoSettings, setVideoSettings] = useState<VideoSettings>(() => {
+    try {
+        const stored = localStorage.getItem('videoSettings');
+        if (stored) {
+            return JSON.parse(stored);
+        }
+    } catch (error) {
+        console.error("Could not load video settings from localStorage", error);
+    }
+    // Default video settings
+    return {
+        selectedModel: 'seedance-v1-pro',
+        modelParameters: {
+            'seedance-v1-pro': { resolution: '720p', duration: '5', aspectRatio: 'auto' },
+            'clink-2.5': { resolution: '720p', duration: '5', aspectRatio: 'auto' },
+            'video-model-alpha': { resolution: '720p', duration: '5', aspectRatio: 'auto' },
+            'video-model-beta': { resolution: '720p', duration: '5', aspectRatio: 'auto' },
+        }
+    };
+  });
+
+  const handleUpdateVideoSettings = (settings: VideoSettings) => {
+    setVideoSettings(settings);
+    try {
+        localStorage.setItem('videoSettings', JSON.stringify(settings));
+    } catch (error) {
+        console.error("Could not save video settings to localStorage", error);
+    }
+  };
+
   useEffect(() => {
     if (!showBetaFeatures && (appMode === 'adCloner' || appMode === 'videoAnalyzer')) {
         setAppMode('hairStudio');
@@ -149,10 +180,10 @@ function App() {
   }, []);
 
   // --- Studio Hooks ---
-  const hairStudioLogic = useHairStudio({ addToast, setConfirmAction, withMultiDownloadWarning, setDownloadProgress, useNanoBananaWebhook: nanoBananaWebhookSettings.hair });
-  const babyStudioLogic = useBabyStudio({ addToast, setConfirmAction, withMultiDownloadWarning, setDownloadProgress, useNanoBananaWebhook: nanoBananaWebhookSettings.baby });
-  const videoStudioLogic = useVideoStudio({ addToast, setConfirmAction, setDownloadProgress, withMultiDownloadWarning });
-  const timelineStudioLogic = useTimelineStudio({ addToast, setConfirmAction, setDownloadProgress, withMultiDownloadWarning });
+  const hairStudioLogic = useHairStudio({ addToast, setConfirmAction, withMultiDownloadWarning, setDownloadProgress, useNanoBananaWebhook: nanoBananaWebhookSettings.hair, videoSettings });
+  const babyStudioLogic = useBabyStudio({ addToast, setConfirmAction, withMultiDownloadWarning, setDownloadProgress, useNanoBananaWebhook: nanoBananaWebhookSettings.baby, videoSettings });
+  const videoStudioLogic = useVideoStudio({ addToast, setConfirmAction, setDownloadProgress, withMultiDownloadWarning, videoSettings });
+  const timelineStudioLogic = useTimelineStudio({ addToast, setConfirmAction, setDownloadProgress, withMultiDownloadWarning, videoSettings });
   const imageStudioLogic = useImageStudioLogic(addToast, setConfirmAction, setDownloadProgress, withMultiDownloadWarning, nanoBananaWebhookSettings.image);
   const adClonerLogic = useAdCloner({ addToast, setConfirmAction, withMultiDownloadWarning, setDownloadProgress, useNanoBananaWebhook: nanoBananaWebhookSettings.adCloner });
   const videoAnalyzerLogic = useVideoAnalyzerStudio({ addToast, setConfirmAction, setDownloadProgress, withMultiDownloadWarning, useNanoBananaWebhook: nanoBananaWebhookSettings.videoAnalyzer });
@@ -533,6 +564,8 @@ function App() {
             onToggleBetaFeatures={handleSetShowBetaFeatures}
             nanoBananaWebhookSettings={nanoBananaWebhookSettings}
             onToggleNanoBananaWebhookSetting={handleSetNanoBananaWebhookSetting}
+            videoSettings={videoSettings}
+            onUpdateVideoSettings={handleUpdateVideoSettings}
         />
       )}
     </div>

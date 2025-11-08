@@ -1,4 +1,4 @@
-import { ImageForVideoProcessing, GeneratedImage, StudioImage, GeneratedBabyImage } from '../types';
+import { ImageForVideoProcessing, GeneratedImage, StudioImage, GeneratedBabyImage, VideoSettings, VideoModel } from '../types';
 import { processWithConcurrency } from './apiUtils';
 import { ai, dataUrlToBlob as dataUrlToBlobUtil } from './geminiClient';
 import { GenerateContentResponse } from '@google/genai';
@@ -25,12 +25,13 @@ const parseGenerationError = (error: Error, task: { filename: string }): string 
 };
 
 
-const pollForResult = async (requestId: string): Promise<string> => {
+const pollForResult = async (requestId: string, videoModel: VideoModel): Promise<string> => {
     for (let attempt = 0; attempt < MAX_POLLING_ATTEMPTS; attempt++) {
         await delay(POLLING_INTERVAL_MS);
 
         try {
-            const response = await fetch(Constance.endpoints.videoStatus, {
+            const statusEndpoint = Constance.endpoints.video[videoModel].status;
+            const response = await fetch(statusEndpoint, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ id: requestId }),
@@ -78,6 +79,7 @@ type VideoGenerationParams = {
     startImageUrl: string;
     endImageUrl?: string;
     videoPrompt: string;
+    videoSettings: VideoSettings;
 };
 
 const generateSingleVideo = async (params: VideoGenerationParams): Promise<string> => {
@@ -85,12 +87,21 @@ const generateSingleVideo = async (params: VideoGenerationParams): Promise<strin
         throw new Error(`Video prompt is missing.`);
     }
 
+    const { videoSettings } = params;
+    const currentParams = videoSettings.modelParameters[videoSettings.selectedModel];
+
+    // Determine which endpoint to use based on whether we have an end image
+    const isTimeline = !!params.endImageUrl;
+    const endpoint = isTimeline
+        ? Constance.endpoints.video[videoSettings.selectedModel].timeline
+        : Constance.endpoints.video[videoSettings.selectedModel].single;
+
     const payload: { [key: string]: any } = {
         prompt: params.videoPrompt,
         image_url: params.startImageUrl,
-        aspect_ratio: 'auto',
-        resolution: '720p',
-        duration: '5'
+        aspect_ratio: currentParams.aspectRatio,
+        resolution: currentParams.resolution,
+        duration: currentParams.duration
     };
 
     if (params.endImageUrl) {
@@ -98,12 +109,12 @@ const generateSingleVideo = async (params: VideoGenerationParams): Promise<strin
     }
 
     // Step 1: Initiate video generation and get a request ID
-    const initialResponse = await fetch(Constance.endpoints.videoGeneration, {
+    const initialResponse = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
     });
-    
+
     // We assume error responses are also JSON, so we parse the body first.
     const initialResult = await initialResponse.json();
 
@@ -118,7 +129,7 @@ const generateSingleVideo = async (params: VideoGenerationParams): Promise<strin
     }
 
     // Step 2: Poll for the video URL using the request ID
-    return pollForResult(initialResult.request_id);
+    return pollForResult(initialResult.request_id, videoSettings.selectedModel);
 };
 
 export type VideoTask = VideoGenerationParams & { filename: string };
