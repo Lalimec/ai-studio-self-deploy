@@ -5,7 +5,6 @@ import { VideoAnalysis, AdIdea, AnalysisModel, ImageModel, AspectRatio, JsonPars
 import { systemInstructionForAnalysis, getSystemInstructionForConcept } from "../prompts/videoAnalyzerPrompts";
 import { generateFigureImage } from "./geminiService";
 import { Constance } from "./endpoints";
-import { uploadVideoToGCS } from "./videoUploadService";
 
 export const parseTimestamp = (timestamp: string): number => {
     const parts = timestamp.split(/[:.]/);
@@ -152,65 +151,25 @@ export const analyzeVideo = async (
   model: AnalysisModel,
   onProgress: (message: string) => void
 ): Promise<{ analysis: VideoAnalysis, processedFile: { uri: string, mimeType: string } }> => {
-    // For small videos (< 20MB), use inline data to bypass File API issues
-    const MAX_INLINE_SIZE = 20 * 1024 * 1024; // 20MB
+    // Use inline data (base64) for videos up to 30MB
+    // This avoids File API header issues entirely
+    const MAX_INLINE_SIZE = 30 * 1024 * 1024; // 30MB
 
-    if (videoFile.size < MAX_INLINE_SIZE) {
-        onProgress("Processing video inline (small file)...");
-        const analysis = await generateAnalysisWithInlineData(videoFile, model, onProgress);
-        return {
-            analysis,
-            processedFile: {
-                uri: 'inline-data',
-                mimeType: videoFile.type
-            }
-        };
+    if (videoFile.size > MAX_INLINE_SIZE) {
+        throw new Error(`Video file is too large (${(videoFile.size / 1024 / 1024).toFixed(1)}MB). Maximum size is 30MB. Please use a smaller video or compress it.`);
     }
 
-    // For larger videos, use Gemini File API
-    onProgress("Uploading video to Gemini File API...");
-    try {
-        const uploadResult = await ai.files.upload({
-            file: videoFile,
-            videoProcessingOptions: {
-                frameRateCaptureConfig: {
-                    frameRate: 15,
-                },
-            },
-        });
-        onProgress(`Video uploaded: ${uploadResult.name}. Waiting for processing...`);
+    // Always use inline data for simplicity and to avoid File API issues
+    onProgress("Processing video...");
+    const analysis = await generateAnalysisWithInlineData(videoFile, model, onProgress);
 
-        const fileName = uploadResult.name;
-        let file = await ai.files.get({ name: fileName });
-
-        const maxRetries = 20;
-        let retries = 0;
-
-        while (file.state === 'PROCESSING' && retries < maxRetries) {
-            await new Promise(resolve => setTimeout(resolve, 5000));
-            file = await ai.files.get({ name: fileName });
-            retries++;
-            onProgress(`Processing video, attempt ${retries}/${maxRetries}...`);
+    return {
+        analysis,
+        processedFile: {
+            uri: 'inline-data',
+            mimeType: videoFile.type
         }
-
-        if (file.state !== 'ACTIVE') {
-            throw new Error(`File processing failed. Final state: ${file.state}`);
-        }
-
-        const processedFileInfo = {
-            uri: file.uri,
-            mimeType: file.mimeType,
-        };
-
-        const analysis = await generateAnalysis(processedFileInfo, model, onProgress);
-
-        return { analysis, processedFile: processedFileInfo };
-    } catch (error: any) {
-        if (error.message?.includes('upload url') || error.message?.includes('x-google-upload-url')) {
-            throw new Error('File API upload failed due to SDK bug. Try using a smaller video (< 20MB) or wait for SDK fix. Error: ' + error.message);
-        }
-        throw error;
-    }
+    };
 };
 
 
