@@ -133,9 +133,34 @@ app.use('/api-proxy', async (req, res, next) => {
         const apiResponse = await axios(axiosConfig);
 
         // Pass through response headers from Gemini API to the client
+        // Axios lowercases header names, but we need to preserve them for compatibility
+        const criticalHeaders = {
+            'x-goog-upload-url': 'X-Goog-Upload-URL',
+            'x-goog-upload-status': 'X-Goog-Upload-Status',
+            'x-goog-upload-chunk-granularity': 'X-Goog-Upload-Chunk-Granularity',
+            'x-goog-upload-control-url': 'X-Goog-Upload-Control-URL',
+        };
+
         for (const header in apiResponse.headers) {
-            res.setHeader(header, apiResponse.headers[header]);
+            // Use proper casing for critical Google upload headers
+            const headerName = criticalHeaders[header.toLowerCase()] || header;
+            res.setHeader(headerName, apiResponse.headers[header]);
         }
+
+        // Expose Google upload headers to the browser via CORS
+        // Without this, the browser can't read these headers even though they're sent
+        const exposedHeaders = [
+            'X-Goog-Upload-URL',
+            'X-Goog-Upload-Status',
+            'X-Goog-Upload-Chunk-Granularity',
+            'X-Goog-Upload-Control-URL',
+        ];
+        const existingExposed = res.getHeader('Access-Control-Expose-Headers');
+        const allExposed = existingExposed
+            ? `${existingExposed}, ${exposedHeaders.join(', ')}`
+            : exposedHeaders.join(', ');
+        res.setHeader('Access-Control-Expose-Headers', allExposed);
+
         res.status(apiResponse.status);
 
 
