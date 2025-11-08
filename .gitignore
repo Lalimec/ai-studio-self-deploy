@@ -37,3 +37,5 @@ gha-creds-*.json
 
 # Google Cloud Run credentials
 cemil-scripts-*.json
+
+.claude

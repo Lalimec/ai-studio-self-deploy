@@ -30,7 +30,11 @@
       "Bash(git checkout:*)",
       "Bash(git pull:*)",
       "Bash(git branch:*)",
-      "Bash(git fetch:*)"
+      "Bash(git fetch:*)",
+      "Bash(git log:*)",
+      "Bash(gh pr list:*)",
+      "Bash(git cherry-pick:*)",
+      "Bash(git revert:*)"
     ],
     "deny": [],
     "ask": []
