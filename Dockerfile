@@ -1,31 +1,33 @@
-# Build stage
-FROM node:18-alpine AS builder
+# Stage 1: Build the frontend, and install server dependencies
+FROM node:22 AS builder
 
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
+# Copy all files from the current directory
+COPY . ./
+RUN echo "API_KEY=PLACEHOLDER" > ./.env
+RUN echo "GEMINI_API_KEY=PLACEHOLDER" >> ./.env
 
-# Install dependencies
-RUN npm ci
+# Install server dependencies
+WORKDIR /app/server
+RUN npm install
 
-# Copy source code
-COPY . .
+# Install dependencies and build the frontend
+WORKDIR /app
+RUN mkdir dist
+RUN bash -c 'if [ -f package.json ]; then npm install && npm run build; fi'
 
-# Build application
-RUN npm run build
 
-# Production stage
-FROM nginx:alpine
+# Stage 2: Build the final server image
+FROM node:22
 
-# Copy built files from builder
-COPY --from=builder /app/dist /usr/share/nginx/html
+WORKDIR /app
 
-# Copy nginx configuration
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+#Copy server files
+COPY --from=builder /app/server .
+# Copy built frontend assets from the builder stage
+COPY --from=builder /app/dist ./dist
 
-# Expose port (Cloud Run uses PORT environment variable)
-EXPOSE 8080
+EXPOSE 3000
 
-# Start nginx
-CMD ["nginx", "-g", "daemon off;"]
+CMD ["node", "server.js"]
