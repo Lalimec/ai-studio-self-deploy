@@ -1,7 +1,7 @@
 /// <reference lib="dom" />
 import React, { useState, useEffect } from 'react';
-import { StudioImage, TimelinePair } from '../types';
-import { CheckCircleIcon, VideoIcon, PrepareMagicIcon, TranslateIcon, DownloadIcon, EyeOffIcon, EyeIcon, AlertCircleIcon } from './Icons';
+import { StudioImage, TimelinePair } from '../../types';
+import { CheckCircleIcon, VideoIcon, PrepareMagicIcon, TranslateIcon, DownloadIcon, EyeOffIcon, EyeIcon, AlertCircleIcon } from '../Icons';
 
 interface TimelinePairCardProps {
     startImage: StudioImage;

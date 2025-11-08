@@ -1,10 +1,10 @@
 /// <reference lib="dom" />
 import React, { useRef, useState, useCallback, useEffect } from 'react';
-import { StudioImage, TimelinePair, GeneratedImage, GeneratedBabyImage, ImageStudioResultImage } from '../types';
+import { StudioImage, TimelinePair, GeneratedImage, GeneratedBabyImage, ImageStudioResultImage } from '../../types';
 import TimelinePairCard from './TimelinePairCard';
 import TimelinePairLightbox from './TimelinePairLightbox';
-import { TrashIcon, HairStudioIcon, BabyIcon, ImageStudioIcon, AdClonerIcon, UploadIcon, SendToEndIcon, SendToStartIcon, PrepareMagicIcon, VideoIcon, DownloadIcon, TranslateIcon, CloseIcon, EyeOffIcon } from './Icons';
-import { useTimelineStudio } from '../hooks/useTimelineStudio';
+import { TrashIcon, HairStudioIcon, BabyIcon, ImageStudioIcon, AdClonerIcon, UploadIcon, SendToEndIcon, SendToStartIcon, PrepareMagicIcon, VideoIcon, DownloadIcon, TranslateIcon, CloseIcon, EyeOffIcon } from '../Icons';
+import { useTimelineStudio } from '../../hooks/useTimelineStudio';
 
 interface TimelineStudioProps {
     logic: ReturnType<typeof useTimelineStudio>;

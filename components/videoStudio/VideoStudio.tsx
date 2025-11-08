@@ -1,16 +1,16 @@
 /// <reference lib="dom" />
 import React, { useRef, useCallback, useState } from 'react';
-import { StudioImage, GeneratedImage, GeneratedBabyImage, ImageStudioResultImage } from '../types';
-import MultiImageUploader from './MultiImageUploader';
-import { 
+import { StudioImage, GeneratedImage, GeneratedBabyImage, ImageStudioResultImage } from '../../types';
+import MultiImageUploader from '../MultiImageUploader';
+import {
     PrepareMagicIcon, VideoIcon, TrashIcon, DownloadIcon,
     HairStudioIcon, BabyIcon, UploadIcon, TranslateIcon,
     CheckCircleIcon,
     ImageStudioIcon,
     AdClonerIcon,
     AlertCircleIcon
-} from './Icons';
-import { useVideoStudio } from '../hooks/useVideoStudio';
+} from '../Icons';
+import { useVideoStudio } from '../../hooks/useVideoStudio';
 
 interface VideoStudioProps {
   logic: ReturnType<typeof useVideoStudio>;
