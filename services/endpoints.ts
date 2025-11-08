@@ -22,41 +22,13 @@ export const models = {
 };
 
 export const endpoints = {
-  // Video Generation - Legacy (Seedance)
+  // Video Generation (Seedance)
   videoGeneration: 'https://n8n.cemil.al/webhook/fbe9280c-07a6-451c-abdd-cf261c501856/higgsfield/video-seedance-v1-pro/image-to-video',
   videoStatus: 'https://n8n.cemil.al/webhook/cddfdbbb-8b1a-40c0-9a4b-8fee6dcf3747/higgsfield/check/video-seedance-v1-pro/image-to-video',
 
-  // Video Generation - All Models (Higgsfield-based)
-  video: {
-    // Seedance v1 Pro
-    'seedance-v1-pro': {
-      single: 'https://n8n.cemil.al/webhook/fbe9280c-07a6-451c-abdd-cf261c501856/higgsfield/video-seedance-v1-pro/image-to-video',
-      timeline: 'https://n8n.cemil.al/webhook/fbe9280c-07a6-451c-abdd-cf261c501856/higgsfield/video-seedance-v1-pro/timeline',
-      status: 'https://n8n.cemil.al/webhook/cddfdbbb-8b1a-40c0-9a4b-8fee6dcf3747/higgsfield/check/video-seedance-v1-pro/image-to-video',
-    },
-    // Clink 2.5
-    'clink-2.5': {
-      single: 'https://n8n.cemil.al/webhook/fbe9280c-07a6-451c-abdd-cf261c501856/higgsfield/video-clink-2.5/image-to-video',
-      timeline: 'https://n8n.cemil.al/webhook/fbe9280c-07a6-451c-abdd-cf261c501856/higgsfield/video-clink-2.5/timeline',
-      status: 'https://n8n.cemil.al/webhook/cddfdbbb-8b1a-40c0-9a4b-8fee6dcf3747/higgsfield/check/video-clink-2.5/image-to-video',
-    },
-    // Video Model Alpha (Placeholder)
-    'video-model-alpha': {
-      single: 'https://n8n.cemil.al/webhook/fbe9280c-07a6-451c-abdd-cf261c501856/higgsfield/video-model-alpha/image-to-video',
-      timeline: 'https://n8n.cemil.al/webhook/fbe9280c-07a6-451c-abdd-cf261c501856/higgsfield/video-model-alpha/timeline',
-      status: 'https://n8n.cemil.al/webhook/cddfdbbb-8b1a-40c0-9a4b-8fee6dcf3747/higgsfield/check/video-model-alpha/image-to-video',
-    },
-    // Video Model Beta (Placeholder)
-    'video-model-beta': {
-      single: 'https://n8n.cemil.al/webhook/fbe9280c-07a6-451c-abdd-cf261c501856/higgsfield/video-model-beta/image-to-video',
-      timeline: 'https://n8n.cemil.al/webhook/fbe9280c-07a6-451c-abdd-cf261c501856/higgsfield/video-model-beta/timeline',
-      status: 'https://n8n.cemil.al/webhook/cddfdbbb-8b1a-40c0-9a4b-8fee6dcf3747/higgsfield/check/video-model-beta/image-to-video',
-    },
-  },
-
   // Video Stitching (ffmpeg)
   videoStitcher: 'https://n8n.cemil.al/webhook/5533f0bb-064a-4757-adcb-56793505fdf3/ffmpeg/stitch',
-
+  
   // Image Upload
   imageUpload: 'https://n8n.cemil.al/webhook/fbe9280c-07a6-451c-abdd-cf261c501856/ai-studio/image-upload-google-bucket',
 

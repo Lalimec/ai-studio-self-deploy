@@ -376,29 +376,5 @@ export class JsonParseError extends Error {
     }
 }
 
-// --- VIDEO GENERATION TYPES ---
-export type VideoModel =
-    | 'seedance-v1-pro'
-    | 'clink-2.5'
-    | 'video-model-alpha'
-    | 'video-model-beta';
-
-export type VideoResolution = '480p' | '720p' | '1080p' | '1440p';
-export type VideoDuration = '3' | '5' | '10' | '15';
-export type VideoAspectRatio = 'auto' | '1:1' | '16:9' | '9:16' | '4:3' | '3:4';
-
-export type VideoModelParameters = {
-    resolution: VideoResolution;
-    duration: VideoDuration;
-    aspectRatio: VideoAspectRatio;
-};
-
-export type VideoSettings = {
-    selectedModel: VideoModel;
-    modelParameters: {
-        [key in VideoModel]: VideoModelParameters;
-    };
-};
-
 // --- SHARED DISPLAY TYPE ---
 export type DisplayImage = GeneratedImage | StudioImage | GeneratedBabyImage | ImageStudioResultImage;
