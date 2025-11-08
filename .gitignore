@@ -34,3 +34,6 @@ Worktree/
 firebase-export*
 .gemini/
 gha-creds-*.json
+
+# Google Cloud Run credentials
+cemil-scripts-*.json
