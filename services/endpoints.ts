@@ -32,6 +32,9 @@ export const endpoints = {
   // Image Upload
   imageUpload: 'https://n8n.cemil.al/webhook/fbe9280c-07a6-451c-abdd-cf261c501856/ai-studio/image-upload-google-bucket',
 
+  // Video Upload (GCS)
+  videoUpload: 'https://n8n.cemil.al/webhook/f123280c-0226-451c-abdd-cf26as301856/ai-studio/gcs-upload-google-bucket',
+
   // Image Generation (External)
   image: {
     seedream: 'https://n8n.cemil.al/webhook/5aff8ad1-c2f0-4d54-a375-3cc47d0f51cd/fal/edit-seedream-4.0',
@@ -102,6 +105,20 @@ export const schemas = {
     response: {
       success: {
         image_url: 'string'
+      },
+      error: {
+        error: 'string'
+      }
+    }
+  },
+  videoUpload: {
+    request: {
+      file_url: 'string (data URL)',
+      filename: 'string (optional)'
+    },
+    response: {
+      success: {
+        file_url: 'string (public GCS URL)'
       },
       error: {
         error: 'string'

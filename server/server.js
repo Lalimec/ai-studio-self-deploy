@@ -40,9 +40,9 @@ app.set('trust proxy', 1 /* number of proxies between user and server */)
 
 // Rate limiter for the proxy
 const proxyLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // Set ratelimit window at 15min (in ms)
-    max: 100, // Limit each IP to 100 requests per window
-    message: 'Too many requests from this IP, please try again after 15 minutes',
+    windowMs: 5 * 60 * 1000, // Set ratelimit window at 5min (in ms)
+    max: 200, // Limit each IP to 200 requests per window
+    message: 'Too many requests from this IP, please try again after 5 minutes',
     standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
     legacyHeaders: false, // no `X-RateLimit-*` headers
     handler: (req, res, next, options) => {
@@ -133,33 +133,57 @@ app.use('/api-proxy', async (req, res, next) => {
         const apiResponse = await axios(axiosConfig);
 
         // Pass through response headers from Gemini API to the client
-        // Axios lowercases header names, but we need to preserve them for compatibility
+        // IMPORTANT: Cloud Run strips headers starting with X-Goog-* (reserved by Google)
+        // So we rename them to X-Upload-* pattern that won't be stripped
         const criticalHeaders = {
-            'x-goog-upload-url': 'X-Goog-Upload-URL',
-            'x-goog-upload-status': 'X-Goog-Upload-Status',
-            'x-goog-upload-chunk-granularity': 'X-Goog-Upload-Chunk-Granularity',
-            'x-goog-upload-control-url': 'X-Goog-Upload-Control-URL',
+            'x-goog-upload-url': 'X-Upload-URL',
+            'x-goog-upload-status': 'X-Upload-Status',
+            'x-goog-upload-chunk-granularity': 'X-Upload-Chunk-Granularity',
+            'x-goog-upload-control-url': 'X-Upload-Control-URL',
         };
 
         for (const header in apiResponse.headers) {
-            // Use proper casing for critical Google upload headers
-            const headerName = criticalHeaders[header.toLowerCase()] || header;
-            res.setHeader(headerName, apiResponse.headers[header]);
+            const lowerHeader = header.toLowerCase();
+
+            // Rename critical upload headers to avoid Cloud Run stripping
+            if (criticalHeaders[lowerHeader]) {
+                const newHeaderName = criticalHeaders[lowerHeader];
+                res.setHeader(newHeaderName, apiResponse.headers[header]);
+                console.log(`[PROXY] Renamed header: ${header} → ${newHeaderName} = ${apiResponse.headers[header]}`);
+            }
+            // Pass through other headers normally
+            else {
+                res.setHeader(header, apiResponse.headers[header]);
+            }
         }
 
-        // Expose Google upload headers to the browser via CORS
-        // Without this, the browser can't read these headers even though they're sent
+        // Expose upload headers to the browser via CORS
+        // NOTE: Cloud Run strips X-Goog-* headers, so we use X-Upload-* instead
         const exposedHeaders = [
-            'X-Goog-Upload-URL',
-            'X-Goog-Upload-Status',
-            'X-Goog-Upload-Chunk-Granularity',
-            'X-Goog-Upload-Control-URL',
+            'X-Upload-URL',
+            'X-Upload-Status',
+            'X-Upload-Chunk-Granularity',
+            'X-Upload-Control-URL',
         ];
+
+        // Also expose other headers that might be useful
+        for (const header in apiResponse.headers) {
+            const lowerHeader = header.toLowerCase();
+            if (lowerHeader.startsWith('x-guploader-') ||
+                lowerHeader === 'x-google-trace' ||
+                lowerHeader === 'content-length' ||
+                lowerHeader === 'content-type') {
+                exposedHeaders.push(header);
+            }
+        }
+
         const existingExposed = res.getHeader('Access-Control-Expose-Headers');
         const allExposed = existingExposed
             ? `${existingExposed}, ${exposedHeaders.join(', ')}`
             : exposedHeaders.join(', ');
         res.setHeader('Access-Control-Expose-Headers', allExposed);
+
+        console.log(`[PROXY] CORS Exposed Headers: ${allExposed}`);
 
         res.status(apiResponse.status);
 
