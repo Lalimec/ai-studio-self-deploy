@@ -47,12 +47,13 @@ Production Express server that proxies all Gemini API requests and injects API k
    - Bidirectional message forwarding
 
 3. **CORS Handling**:
-   - Exposes Google File API upload headers
+   - Exposes Google File API upload headers (renamed to X-Upload-* for Cloud Run)
    - Handles preflight requests
    - Required for file uploads
+   - **Cloud Run Compatibility**: Headers renamed from X-Goog-* to X-Upload-* to avoid Cloud Run stripping
 
 4. **Rate Limiting**:
-   - 100 requests per 15 minutes per IP
+   - 200 requests per 5 minutes per IP
    - Prevents abuse
    - Protects API quota
 
@@ -246,14 +247,39 @@ Client receives response (no knowledge of API key)
 - Network traffic does NOT expose API key (proxied through server)
 - API key visible only in server logs (secure)
 
+### Header Handling (Cloud Run Compatibility)
+
+**Problem**: Cloud Run strips headers starting with `X-Goog-*` (reserved by Google infrastructure)
+
+**Solution**: Server renames Google upload headers to avoid stripping
+
+**Header Renaming:**
+```javascript
+X-Goog-Upload-URL            → X-Upload-URL
+X-Goog-Upload-Status         → X-Upload-Status
+X-Goog-Upload-Chunk-Granularity → X-Upload-Chunk-Granularity
+X-Goog-Upload-Control-URL    → X-Upload-Control-URL
+```
+
+**Why This Matters:**
+- File upload requires these headers for resumable uploads
+- Without renaming, Cloud Run strips them → uploads fail
+- Client code expects these headers (via CORS)
+- Renaming preserves functionality while working with Cloud Run
+
+**CORS Exposure:**
+- All X-Upload-* headers explicitly exposed via Access-Control-Expose-Headers
+- Additional headers exposed: X-Guploader-*, X-Google-Trace, Content-Length, Content-Type
+- Enables client-side access to upload metadata
+
 ### Rate Limiting
 
 **Configuration:**
 ```javascript
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // 100 requests per window
-  message: 'Too many requests, please try again later',
+  windowMs: 5 * 60 * 1000, // 5 minutes
+  max: 200, // 200 requests per window
+  message: 'Too many requests from this IP, please try again after 5 minutes',
 });
 
 app.use('/api-proxy', limiter);
@@ -508,7 +534,7 @@ origin: 'https://your-domain.com'
 **Symptoms:** 429 Too Many Requests
 
 **Solutions:**
-1. Wait 15 minutes
+1. Wait 5 minutes
 2. Increase rate limit in `server.js`
 3. Check for request loops (bug in frontend)
 

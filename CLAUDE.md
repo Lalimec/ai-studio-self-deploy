@@ -459,7 +459,7 @@ hooks/                      # Custom hooks (7 files, ~3,800 lines) - See hooks/C
 ├── useAdCloner.ts                   # ~650 lines (beta)
 └── useVideoAnalyzerStudio.ts        # 880 lines (largest, beta)
 
-services/                   # Service modules (14 files, ~1,700 lines) - See services/CLAUDE.md
+services/                   # Service modules (15 files, ~1,760 lines) - See services/CLAUDE.md
 ├── geminiClient.ts                  # 13 lines - Client initialization
 ├── geminiService.ts                 # 166 lines - CRITICAL multi-model orchestration
 ├── endpoints.ts                     # 158 lines - Centralized endpoint config
@@ -468,10 +468,11 @@ services/                   # Service modules (14 files, ~1,700 lines) - See ser
 ├── videoService.ts                  # 257 lines
 ├── timelineStudioService.ts         # 102 lines
 ├── adClonerService.ts               # 180 lines (beta)
-├── videoAnalyzerService.ts          # 305 lines (beta)
+├── videoAnalyzerService.ts          # 305 lines (beta) - Now uses inline base64 data
 ├── videoStitcher.ts                 # 65 lines
 ├── imageUtils.ts                    # 148 lines - EXIF embedding
 ├── imageUploadService.ts            # 37 lines
+├── videoUploadService.ts            # 60 lines - NEW: Video upload to GCS
 ├── apiUtils.ts                      # 61 lines - Concurrency control
 └── loggingService.ts                # 46 lines - Cloud Monitoring
 
@@ -509,7 +510,7 @@ server/                     # Express.js API proxy (3 files) - See server/CLAUDE
 - **Total Lines**: ~20,500+ lines of TypeScript/TSX
 - **Components**: 59 files
 - **Hooks**: 7 files
-- **Services**: 14 files
+- **Services**: 15 files
 - **Studios**: 7 (5 production, 2 beta)
 
 ## Common Development Tasks

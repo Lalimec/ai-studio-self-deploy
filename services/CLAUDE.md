@@ -12,7 +12,7 @@ This directory contains the service layer for the AI Studio application - handli
 - Error handling and retry logic
 - Logging and monitoring integration
 
-**Total**: 14 service files, ~1,700 lines of TypeScript
+**Total**: 15 service files, ~1,760 lines of TypeScript
 
 ## Service Files Overview
 
@@ -327,13 +327,29 @@ export const ENDPOINTS = {
 #### videoAnalyzerService.ts (305 lines) - BETA
 **Purpose**: Video ad analysis and concept generation
 
+**IMPORTANT CHANGE**: Now uses inline base64 data instead of File API to bypass upload/processing issues
+
+**Video Size Limit**: 50MB maximum (enforced to ensure inline data works reliably)
+
 **Key Functions:**
 
-1. **`generateAnalysis(videoFile, model, onProgress)`**
-   - 10-point strategic analysis of video ad
-   - Uses heavily engineered prompts from `prompts/videoAnalyzerPrompts.ts`
-   - Google Search integration for IP verification
+1. **`analyzeVideo(videoFile, model, onProgress)`** - Main entry point
+   - Checks video size (max 50MB)
+   - Converts video to base64 inline data
+   - Calls `generateAnalysisWithInlineData()`
+   - Returns analysis + processed file info
+
+2. **`generateAnalysisWithInlineData(videoFile, model, onProgress)`** - NEW
+   - Converts video file to base64 data URL
+   - Uses inline data approach (bypasses File API entirely)
+   - Sends base64 directly to Gemini with analysis prompt
+   - Avoids File API upload/processing/polling complexity
    - Returns structured `VideoAnalysis` object
+
+3. **`generateAnalysis(processedFileInfo, model, onProgress)`** - Legacy (File API)
+   - Still available for reference but NOT used by default
+   - Uses File API URI approach
+   - Kept for backwards compatibility
 
    **Analysis Framework:**
    1. Product identification
@@ -484,6 +500,40 @@ export const ENDPOINTS = {
 ```
 
 **Note**: Webhook handles GCS authentication server-side
+
+---
+
+#### videoUploadService.ts (60 lines) - NEW
+**Purpose**: Upload videos to Google Cloud Storage
+
+**Key Functions:**
+
+1. **`uploadVideoToGCS(videoFile)`**
+   - Uploads video to GCS via n8n webhook
+   - Converts video file to data URL (base64)
+   - Returns public GCS URL
+   - **Used by**: Video-related features that need public video URLs
+
+**Workflow:**
+```
+1. Convert video File to data URL (base64)
+2. Create JSON payload: { file_url: dataUrl, filename: videoFile.name }
+3. POST to Constance.endpoints.videoUpload webhook
+4. Webhook uploads to GCS
+5. Returns public GCS URL in response.file_url
+```
+
+**Error Handling:**
+- Throws error with status code if upload fails
+- Attempts to parse error message from response
+- Validates response contains file_url
+
+**Use Cases:**
+- Upload videos for processing by external APIs
+- Share videos via public URLs
+- Store videos for long-term access
+
+**Note**: Webhook handles GCS authentication and bucket management server-side
 
 ---
 

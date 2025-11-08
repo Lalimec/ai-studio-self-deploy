@@ -273,29 +273,50 @@ setVideoAnalysis(mockVideoAnalysis);
 
 #### Stage 1: Video Upload & Processing
 
+**NEW APPROACH**: Uses inline base64 data instead of File API
+
 ```
 User uploads video
   ↓
-videoAnalyzerService.uploadToGemini(videoFile)
+Check video size (max 50MB)
   ↓
-Polling for file processing (exponential backoff)
+If > 50MB → Error: "Video too large, max 50MB"
   ↓
-File ready → setProcessedVideo()
+If ≤ 50MB → Proceed to analysis
 ```
 
+**Why Inline Data:**
+- Bypasses File API upload/processing issues entirely
+- No polling needed - immediate analysis
+- Avoids Cloud Run header stripping issues
+- Simpler, more reliable workflow
+
+**Size Limit:**
+- **Maximum**: 50MB
+- **Reason**: Inline base64 data has practical size limits
+- **Solution for larger videos**: Compress or trim video before upload
+
 **Error Handling:**
-- File too large → Warning
-- Unsupported format → Error
-- Processing timeout → Retry
+- File too large (>50MB) → Clear error message with size
+- Unsupported format → Error with supported formats list
+- No polling timeout issues (instant processing)
 
 ---
 
 #### Stage 2: Strategic Analysis
 
+**NEW WORKFLOW** with inline data:
+
 ```
 analyzeVideo() called
   ↓
-videoAnalyzerService.generateAnalysis(videoFile, model)
+videoAnalyzerService.analyzeVideo(videoFile, model, onProgress)
+  ↓
+Convert video to base64 data URL
+  ↓
+generateAnalysisWithInlineData(videoFile, model, onProgress)
+  ↓
+Send inline data + prompt to Gemini
   ↓
 AI performs 10-point analysis with Google Search
   ↓
