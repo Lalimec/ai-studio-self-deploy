@@ -31,7 +31,7 @@ jobs:
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             echo "Manual trigger - proceeding with deployment"
             echo "deploy=true" >> $GITHUB_OUTPUT
-          elif [[ "${{ github.event.head_commit.message }}" == *"#deploy"* ]]; then
+          elif echo "${{ github.event.head_commit.message }}" | grep -q "#deploy"; then
             echo "Commit message contains #deploy - proceeding with deployment"
             echo "deploy=true" >> $GITHUB_OUTPUT
           else
