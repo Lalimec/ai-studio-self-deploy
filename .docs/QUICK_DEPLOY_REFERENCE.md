@@ -10,10 +10,20 @@ Fast reference for deploying AI Studio to Google Cloud Run with GitHub Actions.
 
 ---
 
+## 💡 PowerShell Users (Windows)
+
+All commands below use **bash syntax**. If you're using **PowerShell**:
+- Replace `\` with `` ` `` (backtick) for line continuation
+- Replace `$VARIABLE` with `$env:VARIABLE`
+- Replace `export VAR=value` with `$env:VAR="value"`
+
+---
+
 ## ⚡ Quick Setup (5 minutes)
 
 ### 1. Google Cloud Setup
 
+**Bash (Linux/macOS):**
 ```bash
 # Set project ID
 export PROJECT_ID="ai-studio-self-deploy"
@@ -39,6 +49,34 @@ gcloud projects add-iam-policy-binding $PROJECT_ID --member="serviceAccount:${SA
 # Create key
 gcloud iam service-accounts keys create ~/gcp-key.json --iam-account=$SA_EMAIL
 cat ~/gcp-key.json  # Copy this for GitHub
+```
+
+**PowerShell (Windows):**
+```powershell
+# Set project ID
+$env:PROJECT_ID="ai-studio-self-deploy"
+
+# Create project (or use existing)
+gcloud projects create $env:PROJECT_ID
+gcloud config set project $env:PROJECT_ID
+
+# Enable APIs
+gcloud services enable run.googleapis.com cloudbuild.googleapis.com containerregistry.googleapis.com
+
+# Create service account
+$env:SA_NAME="github-actions-deployer"
+gcloud iam service-accounts create $env:SA_NAME
+
+# Grant roles
+$env:SA_EMAIL="$env:SA_NAME@$env:PROJECT_ID.iam.gserviceaccount.com"
+gcloud projects add-iam-policy-binding $env:PROJECT_ID --member="serviceAccount:$env:SA_EMAIL" --role="roles/run.admin"
+gcloud projects add-iam-policy-binding $env:PROJECT_ID --member="serviceAccount:$env:SA_EMAIL" --role="roles/storage.admin"
+gcloud projects add-iam-policy-binding $env:PROJECT_ID --member="serviceAccount:$env:SA_EMAIL" --role="roles/iam.serviceAccountUser"
+gcloud projects add-iam-policy-binding $env:PROJECT_ID --member="serviceAccount:$env:SA_EMAIL" --role="roles/cloudbuild.builds.editor"
+
+# Create key
+gcloud iam service-accounts keys create $HOME\gcp-key.json --iam-account=$env:SA_EMAIL
+Get-Content $HOME\gcp-key.json  # Copy this for GitHub
 ```
 
 ### 2. GitHub Secrets Setup
@@ -68,10 +106,19 @@ git push origin main
 
 After deployment completes:
 
+**Bash:**
 ```bash
 gcloud run services describe ai-studio \
   --platform managed \
   --region us-central1 \
+  --format 'value(status.url)'
+```
+
+**PowerShell:**
+```powershell
+gcloud run services describe ai-studio `
+  --platform managed `
+  --region us-central1 `
   --format 'value(status.url)'
 ```
 
@@ -83,15 +130,33 @@ Or check the GitHub Actions summary for the URL.
 
 ### Update Environment Variable
 
+**Bash:**
 ```bash
 gcloud run services update ai-studio \
   --update-env-vars GEMINI_API_KEY=new_key \
   --region us-central1
 ```
 
+**PowerShell:**
+```powershell
+gcloud run services update ai-studio `
+  --update-env-vars GEMINI_API_KEY=new_key `
+  --region us-central1
+```
+
 ### View Logs
 
+**Bash:**
 ```bash
+# Recent logs
+gcloud run services logs read ai-studio --region us-central1 --limit 50
+
+# Stream logs
+gcloud run services logs tail ai-studio --region us-central1
+```
+
+**PowerShell:**
+```powershell
 # Recent logs
 gcloud run services logs read ai-studio --region us-central1 --limit 50
 
@@ -101,6 +166,7 @@ gcloud run services logs tail ai-studio --region us-central1
 
 ### Redeploy Manually
 
+**Bash:**
 ```bash
 # From local machine
 gcloud run deploy ai-studio \
@@ -108,9 +174,23 @@ gcloud run deploy ai-studio \
   --region us-central1
 ```
 
+**PowerShell:**
+```powershell
+# From local machine
+gcloud run deploy ai-studio `
+  --source . `
+  --region us-central1
+```
+
 ### Check Service Status
 
+**Bash:**
 ```bash
+gcloud run services describe ai-studio --region us-central1
+```
+
+**PowerShell:**
+```powershell
 gcloud run services describe ai-studio --region us-central1
 ```
 
