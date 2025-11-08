@@ -1,11 +1,11 @@
 /// <reference lib="dom" />
 import React from 'react';
-import { GenerationOptions } from '../types';
-import ImageUploader from './ImageUploader';
+import { GenerationOptions } from '../../types';
+import ImageUploader from '../ImageUploader';
 import HairOptionsPanel from './HairOptionsPanel';
-import ImageGrid from './ImageGrid';
-import { TrashIcon, HelpIcon, DownloadIcon, PrepareMagicIcon, VideoIcon } from './Icons';
-import { useHairStudio } from '../hooks/useHairStudio';
+import ImageGrid from '../ImageGrid';
+import { TrashIcon, HelpIcon, DownloadIcon, PrepareMagicIcon, VideoIcon } from '../Icons';
+import { useHairStudio } from '../../hooks/useHairStudio';
 
 type HairStudioProps = {
     logic: ReturnType<typeof useHairStudio>;

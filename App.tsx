@@ -33,10 +33,10 @@ import CropChoiceModal from './components/CropChoiceModal';
 import MultiCropView from './components/MultiCropView';
 import GlobalSettingsModal from './components/GlobalSettingsModal';
 
-import HairStudio from './components/HairStudio';
-import BabyStudio from './components/BabyStudio';
-import VideoStudio from './components/VideoStudio';
-import TimelineStudio from './components/TimelineStudio';
+import HairStudio from './components/hairStudio/HairStudio';
+import BabyStudio from './components/babyStudio/BabyStudio';
+import VideoStudio from './components/videoStudio/VideoStudio';
+import TimelineStudio from './components/timelineStudio/TimelineStudio';
 import ImageStudio from './components/ImageStudio';
 import AdClonerStudio from './components/adCloner/AdClonerStudio';
 import VideoAnalyzerStudio from './components/videoAnalyzer/VideoAnalyzerStudio';

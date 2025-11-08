@@ -1,14 +1,14 @@
 import React from 'react';
-import { BabyGenerationOptions, BabyAge, BabyGender, AspectRatio } from '../types';
-import { 
-    BABY_COMPOSITIONS, 
-    BABY_BACKGROUNDS, 
+import { BabyGenerationOptions, BabyAge, BabyGender, AspectRatio } from '../../types';
+import {
+    BABY_COMPOSITIONS,
+    BABY_BACKGROUNDS,
     BABY_CLOTHING_STYLES_UNISEX,
     BABY_CLOTHING_STYLES_BOY,
     BABY_CLOTHING_STYLES_GIRL,
-    BABY_ACTIONS, 
-    ASPECT_RATIO_OPTIONS 
-} from '../constants';
+    BABY_ACTIONS,
+    ASPECT_RATIO_OPTIONS
+} from '../../constants';
 
 interface BabyOptionsPanelProps {
   options: BabyGenerationOptions;

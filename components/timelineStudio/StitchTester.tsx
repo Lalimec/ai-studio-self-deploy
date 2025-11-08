@@ -1,7 +1,7 @@
 /// <reference lib="dom" />
 import React, { useState, useEffect } from 'react';
-import { stitchVideos } from '../services/videoStitcher';
-import { PiSpinnerIcon } from './Icons';
+import { stitchVideos } from '../../services/videoStitcher';
+import { PiSpinnerIcon } from '../Icons';
 
 const StitchTester: React.FC = () => {
     const [urlsInput, setUrlsInput] = useState('');

@@ -1,9 +1,9 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { BabyGenerationOptions, GeneratedBabyImage, Toast as ToastType, ParentImageState } from '../types';
-import { UploadIcon, TrashIcon, PrepareMagicIcon, VideoIcon, DownloadIcon, HelpIcon, AlertCircleIcon } from './Icons';
+import { BabyGenerationOptions, GeneratedBabyImage, Toast as ToastType, ParentImageState } from '../../types';
+import { UploadIcon, TrashIcon, PrepareMagicIcon, VideoIcon, DownloadIcon, HelpIcon, AlertCircleIcon } from '../Icons';
 import BabyOptionsPanel from './BabyOptionsPanel';
-import ImageGrid from './ImageGrid';
-import { useBabyStudio } from '../hooks/useBabyStudio';
+import ImageGrid from '../ImageGrid';
+import { useBabyStudio } from '../../hooks/useBabyStudio';
 
 interface BabyStudioProps {
     logic: ReturnType<typeof useBabyStudio>;

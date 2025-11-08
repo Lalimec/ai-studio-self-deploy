@@ -177,23 +177,54 @@ Comprehensive TypeScript interfaces in `types.ts` and `constants.ts`:
 ## Project Structure
 
 ```
-components/          # 52+ React components organized by feature
-├── HairStudio.tsx, BabyStudio.tsx, ImageStudio.tsx, etc.
-├── adCloner/        # Ad Cloner specific components
-├── imageStudio/     # Image Studio specific components
+components/          # React components organized by studio
+├── hairStudio/      # Hair Studio components
+│   ├── HairStudio.tsx
+│   └── HairOptionsPanel.tsx
+├── babyStudio/      # Baby Studio components
+│   ├── BabyStudio.tsx
+│   └── BabyOptionsPanel.tsx
+├── videoStudio/     # Video Studio components
+│   └── VideoStudio.tsx
+├── timelineStudio/  # Timeline Studio components
+│   ├── TimelineStudio.tsx
+│   ├── TimelinePairCard.tsx
+│   ├── TimelinePairLightbox.tsx
+│   └── StitchTester.tsx
+├── imageStudio/     # Image Studio components
+│   ├── ImageStudioConfirmationDialog.tsx
+│   ├── GeneratedImageDisplay.tsx
+│   ├── ImageUploader.tsx
+│   └── (Other Image Studio components)
+├── adCloner/        # Ad Cloner components
+│   ├── AdClonerStudio.tsx
+│   ├── AdClonerUploader.tsx
+│   └── (Other Ad Cloner components)
+├── videoAnalyzer/   # Video Analyzer components
+│   ├── VideoAnalyzerStudio.tsx
+│   ├── mockData.ts
+│   └── (Other Video Analyzer components)
 ├── help/            # Help/documentation components
-├── ImageCropper.tsx, Lightbox.tsx, ToastContainer.tsx, SettingsModal.tsx
-└── (Various UI components)
+│   ├── HairStudioHelp.tsx
+│   ├── BabyStudioHelp.tsx
+│   └── (Other help components)
+└── (Shared components)
+    ├── ImageCropper.tsx
+    ├── Lightbox.tsx
+    ├── ToastContainer.tsx
+    ├── ImageGrid.tsx
+    └── (Other shared UI components)
 
-hooks/              # 6 custom hooks (one per major studio)
+hooks/              # 7 custom hooks (one per major studio)
 ├── useHairStudio.ts
 ├── useBabyStudio.ts
 ├── useImageStudioLogic.ts
 ├── useVideoStudio.ts
 ├── useTimelineStudio.ts
-└── useAdCloner.ts
+├── useAdCloner.ts
+└── useVideoAnalyzerStudio.ts
 
-services/           # 11 service modules
+services/           # Service modules
 ├── geminiClient.ts, geminiService.ts  # Core API layer
 ├── hairStudioService.ts, babyStudioService.ts, etc.
 ├── imageUtils.ts, apiUtils.ts
@@ -202,11 +233,11 @@ services/           # 11 service modules
 prompts/            # System prompts for AI
 └── adClonerSystemPrompt.ts
 
-imageStudio/        # Standalone Image Studio sub-app
-└── (Complete standalone copy with own package.json)
-
-videoAnalyzer/      # Video Analyzer sub-app (in development)
-└── (Documentation and integration guides)
+.docs/              # Project documentation
+├── CLAUDE.md
+├── DEPLOYMENT.md
+├── SETUP_INSTRUCTIONS.md
+└── (Other documentation files)
 
 App.tsx             # Main application hub
 types.ts            # Comprehensive TypeScript interfaces
@@ -259,13 +290,18 @@ constants.ts        # Hairstyles, colors, baby options, etc.
 - `components/Lightbox.tsx`: Image gallery viewer
 - `components/SettingsModal.tsx`: Model selection and feature flags
 
-**Sub-applications:**
-- `imageStudio/App.tsx`: Standalone Image Studio (separate project structure)
-- `videoAnalyzer/`: Documentation for Video Analyzer integration
+**Studio Components:**
+- `components/hairStudio/HairStudio.tsx`: Hair Studio main component
+- `components/babyStudio/BabyStudio.tsx`: Baby Studio main component
+- `components/videoStudio/VideoStudio.tsx`: Video Studio main component
+- `components/timelineStudio/TimelineStudio.tsx`: Timeline Studio main component
+- `components/imageStudio/`: Image Studio components
+- `components/adCloner/AdClonerStudio.tsx`: Ad Cloner main component
+- `components/videoAnalyzer/VideoAnalyzerStudio.tsx`: Video Analyzer main component
 
 ## Notes on Video Analyzer Integration
 
-The `videoAnalyzer/` directory contains extensive documentation for integrating a video ad analysis feature. This is in development and has its own CLAUDE.md file with detailed implementation guidance. Current integration status is documented in `IMPLEMENTATION_CHECKLIST.md`.
+The `.docs/` directory contains extensive documentation for the Video Analyzer feature and other project documentation. This includes implementation guides, API integration details, and deployment instructions. The Video Analyzer components are located in `components/videoAnalyzer/` with mock data available for development.
 
 ## Environment Configuration
 

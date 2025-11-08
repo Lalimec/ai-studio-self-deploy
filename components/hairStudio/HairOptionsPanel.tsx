@@ -1,6 +1,6 @@
 import React from 'react';
-import { GenerationOptions, Gender, PoseStyle, ColorOption, AdornmentOption, AspectRatio } from '../types';
-import { MALE_HAIRSTYLES, FEMALE_HAIRSTYLES, AVANT_GARDE_HAIRSTYLES, ASPECT_RATIO_OPTIONS } from '../constants';
+import { GenerationOptions, Gender, PoseStyle, ColorOption, AdornmentOption, AspectRatio } from '../../types';
+import { MALE_HAIRSTYLES, FEMALE_HAIRSTYLES, AVANT_GARDE_HAIRSTYLES, ASPECT_RATIO_OPTIONS } from '../../constants';
 
 interface OptionsPanelProps {
   options: GenerationOptions;

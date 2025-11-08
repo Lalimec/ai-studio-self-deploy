@@ -13,7 +13,7 @@ import {
 } from '../services/videoAnalyzerService';
 import { imageModels, analysisModels } from '../constants';
 import { logUserAction } from '../services/loggingService';
-import { mockVideoAnalysisData, mockExtractedFrames } from '../videoAnalyzer/mockData';
+import { mockVideoAnalysisData, mockExtractedFrames } from '../components/videoAnalyzer/mockData';
 
 declare const JSZip: any;
 

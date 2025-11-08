@@ -1,7 +1,7 @@
 /// <reference lib="dom" />
 import React, { useEffect, useCallback, useState } from 'react';
-import { StudioImage, TimelinePair } from '../types';
-import { ChevronLeftIcon, ChevronRightIcon, CloseIcon, SwapIcon } from './Icons';
+import { StudioImage, TimelinePair } from '../../types';
+import { ChevronLeftIcon, ChevronRightIcon, CloseIcon, SwapIcon } from '../Icons';
 
 interface TimelinePairLightboxProps {
   pairs: TimelinePair[];
