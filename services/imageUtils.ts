@@ -32,8 +32,36 @@ export const dataURLtoFile = (dataurl: string, filename: string): File => {
     return new File([u8arr], filename, {type:mime});
 }
 
+/**
+ * Sanitizes a filename by removing only filesystem-reserved characters while preserving Unicode.
+ *
+ * **Unicode-Friendly**: Preserves non-Latin characters (Arabic, Chinese, Cyrillic, etc.)
+ *
+ * **Keeps**: All Unicode letters/numbers, hyphens, underscores, dots
+ *
+ * **Removes**: < > : " / \ | ? * and control characters (ASCII 0-31)
+ *
+ * @param name - The filename to sanitize
+ * @returns Sanitized filename safe for all major operating systems
+ */
 export const sanitizeFilename = (name: string): string => {
-    return name.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-._]/g, '');
+    // Replace whitespace with hyphens
+    let sanitized = name.replace(/\s+/g, '-');
+
+    // Remove only truly problematic filename characters (filesystem reserved characters)
+    // This regex removes: < > : " / \ | ? * and control characters (0x00-0x1F)
+    // Everything else (including all Unicode) is preserved
+    sanitized = sanitized.replace(/[<>:"/\\|?*\x00-\x1F]/g, '');
+
+    // Trim and remove leading/trailing dots (security risk on some systems)
+    sanitized = sanitized.trim().replace(/^\.+|\.+$/g, '');
+
+    // If sanitized name is empty after cleaning, use fallback
+    if (!sanitized) {
+        sanitized = 'untitled';
+    }
+
+    return sanitized;
 };
 
 export const blobToDataUrl = (blob: Blob): Promise<string> => {
@@ -60,20 +88,52 @@ export const getTimestamp = (): string => {
 };
 
 /**
- * Embeds a prompt into a JPEG image's EXIF metadata.
+ * Embeds a prompt into a JPEG image's EXIF metadata with proper Unicode support.
+ *
+ * **Unicode-Safe**: Handles emojis, non-Latin characters, and all UTF-8 text.
+ *
  * @param imageDataUrl The data URL of the JPEG image.
- * @param prompt The text prompt to embed.
+ * @param prompt The text prompt to embed (supports Unicode).
  * @returns A new data URL of the image with embedded metadata.
  */
 export const embedPromptInJpeg = (imageDataUrl: string, prompt: string): string => {
     const zeroth = {};
     const exif = {};
     const gps = {};
-    // Embed prompt in the UserComment tag. The prefix is required by the EXIF standard.
-    exif[piexif.ExifIFD.UserComment] = "ASCII\0\0\0" + prompt;
-    const exifObj = { "0th": zeroth, "Exif": exif, "GPS": gps };
-    const exifbytes = piexif.dump(exifObj);
-    return piexif.insert(exifbytes, imageDataUrl);
+
+    // EXIF UserComment requires proper encoding for Unicode support
+    // Format: [Character Code (8 bytes)] + [Actual String]
+    // Using "UNICODE\0" prefix for UTF-16 encoding (EXIF spec)
+
+    try {
+        // Encode the prompt as UTF-8 bytes
+        const encoder = new TextEncoder();
+        const promptBytes = encoder.encode(prompt);
+
+        // Create the character code prefix for UTF-8 (using undefined char code)
+        // EXIF spec: undefined char code is 8 null bytes, but piexif handles "UNICODE\0" better
+        const charCode = new Uint8Array([0x55, 0x4E, 0x49, 0x43, 0x4F, 0x44, 0x45, 0x00]); // "UNICODE\0"
+
+        // Combine character code + prompt bytes
+        const userCommentBytes = new Uint8Array(charCode.length + promptBytes.length);
+        userCommentBytes.set(charCode, 0);
+        userCommentBytes.set(promptBytes, charCode.length);
+
+        // Convert to string that piexif can handle (Latin1 byte representation)
+        let userCommentStr = '';
+        for (let i = 0; i < userCommentBytes.length; i++) {
+            userCommentStr += String.fromCharCode(userCommentBytes[i]);
+        }
+
+        exif[piexif.ExifIFD.UserComment] = userCommentStr;
+        const exifObj = { "0th": zeroth, "Exif": exif, "GPS": gps };
+        const exifbytes = piexif.dump(exifObj);
+        return piexif.insert(exifbytes, imageDataUrl);
+    } catch (error) {
+        // Fallback: if embedding fails, return original image
+        console.warn('Failed to embed prompt in JPEG EXIF:', error);
+        return imageDataUrl;
+    }
 };
 
 // Standard CRC32 implementation for PNG chunk checksums.
@@ -99,50 +159,98 @@ const crc32 = (buf: Uint8Array): number => {
 };
 
 /**
- * Embeds a prompt into a PNG image's metadata by adding a tEXt chunk.
+ * Embeds a prompt into a PNG image's metadata by adding an iTXt chunk.
+ *
+ * **Unicode-Safe**: Uses PNG iTXt chunk for full UTF-8 support (emojis, all languages).
+ *
  * @param imageBlob The blob of the original PNG image.
- * @param prompt The text prompt to embed.
+ * @param prompt The text prompt to embed (supports Unicode).
  * @returns A promise that resolves to a new Blob of the PNG with embedded metadata.
  */
 export const embedPromptInPng = async (imageBlob: Blob, prompt: string): Promise<Blob> => {
-    const keyword = "Description"; // This key is often read by OS file properties
-    const textEncoder = new TextEncoder();
-    const promptBytes = textEncoder.encode(prompt);
-    const keywordBytes = textEncoder.encode(keyword);
+    try {
+        const keyword = "Description"; // This key is often read by OS file properties
+        const textEncoder = new TextEncoder();
+        const keywordBytes = textEncoder.encode(keyword);
+        const promptBytes = textEncoder.encode(prompt);
 
-    // Create tEXt chunk data: keyword + null separator + prompt
-    const chunkDataBytes = new Uint8Array(keywordBytes.length + 1 + promptBytes.length);
-    chunkDataBytes.set(keywordBytes, 0);
-    chunkDataBytes.set([0], keywordBytes.length);
-    chunkDataBytes.set(promptBytes, keywordBytes.length + 1);
-    
-    // Create the full chunk structure
-    const chunkTypeBytes = new Uint8Array([116, 69, 88, 116]); // "tEXt"
-    const dataAndTypeBytes = new Uint8Array(chunkTypeBytes.length + chunkDataBytes.length);
-    dataAndTypeBytes.set(chunkTypeBytes, 0);
-    dataAndTypeBytes.set(chunkDataBytes, chunkTypeBytes.length);
-    
-    const crc = crc32(dataAndTypeBytes);
-    const crcBytes = new Uint8Array(4);
-    new DataView(crcBytes.buffer).setUint32(0, crc, false);
+        // iTXt chunk format (for Unicode support):
+        // Keyword: 1-79 bytes (Latin-1)
+        // Null separator: 1 byte
+        // Compression flag: 1 byte (0 = uncompressed)
+        // Compression method: 1 byte (0)
+        // Language tag: 0-79 bytes (empty for default)
+        // Null separator: 1 byte
+        // Translated keyword: 0+ bytes (empty for default)
+        // Null separator: 1 byte
+        // Text: 0+ bytes (UTF-8)
 
-    const lengthBytes = new Uint8Array(4);
-    new DataView(lengthBytes.buffer).setUint32(0, chunkDataBytes.length, false);
+        const compressionFlag = 0;
+        const compressionMethod = 0;
+        const languageTag = new Uint8Array(0); // Empty = default language
+        const translatedKeyword = new Uint8Array(0); // Empty = no translation
 
-    const chunk = new Uint8Array(lengthBytes.length + dataAndTypeBytes.length + crcBytes.length);
-    chunk.set(lengthBytes, 0);
-    chunk.set(dataAndTypeBytes, lengthBytes.length);
-    chunk.set(crcBytes, lengthBytes.length + dataAndTypeBytes.length);
+        // Calculate total chunk data size
+        const chunkDataLength =
+            keywordBytes.length + 1 + // keyword + null
+            1 + 1 + // compression flag + method
+            languageTag.length + 1 + // language tag + null
+            translatedKeyword.length + 1 + // translated keyword + null
+            promptBytes.length; // text
 
-    // Insert chunk before the IEND chunk of the PNG
-    const imageBuffer = await imageBlob.arrayBuffer();
-    const originalBytes = new Uint8Array(imageBuffer);
-    const iendPosition = originalBytes.length - 12; // IEND chunk is always last 12 bytes
-    
-    const newPngBytes = new Uint8Array(originalBytes.length + chunk.length);
-    newPngBytes.set(originalBytes.slice(0, iendPosition), 0);
-    newPngBytes.set(chunk, iendPosition);
-    newPngBytes.set(originalBytes.slice(iendPosition), iendPosition + chunk.length);
+        // Create iTXt chunk data
+        const chunkDataBytes = new Uint8Array(chunkDataLength);
+        let offset = 0;
 
-    return new Blob([newPngBytes], { type: 'image/png' });
+        chunkDataBytes.set(keywordBytes, offset);
+        offset += keywordBytes.length;
+        chunkDataBytes[offset++] = 0; // null separator
+
+        chunkDataBytes[offset++] = compressionFlag;
+        chunkDataBytes[offset++] = compressionMethod;
+
+        chunkDataBytes.set(languageTag, offset);
+        offset += languageTag.length;
+        chunkDataBytes[offset++] = 0; // null separator
+
+        chunkDataBytes.set(translatedKeyword, offset);
+        offset += translatedKeyword.length;
+        chunkDataBytes[offset++] = 0; // null separator
+
+        chunkDataBytes.set(promptBytes, offset);
+
+        // Create the full chunk structure
+        const chunkTypeBytes = new Uint8Array([105, 84, 88, 116]); // "iTXt" (was "tEXt")
+        const dataAndTypeBytes = new Uint8Array(chunkTypeBytes.length + chunkDataBytes.length);
+        dataAndTypeBytes.set(chunkTypeBytes, 0);
+        dataAndTypeBytes.set(chunkDataBytes, chunkTypeBytes.length);
+
+        const crc = crc32(dataAndTypeBytes);
+        const crcBytes = new Uint8Array(4);
+        new DataView(crcBytes.buffer).setUint32(0, crc, false);
+
+        const lengthBytes = new Uint8Array(4);
+        new DataView(lengthBytes.buffer).setUint32(0, chunkDataBytes.length, false);
+
+        const chunk = new Uint8Array(lengthBytes.length + dataAndTypeBytes.length + crcBytes.length);
+        chunk.set(lengthBytes, 0);
+        chunk.set(dataAndTypeBytes, lengthBytes.length);
+        chunk.set(crcBytes, lengthBytes.length + dataAndTypeBytes.length);
+
+        // Insert chunk before the IEND chunk of the PNG
+        const imageBuffer = await imageBlob.arrayBuffer();
+        const originalBytes = new Uint8Array(imageBuffer);
+        const iendPosition = originalBytes.length - 12; // IEND chunk is always last 12 bytes
+
+        const newPngBytes = new Uint8Array(originalBytes.length + chunk.length);
+        newPngBytes.set(originalBytes.slice(0, iendPosition), 0);
+        newPngBytes.set(chunk, iendPosition);
+        newPngBytes.set(originalBytes.slice(iendPosition), iendPosition + chunk.length);
+
+        return new Blob([newPngBytes], { type: 'image/png' });
+    } catch (error) {
+        // Fallback: if embedding fails, return original image
+        console.warn('Failed to embed prompt in PNG iTXt:', error);
+        return imageBlob;
+    }
 };

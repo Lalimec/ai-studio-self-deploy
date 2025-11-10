@@ -431,6 +431,78 @@ export const ENDPOINTS = {
 
 ### Utility Services
 
+#### downloadService.ts (~400 lines) ⭐ **CENTRALIZED DOWNLOAD**
+**Purpose**: Unified download functionality for all studios (DRY principle)
+
+**Architecture Philosophy:**
+- **Single source of truth** for all download operations
+- **Eliminates code duplication** across studios
+- **Consistent error handling** and progress tracking
+- **Unicode-friendly** filename handling
+
+**Key Functions:**
+
+1. **`downloadFile(options)`**
+   - Simple file download via browser download API
+   - Handles URL or Blob sources
+   - Automatic cleanup of object URLs
+
+2. **`downloadImageWithMetadata(options)`**
+   - Downloads image with EXIF prompt embedding
+   - Optionally creates accompanying .txt metadata file
+   - Used by: Image Studio (single download)
+
+3. **`downloadBulkImages(options)`** ⭐ **Most Used**
+   - Bulk download of images in ZIP format
+   - Supports EXIF embedding, metadata files, videos
+   - Progress tracking with callbacks
+   - Used by: Hair Studio, Baby Studio, Image Studio (bulk)
+
+4. **`downloadZip(options)`**
+   - Generic ZIP creation and download
+   - Supports nested folders
+   - Progress tracking
+   - Used by: Ad Cloner
+
+**Type System:**
+```typescript
+interface DownloadWithMetadataOptions {
+    imageUrl?: string;
+    imageBlob?: Blob;
+    imageBase64?: string;
+    filename: string;
+    prompt?: string;
+    metadata?: Record<string, any>;
+    embedInImage?: boolean;
+}
+
+interface BulkImageDownloadOptions {
+    images: Array<{
+        imageUrl/imageBlob/imageBase64
+        filename, prompt, metadata
+        videoUrl, videoFilename
+    }>;
+    zipFilename: string;
+    folderName?: string;
+    progressCallback?: ProgressCallback;
+    embedPrompts?: boolean;
+    includeMetadataFiles?: boolean;
+}
+```
+
+**Progress Tracking:**
+- 0-50%: Processing files (fetching, EXIF embedding)
+- 50-100%: ZIP compression
+- Callback format: `{ visible: boolean, message: string, progress: 0-100 }`
+
+**Used By:**
+- `useImageStudioLogic.ts` - Single & bulk downloads with EXIF
+- `useHairStudio.ts` - ZIP with image + video + metadata
+- `useBabyStudio.ts` - ZIP with parents + babies + videos
+- `useAdCloner.ts` - ZIP with nested folders & variations
+
+---
+
 #### imageUtils.ts (148 lines)
 **Purpose**: Image processing utilities
 
@@ -448,11 +520,34 @@ export const ENDPOINTS = {
    - Converts base64 to Blob
    - For downloads
 
-4. **`dataURLToBlob(dataURL)`**
+4. **`sanitizeFilename(name)` 🌐** ⭐ **UNICODE-FRIENDLY**
+   - **NEW**: Preserves non-Latin characters (Arabic, Chinese, Cyrillic, etc.)
+   - **OLD**: Stripped all non-ASCII → caused download failures
+   - **Removes**: Only filesystem-reserved chars (< > : " / \ | ? *)
+   - **Keeps**: All Unicode letters, numbers, hyphens, underscores, dots
+   - **Fallback**: Returns 'untitled' if sanitized name is empty
+
+5. **`embedPromptInJpeg(dataUrl, prompt)` 🌐** ⭐ **UNICODE-SAFE**
+   - **CRITICAL FIX**: Handles emojis & Unicode in prompts
+   - **OLD BUG**: `btoa()` crashed on non-Latin1 characters
+   - **NEW**: Properly encodes UTF-8 bytes for EXIF UserComment
+   - Uses "UNICODE\0" character code prefix (EXIF spec)
+   - Converts bytes to Latin1-safe string for piexif library
+   - **Fallback**: Returns original image if embedding fails
+
+6. **`embedPromptInPng(blob, prompt)` 🌐** ⭐ **UNICODE-SAFE**
+   - **CRITICAL FIX**: Now uses PNG iTXt chunk (was tEXt)
+   - **tEXt**: Latin-1 only (old implementation)
+   - **iTXt**: Full UTF-8 support (new implementation)
+   - Supports compression flags, language tags
+   - Inserts chunk before IEND (PNG spec)
+   - **Fallback**: Returns original image if embedding fails
+
+7. **`dataURLToBlob(dataURL)`**
    - Extracts Blob from data URL
    - Handles `data:image/png;base64,...` format
 
-5. **`downloadImage(base64OrUrl, filename)`**
+8. **`downloadImage(base64OrUrl, filename)`**
    - Triggers browser download
    - Creates temporary anchor element
    - Supports both base64 and URLs

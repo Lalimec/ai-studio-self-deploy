@@ -7,6 +7,7 @@ import { generateSetId, getTimestamp, sanitizeFilename } from '../services/image
 import { processWithConcurrency } from '../services/apiUtils';
 import { ActiveCropper } from '../App';
 import { logUserAction } from '../services/loggingService';
+import { downloadBulkImages, ZipFileEntry, downloadZip } from '../services/downloadService';
 
 declare const JSZip: any;
 
@@ -359,72 +360,82 @@ export const useAdCloner = ({ addToast, setConfirmAction, withMultiDownloadWarni
                 addToast("No results to download.", "info");
                 return;
             }
-            setDownloadProgress({ visible: true, message: 'Starting download...', progress: 0 });
 
             try {
-                const zip = new JSZip();
-                const adFolder = zip.folder(`ad_cloner_session_${sessionId}`);
-                
                 const timestamp = getTimestamp();
-                const baseTitle = generationResult.base_prompt.title 
-                    ? sanitizeFilename(generationResult.base_prompt.title.split('||')[0].trim()).substring(0, 50) 
+                const baseTitle = generationResult.base_prompt.title
+                    ? sanitizeFilename(generationResult.base_prompt.title.split('||')[0].trim()).substring(0, 50)
                     : 'ad';
 
+                const files: ZipFileEntry[] = [];
+
+                // Add original ad image
                 if (adImage.croppedSrc) {
-                    adFolder.file(`${sessionId}_original_ad_${baseTitle}_${timestamp}.jpg`, adImage.croppedSrc.split(',')[1], { base64: true });
+                    files.push({
+                        filename: `${sessionId}_original_ad_${baseTitle}_${timestamp}.jpg`,
+                        content: adImage.croppedSrc.split(',')[1],
+                        base64: true,
+                    });
                 }
+
+                // Add subject images
                 subjectImages.forEach((img, i) => {
                     if (img.croppedSrc) {
-                        adFolder.file(`subject_${i + 1}.jpg`, img.croppedSrc.split(',')[1], { base64: true });
+                        files.push({
+                            filename: `subject_${i + 1}.jpg`,
+                            content: img.croppedSrc.split(',')[1],
+                            base64: true,
+                        });
                     }
                 });
-                adFolder.file(`${sessionId}_generation_results_${baseTitle}_${timestamp}.json`, JSON.stringify(generationResult, null, 2));
 
-                // FIX: Use a type guard to ensure correct typing of `state` from `Object.entries`.
-                const variationsWithImages = Object.entries(variationStates).filter((entry): entry is [string, VariationState] => (entry[1] as VariationState)?.activeImageIndex > -1);
-                let processed = 0;
+                // Add generation results JSON
+                files.push({
+                    filename: `${sessionId}_generation_results_${baseTitle}_${timestamp}.json`,
+                    content: JSON.stringify(generationResult, null, 2),
+                });
+
+                // Add variation images and metadata
+                const variationsWithImages = Object.entries(variationStates).filter(
+                    (entry): entry is [string, VariationState] => (entry[1] as VariationState)?.activeImageIndex > -1
+                );
+
+                if (variationsWithImages.length === 0) {
+                    addToast("No generated images to download.", "info");
+                    return;
+                }
 
                 for (const [indexStr, state] of variationsWithImages) {
                     const index = parseInt(indexStr, 10);
                     const variation = generationResult.variations[index];
                     const activeImageSrc = state.imageHistory[state.activeImageIndex];
                     const filename = getDownloadFilename(index, state.activeImageIndex, variation.title);
-                    
+
                     const response = await fetch(activeImageSrc);
                     const blob = await response.blob();
-                    adFolder.file(filename, blob);
+                    files.push({
+                        filename,
+                        content: blob,
+                    });
 
                     const info = {
                         variation_title: variation.title,
                         variation_details: variation.details,
                         instructional_prompt: variation.prompt,
-                        refinement_history: state.imageHistory.length > 1 ? "Multiple refinements were made." : "Initial generation."
+                        refinement_history: state.imageHistory.length > 1 ? "Multiple refinements were made." : "Initial generation.",
                     };
-                    adFolder.file(filename.replace(/\.[^/.]+$/, ".txt"), JSON.stringify(info, null, 2));
-                    
-                    processed++;
-                    setDownloadProgress({ 
-                        visible: true, 
-                        message: `Zipping variation ${index + 1}...`,
-                        progress: (processed / variationsWithImages.length) * 100
+                    files.push({
+                        filename: filename.replace(/\.[^/.]+$/, '.txt'),
+                        content: JSON.stringify(info, null, 2),
                     });
                 }
 
-                if (variationsWithImages.length === 0) {
-                     addToast("No generated images to download.", "info");
-                     setDownloadProgress({ visible: false, message: '', progress: 0 });
-                     return;
-                }
-
-                setDownloadProgress({ visible: true, message: 'Compressing...', progress: 99 });
-                const content = await zip.generateAsync({ type: "blob" });
-                const link = document.createElement('a');
-                link.href = URL.createObjectURL(content);
-                link.download = `AI_Studio_AdCloner_${sessionId}_${getTimestamp()}.zip`;
-                link.click();
-                URL.revokeObjectURL(link.href);
-
-                setDownloadProgress({ visible: false, message: '', progress: 0 });
+                await downloadZip({
+                    zipFilename: `AI_Studio_AdCloner_${sessionId}_${getTimestamp()}.zip`,
+                    files,
+                    folderName: `ad_cloner_session_${sessionId}`,
+                    progressCallback: setDownloadProgress,
+                });
 
             } catch (err) {
                 addToast("Error creating ZIP file.", "error");
@@ -443,36 +454,39 @@ export const useAdCloner = ({ addToast, setConfirmAction, withMultiDownloadWarni
                 return;
             }
             
-            setDownloadProgress({ visible: true, message: `Zipping variation ${index + 1}...`, progress: 0 });
-
             try {
-                const zip = new JSZip();
+                const files: ZipFileEntry[] = [];
+
+                // Add all images in the variation's history
                 for (let i = 0; i < state.imageHistory.length; i++) {
                     const imgSrc = state.imageHistory[i];
                     const filename = getDownloadFilename(index, i, variation.title);
                     const response = await fetch(imgSrc);
                     const blob = await response.blob();
-                    zip.file(filename, blob);
-                    setDownloadProgress({ visible: true, message: `Adding image ${i+1} of ${state.imageHistory.length}...`, progress: (i / state.imageHistory.length) * 80 });
+                    files.push({
+                        filename,
+                        content: blob,
+                    });
                 }
 
+                // Add metadata file
                 const info = {
                     variation_title: variation.title,
                     variation_details: variation.details,
                     instructional_prompt: variation.prompt,
                 };
                 const zipFilename = getDownloadFilename(index, 0, variation.title).replace(/_gen\d+.*\.jpg$/, '.zip');
-                zip.file(zipFilename.replace('.zip', '.txt'), JSON.stringify(info, null, 2));
-                setDownloadProgress({ visible: true, message: `Compressing...`, progress: 90 });
+                files.push({
+                    filename: zipFilename.replace('.zip', '.txt'),
+                    content: JSON.stringify(info, null, 2),
+                });
 
-                const content = await zip.generateAsync({ type: "blob" });
-                const link = document.createElement('a');
-                link.href = URL.createObjectURL(content);
-                link.download = zipFilename;
-                link.click();
-                URL.revokeObjectURL(link.href);
-                
-                setDownloadProgress({ visible: false, message: '', progress: 0 });
+                await downloadZip({
+                    zipFilename,
+                    files,
+                    progressCallback: setDownloadProgress,
+                });
+
             } catch (err) {
                 addToast("Error creating single variation ZIP file.", "error");
                 setDownloadProgress({ visible: false, message: '', progress: 0 });

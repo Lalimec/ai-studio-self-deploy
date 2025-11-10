@@ -1,8 +1,8 @@
 import { useState, useCallback } from 'react';
-import { 
-    BabyGenerationOptions, BabyAge, BabyGender, GeneratedBabyImage, Toast as ToastType, ParentImageState, ImageForVideoProcessing 
+import {
+    BabyGenerationOptions, BabyAge, BabyGender, GeneratedBabyImage, Toast as ToastType, ParentImageState, ImageForVideoProcessing
 } from '../types';
-import { 
+import {
     generateBabyImages, prepareBabyVideoPrompts, generateVideoPromptForBabyImage
 } from '../services/babyStudioService';
 import { dataUrlToBlob } from '../services/geminiClient';
@@ -10,6 +10,7 @@ import { uploadImageFromDataUrl } from '../services/imageUploadService';
 import { generateAllVideos, generateSingleVideoForImage, generateVideoPromptForImage, VideoTask } from '../services/videoService';
 import { getTimestamp, generateSetId, sanitizeFilename } from '../services/imageUtils';
 import { logUserAction } from '../services/loggingService';
+import { downloadBulkImages } from '../services/downloadService';
 
 declare const JSZip: any;
 
@@ -433,40 +434,26 @@ export const useBabyStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
             const parentIdString = parentId === 'parent1' ? 'parent-01' : 'parent-02';
             const baseName = `${sessionId}_${parentIdString}_${sanitizedBaseFilename}_${timestamp}`;
 
-            setDownloadProgress({ visible: true, message: `Preparing: ${baseName}.zip`, progress: 0 });
-
             try {
-                const zip = new JSZip();
-
-                zip.file(`${baseName}.jpg`, parentToDownload.croppedSrc.split(',')[1], { base64: true });
-                setDownloadProgress({ visible: true, message: 'Adding image...', progress: 33 });
-
-                if (parentToDownload.videoSrc) {
-                    const videoBlob = await fetch(parentToDownload.videoSrc).then(res => res.blob());
-                    zip.file(`${baseName}.mp4`, videoBlob);
-                    setDownloadProgress({ visible: true, message: 'Adding video...', progress: 66 });
-                }
-
-                const info = {
-                    type: "parent_image",
-                    id: parentToDownload.id,
-                    video_prompt: parentToDownload.videoPrompt,
-                    session_id: sessionId,
-                    timestamp: timestamp,
-                };
-                zip.file(`${baseName}_info.txt`, JSON.stringify(info, null, 2));
-                setDownloadProgress({ visible: true, message: 'Compressing...', progress: 90 });
-
-                const content = await zip.generateAsync({ type: 'blob' });
-                const link = document.createElement('a');
-                link.href = URL.createObjectURL(content);
-                link.download = `${baseName}.zip`;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                URL.revokeObjectURL(link.href);
-
-                setDownloadProgress({ visible: false, message: '', progress: 0 });
+                await downloadBulkImages({
+                    images: [{
+                        imageBase64: parentToDownload.croppedSrc,
+                        filename: `${baseName}.jpg`,
+                        metadata: {
+                            type: "parent_image",
+                            id: parentToDownload.id,
+                            video_prompt: parentToDownload.videoPrompt,
+                            session_id: sessionId,
+                            timestamp: timestamp,
+                        },
+                        videoUrl: parentToDownload.videoSrc,
+                        videoFilename: `${baseName}.mp4`,
+                    }],
+                    zipFilename: `${baseName}.zip`,
+                    progressCallback: setDownloadProgress,
+                    embedPrompts: false, // Baby Studio uses metadata files instead
+                    includeMetadataFiles: true,
+                });
             } catch (err) {
                 addToast("Error creating ZIP file.", "error");
                 setDownloadProgress({ visible: false, message: '', progress: 0 });
@@ -481,44 +468,30 @@ export const useBabyStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
                 addToast("Could not find image to download.", "error");
                 return;
             }
-            
+
             const baseName = image.filename.substring(0, image.filename.lastIndexOf('.'));
 
-            setDownloadProgress({ visible: true, message: `Preparing: ${baseName}.zip`, progress: 0 });
-
             try {
-                const zip = new JSZip();
-
-                zip.file(`${baseName}.jpg`, image.src.split(',')[1], { base64: true });
-                setDownloadProgress({ visible: true, message: 'Adding image...', progress: 33 });
-
-                if (image.videoSrc) {
-                    const videoBlob = await fetch(image.videoSrc).then(res => res.blob());
-                    zip.file(`${baseName}.mp4`, videoBlob);
-                    setDownloadProgress({ visible: true, message: 'Adding video...', progress: 66 });
-                }
-
-                const info = {
-                    type: "generated_baby_image",
-                    description: image.description,
-                    image_generation_prompt: image.imageGenerationPrompt,
-                    video_prompt: image.videoPrompt,
-                    session_id: sessionId,
-                    timestamp: getTimestamp(),
-                };
-                zip.file(`${baseName}_info.txt`, JSON.stringify(info, null, 2));
-                setDownloadProgress({ visible: true, message: 'Compressing...', progress: 90 });
-
-                const content = await zip.generateAsync({ type: 'blob' });
-                const link = document.createElement('a');
-                link.href = URL.createObjectURL(content);
-                link.download = `${baseName}.zip`;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                URL.revokeObjectURL(link.href);
-
-                setDownloadProgress({ visible: false, message: '', progress: 0 });
+                await downloadBulkImages({
+                    images: [{
+                        imageBase64: image.src,
+                        filename: `${baseName}.jpg`,
+                        metadata: {
+                            type: "generated_baby_image",
+                            description: image.description,
+                            image_generation_prompt: image.imageGenerationPrompt,
+                            video_prompt: image.videoPrompt,
+                            session_id: sessionId,
+                            timestamp: getTimestamp(),
+                        },
+                        videoUrl: image.videoSrc,
+                        videoFilename: `${baseName}.mp4`,
+                    }],
+                    zipFilename: `${baseName}.zip`,
+                    progressCallback: setDownloadProgress,
+                    embedPrompts: false, // Baby Studio uses metadata files instead
+                    includeMetadataFiles: true,
+                });
             } catch (err) {
                 addToast("Error creating ZIP file.", "error");
                 setDownloadProgress({ visible: false, message: '', progress: 0 });
@@ -528,83 +501,84 @@ export const useBabyStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
 
     const handleDownloadAll = () => {
         withMultiDownloadWarning(async () => {
-            const itemsToDownload = [
-                ...(parent1.croppedSrc ? [parent1] : []),
-                ...(parent2.croppedSrc ? [parent2] : []),
-                ...generatedImages
-            ];
+            const timestamp = getTimestamp();
+            const images: any[] = [];
 
-            if (itemsToDownload.length === 0) {
+            // Add parent images if available
+            if (parent1.croppedSrc) {
+                const originalFilename = parent1.filename || 'parent1';
+                const baseFilename = originalFilename.substring(0, originalFilename.lastIndexOf('.')) || originalFilename;
+                const sanitizedBaseFilename = sanitizeFilename(baseFilename);
+                const baseName = `${sessionId}_parent-01_${sanitizedBaseFilename}_${timestamp}`;
+
+                images.push({
+                    imageBase64: parent1.croppedSrc,
+                    filename: `${baseName}.jpg`,
+                    metadata: {
+                        type: "parent_image",
+                        id: parent1.id,
+                        video_prompt: parent1.videoPrompt,
+                        session_id: sessionId,
+                        timestamp,
+                    },
+                    videoUrl: parent1.videoSrc,
+                    videoFilename: `${baseName}.mp4`,
+                });
+            }
+
+            if (parent2.croppedSrc) {
+                const originalFilename = parent2.filename || 'parent2';
+                const baseFilename = originalFilename.substring(0, originalFilename.lastIndexOf('.')) || originalFilename;
+                const sanitizedBaseFilename = sanitizeFilename(baseFilename);
+                const baseName = `${sessionId}_parent-02_${sanitizedBaseFilename}_${timestamp}`;
+
+                images.push({
+                    imageBase64: parent2.croppedSrc,
+                    filename: `${baseName}.jpg`,
+                    metadata: {
+                        type: "parent_image",
+                        id: parent2.id,
+                        video_prompt: parent2.videoPrompt,
+                        session_id: sessionId,
+                        timestamp,
+                    },
+                    videoUrl: parent2.videoSrc,
+                    videoFilename: `${baseName}.mp4`,
+                });
+            }
+
+            // Add baby images
+            for (const image of generatedImages) {
+                const baseName = image.filename.substring(0, image.filename.lastIndexOf('.'));
+                images.push({
+                    imageBase64: image.src,
+                    filename: `${baseName}.jpg`,
+                    metadata: {
+                        type: "generated_baby_image",
+                        description: image.description,
+                        image_generation_prompt: image.imageGenerationPrompt,
+                        video_prompt: image.videoPrompt,
+                        session_id: sessionId,
+                        timestamp,
+                    },
+                    videoUrl: image.videoSrc,
+                    videoFilename: `${baseName}.mp4`,
+                });
+            }
+
+            if (images.length === 0) {
                 addToast("No images to download.", "info");
                 return;
             }
 
-            const timestamp = getTimestamp();
-            setDownloadProgress({ visible: true, message: 'Starting download...', progress: 0 });
-
             try {
-                const zip = new JSZip();
-                let filesProcessed = 0;
-                const totalFiles = itemsToDownload.length;
-
-                const processItem = async (item: GeneratedBabyImage | ParentImageState) => {
-                    const isParent = 'id' in item && (item.id === 'parent1' || item.id === 'parent2');
-                    let baseName: string;
-                    
-                    if (isParent) {
-                        const parentItem = item as ParentImageState;
-                        const parentIdString = parentItem.id === 'parent1' ? 'parent-01' : 'parent-02';
-                        const originalFilename = parentItem.filename || parentItem.id;
-                        const baseFilename = originalFilename.substring(0, originalFilename.lastIndexOf('.')) || originalFilename;
-                        const sanitizedBaseFilename = sanitizeFilename(baseFilename);
-                        baseName = `${sessionId}_${parentIdString}_${sanitizedBaseFilename}_${timestamp}`;
-                    } else {
-                        const babyItem = item as GeneratedBabyImage;
-                        baseName = babyItem.filename.substring(0, babyItem.filename.lastIndexOf('.'));
-                    }
-
-                    const src = 'croppedSrc' in item && item.croppedSrc ? item.croppedSrc : ('src' in item ? item.src : null);
-
-                    if (src) {
-                        zip.file(`${baseName}.jpg`, src.split(',')[1], { base64: true });
-                    }
-
-                    if (item.videoSrc) {
-                        const videoBlob = await fetch(item.videoSrc).then(res => res.blob());
-                        zip.file(`${baseName}.mp4`, videoBlob);
-                    }
-
-                    const info = isParent ? {
-                        type: "parent_image", id: (item as ParentImageState).id, video_prompt: item.videoPrompt,
-                    } : {
-                        type: "generated_baby_image", description: (item as GeneratedBabyImage).description,
-                        image_generation_prompt: (item as GeneratedBabyImage).imageGenerationPrompt,
-                        video_prompt: item.videoPrompt,
-                    };
-                    zip.file(`${baseName}_info.txt`, JSON.stringify({...info, session_id: sessionId, timestamp }, null, 2));
-                    
-                    filesProcessed++;
-                    setDownloadProgress({ 
-                        visible: true, 
-                        message: `Zipping: ${baseName}`, 
-                        progress: (filesProcessed / totalFiles) * 100 
-                    });
-                };
-
-                await Promise.all(itemsToDownload.map(processItem));
-                
-                setDownloadProgress({ visible: true, message: 'Compressing ZIP...', progress: 99 });
-                const content = await zip.generateAsync({ type: 'blob' });
-                const link = document.createElement('a');
-                link.href = URL.createObjectURL(content);
-                link.download = `AI_Studio_Baby_${sessionId}_${timestamp}.zip`;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                URL.revokeObjectURL(link.href);
-
-                setDownloadProgress({ visible: false, message: '', progress: 0 });
-
+                await downloadBulkImages({
+                    images,
+                    zipFilename: `AI_Studio_Baby_${sessionId}_${timestamp}.zip`,
+                    progressCallback: setDownloadProgress,
+                    embedPrompts: false, // Baby Studio uses metadata files instead
+                    includeMetadataFiles: true,
+                });
             } catch (err) {
                 console.error("Error creating ZIP file for Baby Studio:", err);
                 addToast("Error creating ZIP file.", "error");

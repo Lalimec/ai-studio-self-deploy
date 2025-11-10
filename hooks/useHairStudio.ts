@@ -1,19 +1,20 @@
 import { useState, useCallback } from 'react';
-import { 
-    GenerationOptions, Gender, PoseStyle, ColorOption, GeneratedImage, Toast as ToastType, AdornmentOption 
+import {
+    GenerationOptions, Gender, PoseStyle, ColorOption, GeneratedImage, Toast as ToastType, AdornmentOption
 } from '../types';
-import { 
+import {
     generateHairstyles, regenerateSingleHairstyle
 } from '../services/hairStudioService';
-import { 
-    prepareVideoPrompts, 
+import {
+    prepareVideoPrompts,
     generateVideoPromptForImage, enhanceVideoPromptForImage, VideoTask
 } from '../services/videoService';
 import { dataUrlToBlob } from '../services/geminiClient';
 import { generateAllVideos, generateSingleVideoForImage } from '../services/videoService';
-import { getTimestamp, generateSetId, sanitizeFilename } from '../services/imageUtils';
+import { getTimestamp, generateSetId } from '../services/imageUtils';
 import { logUserAction } from '../services/loggingService';
 import { uploadImageFromDataUrl } from '../services/imageUploadService';
+import { downloadBulkImages } from '../services/downloadService';
 
 declare const JSZip: any;
 
@@ -328,43 +329,32 @@ export const useHairStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
                 addToast("Could not find image to download.", "error");
                 return;
             }
-            
+
             const baseName = image.filename.substring(0, image.filename.lastIndexOf('.'));
-            setDownloadProgress({ visible: true, message: `Preparing: ${baseName}.zip`, progress: 0 });
 
             try {
-                const zip = new JSZip();
-                zip.file(`${baseName}.jpg`, image.src.split(',')[1], { base64: true });
-                setDownloadProgress({ visible: true, message: 'Adding image...', progress: 33 });
-
-                if (image.videoSrc) {
-                    const videoBlob = await fetch(image.videoSrc).then(res => res.blob());
-                    zip.file(`${baseName}.mp4`, videoBlob);
-                    setDownloadProgress({ visible: true, message: 'Adding video...', progress: 66 });
-                }
-
-                const info = {
-                    type: "generated_hairstyle",
-                    hairstyle: image.hairstyle.name,
-                    color: image.color,
-                    image_generation_prompt: image.imageGenerationPrompt,
-                    video_prompt: image.videoPrompt,
-                    session_id: sessionId,
-                    timestamp: getTimestamp(),
-                };
-                zip.file(`${baseName}_info.txt`, JSON.stringify(info, null, 2));
-                setDownloadProgress({ visible: true, message: 'Compressing...', progress: 90 });
-
-                const content = await zip.generateAsync({ type: 'blob' });
-                const link = document.createElement('a');
-                link.href = URL.createObjectURL(content);
-                link.download = `${baseName}.zip`;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                URL.revokeObjectURL(link.href);
-
-                setDownloadProgress({ visible: false, message: '', progress: 0 });
+                await downloadBulkImages({
+                    images: [{
+                        imageBase64: image.src,
+                        filename: `${baseName}.jpg`,
+                        prompt: image.imageGenerationPrompt,
+                        metadata: {
+                            type: "generated_hairstyle",
+                            hairstyle: image.hairstyle.name,
+                            color: image.color,
+                            image_generation_prompt: image.imageGenerationPrompt,
+                            video_prompt: image.videoPrompt,
+                            session_id: sessionId,
+                            timestamp: getTimestamp(),
+                        },
+                        videoUrl: image.videoSrc,
+                        videoFilename: `${baseName}.mp4`,
+                    }],
+                    zipFilename: `${baseName}.zip`,
+                    progressCallback: setDownloadProgress,
+                    embedPrompts: false, // Hair Studio uses metadata files instead
+                    includeMetadataFiles: true,
+                });
             } catch (err) {
                 addToast("Error creating ZIP file.", "error");
                 setDownloadProgress({ visible: false, message: '', progress: 0 });
@@ -379,49 +369,33 @@ export const useHairStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
                 return;
             }
             logUserAction('DOWNLOAD_HAIR_ALL', { count: generatedImages.length, sessionId });
-            setDownloadProgress({ visible: true, message: 'Starting download...', progress: 0 });
 
             try {
-                const zip = new JSZip();
-                let filesProcessed = 0;
-                
-                const processItem = async (image: GeneratedImage) => {
+                const images = generatedImages.map(image => {
                     const baseName = image.filename.substring(0, image.filename.lastIndexOf('.'));
-                    zip.file(`${baseName}.jpg`, image.src.split(',')[1], { base64: true });
-
-                    if (image.videoSrc) {
-                        const videoBlob = await fetch(image.videoSrc).then(res => res.blob());
-                        zip.file(`${baseName}.mp4`, videoBlob);
-                    }
-
-                    const info = {
-                        type: "generated_hairstyle", hairstyle: image.hairstyle.name,
-                        color: image.color, image_generation_prompt: image.imageGenerationPrompt,
-                        video_prompt: image.videoPrompt,
+                    return {
+                        imageBase64: image.src,
+                        filename: `${baseName}.jpg`,
+                        prompt: image.imageGenerationPrompt,
+                        metadata: {
+                            type: "generated_hairstyle",
+                            hairstyle: image.hairstyle.name,
+                            color: image.color,
+                            image_generation_prompt: image.imageGenerationPrompt,
+                            video_prompt: image.videoPrompt,
+                        },
+                        videoUrl: image.videoSrc,
+                        videoFilename: `${baseName}.mp4`,
                     };
-                    zip.file(`${baseName}_info.txt`, JSON.stringify(info, null, 2));
-                    
-                    filesProcessed++;
-                    setDownloadProgress({ 
-                        visible: true, 
-                        message: `Zipping: ${image.filename}`, 
-                        progress: (filesProcessed / generatedImages.length) * 100 
-                    });
-                };
-                
-                await Promise.all(generatedImages.map(processItem));
-                
-                setDownloadProgress({ visible: true, message: 'Compressing ZIP...', progress: 99 });
-                const content = await zip.generateAsync({ type: 'blob' });
-                const link = document.createElement('a');
-                link.href = URL.createObjectURL(content);
-                link.download = `AI_Studio_Hair_${sessionId}_${getTimestamp()}.zip`;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                URL.revokeObjectURL(link.href);
+                });
 
-                setDownloadProgress({ visible: false, message: '', progress: 0 });
+                await downloadBulkImages({
+                    images,
+                    zipFilename: `AI_Studio_Hair_${sessionId}_${getTimestamp()}.zip`,
+                    progressCallback: setDownloadProgress,
+                    embedPrompts: false, // Hair Studio uses metadata files instead
+                    includeMetadataFiles: true,
+                });
             } catch (err) {
                 addToast("Error creating ZIP file.", "error");
                 setDownloadProgress({ visible: false, message: '', progress: 0 });

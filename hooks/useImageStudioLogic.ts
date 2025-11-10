@@ -2,10 +2,11 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { generateFigureImage, translateToEnglish, generatePromptList, generatePromptVariation, enhancePrompt } from '../services/geminiService';
 import { ImageStudioRunResult, ImageStudioGenerationResult, AppFile, Toast } from '../types';
-import { fileToBase64, blobToDataUrl, generateSetId, generateShortId, sanitizeFilename, getTimestamp, embedPromptInJpeg, embedPromptInPng } from '../services/imageUtils';
+import { fileToBase64, blobToDataUrl, generateSetId, generateShortId, sanitizeFilename, getTimestamp } from '../services/imageUtils';
 import { uploadImageFromDataUrl } from '../services/imageUploadService';
 import { runConcurrentTasks } from '../services/apiUtils';
 import { logUserAction } from '../services/loggingService';
+import { downloadImageWithMetadata, downloadBulkImages } from '../services/downloadService';
 
 declare const JSZip: any;
 
@@ -389,34 +390,17 @@ export const useImageStudioLogic = (
             addToast(`Downloading files for image...`, 'info');
 
             try {
-                const download = (url: string, filename: string, isBlob: boolean = false) => {
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = filename;
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    if (isBlob) URL.revokeObjectURL(url);
-                };
-                
-                let imageBlob = await fetch(result.url).then(res => res.blob());
-                if (imageBlob.type === 'image/jpeg') {
-                    const dataUrl = await blobToDataUrl(imageBlob);
-                    const newDataUrl = embedPromptInJpeg(dataUrl, result.prompt);
-                    imageBlob = await fetch(newDataUrl).then(res => res.blob());
-                } else if (imageBlob.type === 'image/png') {
-                    imageBlob = await embedPromptInPng(imageBlob, result.prompt);
-                }
-                const imageUrl = URL.createObjectURL(imageBlob);
-                const imageFilename = getDownloadFilename(result);
-                download(imageUrl, imageFilename, true);
-                await new Promise(res => setTimeout(res, 200));
-
-                const textContent = { filename: imageFilename, image_generation_prompt: result.prompt };
-                const textBlob = new Blob([JSON.stringify(textContent, null, 2)], { type: 'text/plain' });
-                const textUrl = URL.createObjectURL(textBlob);
-                download(textUrl, imageFilename.replace(/\.[^/.]+$/, ".txt"), true);
-
+                const filename = getDownloadFilename(result);
+                await downloadImageWithMetadata({
+                    imageUrl: result.url,
+                    filename,
+                    prompt: result.prompt,
+                    metadata: {
+                        filename,
+                        image_generation_prompt: result.prompt
+                    },
+                    embedInImage: true,
+                });
             } catch (err) {
                 addToast(err instanceof Error ? err.message : "An error occurred while preparing files.", "error");
             }
@@ -431,75 +415,62 @@ export const useImageStudioLogic = (
                 return;
             }
 
-            setDownloadProgress({ visible: true, message: 'Starting download...', progress: 0 });
-
             try {
-                const zip = new JSZip();
-                const addedOriginals = new Set<number>();
-                
-                let filesToProcessCount = successfulResults.length;
+                // Prepare images array for bulk download
+                const images = successfulResults
+                    .filter(r => r.url && r.prompt)
+                    .map(result => ({
+                        imageUrl: result.url!,
+                        filename: getDownloadFilename(result),
+                        prompt: result.prompt!,
+                        metadata: undefined, // No metadata files in Image Studio bulk download
+                    }));
+
+                // Add original files if requested
                 if (includeOriginals) {
-                    const uniqueOriginals = new Set(successfulResults.map(r => r.originalImageIndex));
-                    filesToProcessCount += uniqueOriginals.size;
-                }
-                let filesProcessed = 0;
+                    const addedOriginals = new Set<number>();
+                    for (const result of successfulResults) {
+                        if (!addedOriginals.has(result.originalImageIndex)) {
+                            const appFile = imageFiles[result.originalImageIndex];
+                            if (appFile) {
+                                const originalFile = appFile.file;
+                                const shortId = appFile.id;
+                                let baseName = originalFile.name.substring(0, originalFile.name.lastIndexOf('.'));
+                                const extension = originalFile.name.substring(originalFile.name.lastIndexOf('.') + 1) || 'png';
+                                if (baseName.startsWith('cropped_')) baseName = baseName.substring(8);
+                                const sanitizedBaseName = sanitizeFilename(baseName);
+                                const originalZipFilename = `${setId}_${sanitizedBaseName}_${shortId}_before.${extension}`;
 
-                for (const result of successfulResults) {
-                    filesProcessed++;
-                    setDownloadProgress({
-                        visible: true,
-                        message: `Fetching image: ${getDownloadFilename(result)}`,
-                        progress: (filesProcessed / filesToProcessCount) * 50
-                    });
+                                // Convert File to base64 data URL
+                                const reader = new FileReader();
+                                const base64Data = await new Promise<string>((resolve, reject) => {
+                                    reader.onload = () => resolve(reader.result as string);
+                                    reader.onerror = reject;
+                                    reader.readAsDataURL(originalFile);
+                                });
 
-                    if (!result.url || !result.prompt) continue;
+                                images.push({
+                                    imageUrl: undefined as any,
+                                    imageBase64: base64Data,
+                                    filename: originalZipFilename,
+                                    prompt: undefined,
+                                    metadata: undefined,
+                                });
 
-                    let blob = await fetch(result.url).then(res => res.blob());
-                    if (blob.type === 'image/jpeg') {
-                        const dataUrl = await blobToDataUrl(blob);
-                        const newDataUrl = embedPromptInJpeg(dataUrl, result.prompt);
-                        blob = await fetch(newDataUrl).then(res => res.blob());
-                    } else if (blob.type === 'image/png') {
-                        blob = await embedPromptInPng(blob, result.prompt);
-                    }
-                    zip.file(getDownloadFilename(result), blob);
-
-                    if (includeOriginals && !addedOriginals.has(result.originalImageIndex)) {
-                        const appFile = imageFiles[result.originalImageIndex];
-                        if (appFile) {
-                            const originalFile = appFile.file;
-                            const shortId = appFile.id;
-                            let baseName = originalFile.name.substring(0, originalFile.name.lastIndexOf('.'));
-                            const extension = originalFile.name.substring(originalFile.name.lastIndexOf('.') + 1) || 'png';
-                            if (baseName.startsWith('cropped_')) baseName = baseName.substring(8);
-                            const sanitizedBaseName = sanitizeFilename(baseName);
-                            const originalZipFilename = `${setId}_${sanitizedBaseName}_${shortId}_before.${extension}`;
-                            zip.file(originalZipFilename, originalFile);
-                            addedOriginals.add(result.originalImageIndex);
+                                addedOriginals.add(result.originalImageIndex);
+                            }
                         }
                     }
                 }
-                
-                setDownloadProgress({ visible: true, message: 'Compressing files...', progress: 50 });
-                const content = await zip.generateAsync({ type: 'blob' }, (metadata: any) => {
-                    setDownloadProgress({
-                        visible: true,
-                        message: metadata.currentFile ? `Compressing: ${metadata.currentFile}` : 'Preparing to compress...',
-                        progress: 50 + metadata.percent * 0.5
-                    });
+
+                // Use centralized download service
+                await downloadBulkImages({
+                    images,
+                    zipFilename: `AI_Studio_Image_Batch_${setId}_${getTimestamp()}.zip`,
+                    progressCallback: setDownloadProgress,
+                    embedPrompts: true,
+                    includeMetadataFiles: false, // Image Studio doesn't include metadata files in bulk download
                 });
-                
-                setDownloadProgress({ visible: true, message: 'Download will begin shortly!', progress: 100 });
-
-                const link = document.createElement('a');
-                link.href = URL.createObjectURL(content);
-                link.download = `AI_Studio_Image_Batch_${setId}_${getTimestamp()}.zip`;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                URL.revokeObjectURL(link.href);
-
-                setDownloadProgress({ visible: false, message: '', progress: 0 });
 
             } catch (err) {
                 addToast("An error occurred while creating the zip file.", "error");
