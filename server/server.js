@@ -13,6 +13,33 @@ const path = require('path');
 const WebSocket = require('ws');
 const { URLSearchParams, URL } = require('url');
 const rateLimit = require('express-rate-limit');
+const admin = require('firebase-admin');
+
+// Initialize Firebase Admin SDK
+let firebaseInitialized = false;
+try {
+  if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
+    // Cloud Run: Service account JSON from environment variable
+    const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount),
+    });
+    console.log('Firebase Admin initialized with service account JSON from environment');
+    firebaseInitialized = true;
+  } else if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+    // Local development: Service account JSON file path
+    admin.initializeApp({
+      credential: admin.credential.applicationDefault(),
+    });
+    console.log('Firebase Admin initialized with application default credentials');
+    firebaseInitialized = true;
+  } else {
+    console.warn('WARNING: Firebase Admin SDK not initialized. No credentials found.');
+    console.warn('Set FIREBASE_SERVICE_ACCOUNT_JSON or GOOGLE_APPLICATION_CREDENTIALS');
+  }
+} catch (error) {
+  console.error('Failed to initialize Firebase Admin SDK:', error.message);
+}
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -51,8 +78,101 @@ const proxyLimiter = rateLimit({
     }
 });
 
+// Firebase Authentication Middleware
+const authenticateUser = async (req, res, next) => {
+  if (!firebaseInitialized) {
+    // If Firebase not initialized, skip authentication (development mode)
+    console.warn('Skipping Firebase authentication - Firebase Admin not initialized');
+    return next();
+  }
+
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({
+      error: 'Unauthorized',
+      message: 'Missing or invalid Authorization header. Please sign in.',
+    });
+  }
+
+  const token = authHeader.split('Bearer ')[1];
+
+  try {
+    // Verify Firebase ID token
+    const decodedToken = await admin.auth().verifyIdToken(token);
+    const email = decodedToken.email;
+
+    if (!email) {
+      return res.status(401).json({
+        error: 'Unauthorized',
+        message: 'No email found in authentication token',
+      });
+    }
+
+    // Check user profile in Firestore
+    const userDoc = await admin.firestore().collection('users').doc(email).get();
+
+    if (!userDoc.exists) {
+      return res.status(403).json({
+        error: 'Forbidden',
+        message: 'User profile not found. Please refresh and try again.',
+      });
+    }
+
+    const userData = userDoc.data();
+
+    // Check user approval status
+    if (userData.status !== 'approved') {
+      return res.status(403).json({
+        error: 'Forbidden',
+        message: `Account status: ${userData.status}. Please contact an administrator.`,
+      });
+    }
+
+    // Check credits (warning only, don't block)
+    if (userData.credits <= 0) {
+      console.warn(`User ${email} has no credits remaining (${userData.credits})`);
+      // Continue anyway - frontend should handle credit checks
+    }
+
+    // Attach user info to request
+    req.user = {
+      email,
+      uid: decodedToken.uid,
+      profile: userData,
+    };
+
+    console.log(`Authenticated request from: ${email} (${userData.credits} credits)`);
+    next();
+  } catch (error) {
+    console.error('Authentication error:', error.message);
+
+    if (error.code === 'auth/id-token-expired') {
+      return res.status(401).json({
+        error: 'Unauthorized',
+        message: 'Authentication token expired. Please sign in again.',
+      });
+    }
+
+    if (error.code === 'auth/argument-error') {
+      return res.status(401).json({
+        error: 'Unauthorized',
+        message: 'Invalid authentication token format.',
+      });
+    }
+
+    return res.status(401).json({
+      error: 'Unauthorized',
+      message: 'Authentication failed. Please sign in again.',
+    });
+  }
+};
+
 // Apply the rate limiter to the /api-proxy route before the main proxy logic
 app.use('/api-proxy', proxyLimiter);
+
+// Apply Firebase authentication middleware to API proxy routes
+app.use('/api-proxy', authenticateUser);
 
 // Proxy route for Gemini API calls (HTTP)
 app.use('/api-proxy', async (req, res, next) => {

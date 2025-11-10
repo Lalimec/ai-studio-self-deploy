@@ -101,8 +101,8 @@ jobs:
             --image us-central1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/$SERVICE_NAME:$GITHUB_SHA \
             --platform managed \
             --region $REGION \
-            --no-allow-unauthenticated \
-            --set-env-vars GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }} \
+            --allow-unauthenticated \
+            --set-env-vars "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }},FIREBASE_SERVICE_ACCOUNT_JSON=${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }},ALLOW_EXTERNAL=false,ALLOWED_DOMAINS=lyrebirdstudio.net" \
             --memory 512Mi \
             --cpu 1 \
             --max-instances 10 \

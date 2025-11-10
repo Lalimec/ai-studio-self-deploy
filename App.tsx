@@ -1,11 +1,17 @@
 /// <reference lib="dom" />
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import JSZip from 'jszip';
-import { 
-    GeneratedImage, GeneratedBabyImage, Toast as ToastType, 
+import {
+    GeneratedImage, GeneratedBabyImage, Toast as ToastType,
     DisplayImage, StudioImage, ImageStudioResultImage, VariationState,
-    NanoBananaWebhookSettings
+    NanoBananaWebhookSettings, UserProfile
 } from './types';
+import { onAuthStateChanged, User } from 'firebase/auth';
+import { auth } from './services/firebaseConfig';
+import { getUserProfile, createUserProfile, updateLastLogin } from './services/userService';
+import { LoginScreen } from './components/LoginScreen';
+import { PendingApprovalScreen } from './components/PendingApprovalScreen';
+import { UserGallery } from './components/UserGallery';
 
 import { useHairStudio } from './hooks/useHairStudio';
 import { useBabyStudio } from './hooks/useBabyStudio';
@@ -52,7 +58,13 @@ export type ActiveCropper = {
 
 function App() {
   const [appMode, setAppMode] = useState<AppMode>('hairStudio');
-  
+
+  // --- Firebase Authentication State ---
+  const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [showUserGallery, setShowUserGallery] = useState(false);
+
   // --- Shared State ---
   const [toasts, setToasts] = useState<ToastType[]>([]);
   const [isCropping, setIsCropping] = useState(false);
@@ -116,6 +128,41 @@ function App() {
         console.error("Could not save beta features setting to localStorage", error);
     }
   };
+
+  // Firebase Auth State Listener
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      setFirebaseUser(user);
+
+      if (user && user.email) {
+        try {
+          // Check if user profile exists
+          let profile = await getUserProfile(user.email);
+
+          if (!profile) {
+            // Create new user profile
+            profile = await createUserProfile(user.email, user.displayName, user.photoURL);
+            console.log('New user profile created:', profile);
+          } else {
+            // Update last login
+            await updateLastLogin(user.email);
+            console.log('User logged in:', user.email);
+          }
+
+          setUserProfile(profile);
+        } catch (error) {
+          console.error('Error loading user profile:', error);
+          showToast('error', 'Failed to load user profile');
+        }
+      } else {
+        setUserProfile(null);
+      }
+
+      setAuthLoading(false);
+    });
+
+    return unsubscribe;
+  }, []);
 
   useEffect(() => {
     if (!showBetaFeatures && (appMode === 'adCloner' || appMode === 'videoAnalyzer')) {
@@ -357,9 +404,109 @@ function App() {
       </button>
   );
 
+  // Show loading spinner during auth check
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 to-pink-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-purple-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 text-lg">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Not authenticated - show login screen
+  if (!firebaseUser) {
+    return <LoginScreen />;
+  }
+
+  // Authenticated but pending approval
+  if (userProfile?.status === 'pending') {
+    return (
+      <PendingApprovalScreen
+        email={firebaseUser.email!}
+        displayName={userProfile.displayName}
+      />
+    );
+  }
+
+  // Suspended account
+  if (userProfile?.status === 'suspended') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-50 to-orange-50 p-4">
+        <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full text-center">
+          <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-10 h-10 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <h1 className="text-3xl font-bold text-red-600 mb-4">Account Suspended</h1>
+          <p className="text-gray-700 mb-6">
+            Your account has been suspended. Please contact support for more information.
+          </p>
+          <p className="text-sm text-gray-600">{firebaseUser.email}</p>
+          <button
+            onClick={() => auth.signOut()}
+            className="mt-6 bg-gray-200 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-300 transition"
+          >
+            Sign Out
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Approved user - show main app
   return (
-    <div className='min-h-screen bg-[var(--color-bg-base)] text-[var(--color-text-main)] p-4 sm:p-6 lg:p-8 flex flex-col items-center'>
-      <button 
+    <>
+      {/* User Gallery Modal */}
+      {showUserGallery && userProfile && (
+        <UserGallery
+          userId={userProfile.email}
+          onClose={() => setShowUserGallery(false)}
+          onImageClick={(url) => {
+            // Could open in lightbox if needed
+            window.open(url, '_blank');
+          }}
+        />
+      )}
+
+      <div className='min-h-screen bg-[var(--color-bg-base)] text-[var(--color-text-main)] p-4 sm:p-6 lg:p-8 flex flex-col items-center'>
+        {/* User info bar */}
+        {userProfile && (
+          <div className="fixed top-4 right-4 z-50 flex items-center gap-3 bg-white rounded-full shadow-lg px-4 py-2">
+            <button
+              onClick={() => setShowUserGallery(true)}
+              className="text-sm text-purple-600 hover:text-purple-700 font-medium flex items-center gap-1"
+              title="View my generations"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              Gallery
+            </button>
+            <div className="h-4 w-px bg-gray-300"></div>
+            <span className="text-sm text-gray-600">
+              {userProfile.credits} credits
+            </span>
+            <div className="h-4 w-px bg-gray-300"></div>
+            <span className="text-sm text-gray-700 font-medium">
+              {userProfile.displayName || userProfile.email.split('@')[0]}
+            </span>
+            <button
+              onClick={() => auth.signOut()}
+              className="text-sm text-gray-500 hover:text-gray-700"
+              title="Sign out"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+            </button>
+          </div>
+        )}
+
+        <button 
         onClick={() => setShowGlobalSettings(true)}
         className="fixed top-4 left-4 z-50 p-2 bg-[var(--color-bg-surface)] rounded-full shadow-lg hover:bg-[var(--color-bg-muted)] transition-colors"
         aria-label="Open settings"
@@ -536,6 +683,7 @@ function App() {
         />
       )}
     </div>
+    </>
   );
 }
 

@@ -378,3 +378,123 @@ export class JsonParseError extends Error {
 
 // --- SHARED DISPLAY TYPE ---
 export type DisplayImage = GeneratedImage | StudioImage | GeneratedBabyImage | ImageStudioResultImage;
+
+// --- FIREBASE AUTH & USER TYPES ---
+export type UserStatus = 'pending' | 'approved' | 'suspended';
+export type UserTier = 'free' | 'pro' | 'enterprise';
+
+export interface UserProfile {
+  // Identity
+  email: string;
+  displayName: string | null;
+  photoURL: string | null;
+
+  // Status
+  status: UserStatus;
+  isAdmin: boolean;
+
+  // Quotas & Usage
+  credits: number;
+  usageCount: number;
+  tier: UserTier;
+
+  // Metadata
+  domain: string;
+  isInternalUser: boolean;
+  createdAt: string;
+  lastLoginAt: string;
+  lastActivityAt: string;
+
+  // Optional settings
+  preferences?: {
+    defaultModel?: string;
+    enableBetaFeatures?: boolean;
+    emailNotifications?: boolean;
+  };
+}
+
+export interface Generation {
+  // Identity
+  id: string;
+  userId: string;
+
+  // Generation Info
+  studioType: AppMode;
+  sessionId?: string;
+  batchId?: string;
+
+  // Content
+  imageUrl: string;
+  thumbnailUrl?: string;
+  prompt?: string;
+  negativePrompt?: string;
+
+  // Metadata
+  model: string;
+  aspectRatio?: string;
+  dimensions?: {
+    width: number;
+    height: number;
+  };
+
+  // Studio-specific data
+  settings?: {
+    // Hair Studio
+    hairstyle?: string;
+    hairColor?: string;
+    adornment?: string;
+
+    // Baby Studio
+    babyAge?: string;
+    babyGender?: string;
+    babyStyle?: string;
+
+    // Image Studio
+    variationCount?: number;
+
+    // Video Studio
+    motionPrompt?: string;
+    videoDuration?: number;
+    videoUrl?: string;
+
+    // Ad Cloner
+    adContext?: string;
+    variationType?: string;
+
+    // Any other studio-specific settings
+    [key: string]: any;
+  };
+
+  // Timestamps
+  createdAt: string;
+
+  // Status
+  isFavorite?: boolean;
+  isDeleted?: boolean;
+  deletedAt?: string;
+
+  // File info
+  fileSize?: number;
+  mimeType?: string;
+
+  // Cost tracking
+  creditsUsed: number;
+}
+
+export interface AccessControlSettings {
+  allowedDomains: string[];
+  allowExternal: boolean;
+  whitelistedEmails: string[];
+
+  internalUserCredits: number;
+  externalUserCredits: number;
+
+  internalAutoApprove: boolean;
+  externalAutoApprove: boolean;
+
+  enableBetaFeatures: boolean;
+  maintenanceMode: boolean;
+
+  maxGenerationsPerHour?: number;
+  maxGenerationsPerDay?: number;
+}
