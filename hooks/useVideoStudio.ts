@@ -344,7 +344,7 @@ export const useVideoStudio = ({ addToast, setConfirmAction, setDownloadProgress
                 }
 
                 const info = { type: "video_studio_image", video_prompt: image.videoPrompt };
-                zip.file(`${baseName}_info.txt`, JSON.stringify(info, null, 2));
+                zip.file(`${baseName}.txt`, JSON.stringify(info, null, 2));
                 setDownloadProgress({ visible: true, message: 'Compressing...', progress: 90 });
 
                 const content = await zip.generateAsync({ type: 'blob' });
@@ -388,7 +388,7 @@ export const useVideoStudio = ({ addToast, setConfirmAction, setDownloadProgress
                     }
 
                     const info = { type: "video_studio_image", video_prompt: image.videoPrompt };
-                    zip.file(`${baseName}_info.txt`, JSON.stringify(info, null, 2));
+                    zip.file(`${baseName}.txt`, JSON.stringify(info, null, 2));
                     
                     filesProcessed++;
                     setDownloadProgress({ 

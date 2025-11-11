@@ -284,7 +284,7 @@ export const downloadBulkImages = async (
         // Add metadata file if requested
         if (includeMetadataFiles && (metadata || prompt)) {
             const metadataContent = metadata || { prompt };
-            const metadataFilename = filename.replace(/\.[^/.]+$/, '_info.txt');
+            const metadataFilename = filename.replace(/\.[^/.]+$/, '.txt');
             targetFolder.file(metadataFilename, JSON.stringify(metadataContent, null, 2));
         }
 
