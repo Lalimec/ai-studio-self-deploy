@@ -67,18 +67,18 @@ export const useImageStudioLogic = (
             return { width: preset.width, height: preset.height };
         }
 
-        // Fallback: calculate from aspect ratio string
+        // Fallback: calculate from aspect ratio string (megapixel-based approach)
+        // Based on 2048x2048 (4.19 MP) for 2K and 4096x4096 (16.78 MP) for 4K
         const [w, h] = aspectRatio.split(':').map(Number);
         const ratio = w / h;
-        const maxDimension = quality === '4K' ? 4576 : 2048;
+        const targetMegapixels = quality === '4K' ? 4096 * 4096 : 2048 * 2048;
 
-        if (ratio >= 1) {
-            // Landscape or square
-            return { width: maxDimension, height: Math.round(maxDimension / ratio) };
-        } else {
-            // Portrait
-            return { width: Math.round(maxDimension * ratio), height: maxDimension };
-        }
+        // Calculate dimensions that maintain aspect ratio and hit target megapixels
+        // Formula: height = sqrt(targetMP / ratio), width = height * ratio
+        const height = Math.round(Math.sqrt(targetMegapixels / ratio));
+        const width = Math.round(height * ratio);
+
+        return { width, height };
     }, []);
 
     const imageSizePresets: { [key: string]: { name: string; width?: number; height?: number } } = useMemo(() => {
