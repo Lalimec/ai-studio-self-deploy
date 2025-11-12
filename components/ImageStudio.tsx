@@ -9,7 +9,7 @@ import { CropChoiceModal } from './imageStudio/CropChoiceModal';
 import { MultiCropView } from './imageStudio/MultiCropView';
 import { AdvancedOptions } from './imageStudio/AdvancedOptions';
 import { NANO_BANANA_RATIOS, FLUX_KONTEXT_PRO_RATIOS, ASPECT_RATIO_PRESETS } from '../constants';
-import { HelpIcon, PiSpinnerIcon, PiDownloadSimpleIcon, PiCloseIcon, BananaIcon, WavesIcon, ZapIcon } from './Icons';
+import { HelpIcon, PiSpinnerIcon, PiDownloadSimpleIcon, PiCloseIcon, BananaIcon, WavesIcon, ZapIcon, FlowerIcon } from './Icons';
 import { ImageStudioConfirmationDialog } from './imageStudio/ImageStudioConfirmationDialog';
 
 
@@ -73,6 +73,14 @@ const ImageStudio: React.FC<ImageStudioProps> = ({ logic, onImageClick, onShowHe
                                     aria-label="Select Flux Kontext Pro model"
                                 >
                                     <ZapIcon className="w-6 h-6" />
+                                </button>
+                                <button
+                                    disabled
+                                    title="Qwen Image Edit (Coming Soon)"
+                                    className="group relative p-3 rounded-lg bg-[var(--color-bg-muted)] text-[var(--color-text-dimmer)] opacity-50 cursor-not-allowed"
+                                    aria-label="Qwen Image Edit (Coming Soon)"
+                                >
+                                    <FlowerIcon className="w-6 h-6" />
                                 </button>
                             </div>
                         </div>
