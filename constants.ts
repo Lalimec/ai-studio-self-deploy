@@ -664,7 +664,8 @@ export const FLUX_KONTEXT_PRO_RATIOS = [
   '21:9', '16:9', '4:3', '3:2', '1:1', '2:3', '3:4', '9:16', '9:21'
 ];
 
-export const ASPECT_RATIO_PRESETS = [
+// 2K Resolution Presets (around 2048px on long edge)
+export const ASPECT_RATIO_PRESETS_2K = [
     { label: '1:1', width: 2048, height: 2048 },
     { label: '4:5', width: 1638, height: 2048 },
     { label: '3:4', width: 1536, height: 2048 },
@@ -675,6 +676,22 @@ export const ASPECT_RATIO_PRESETS = [
     { label: '3:2', width: 2048, height: 1365 },
     { label: '16:9', width: 2048, height: 1152 },
 ];
+
+// 4K Resolution Presets (around 4576px on long edge, matching SEEDREAM's actual capabilities like 3648x4576)
+export const ASPECT_RATIO_PRESETS_4K = [
+    { label: '1:1', width: 4576, height: 4576 },
+    { label: '4:5', width: 3661, height: 4576 },
+    { label: '3:4', width: 3432, height: 4576 },
+    { label: '2:3', width: 3051, height: 4576 },
+    { label: '9:16', width: 2574, height: 4576 },
+    { label: '5:4', width: 4576, height: 3661 },
+    { label: '4:3', width: 4576, height: 3432 },
+    { label: '3:2', width: 4576, height: 3051 },
+    { label: '16:9', width: 4576, height: 2574 },
+];
+
+// Legacy export for backward compatibility
+export const ASPECT_RATIO_PRESETS = ASPECT_RATIO_PRESETS_2K;
 
 // --- VIDEO ANALYZER CONSTANTS ---
 

@@ -39,12 +39,28 @@ export const generateFigureImage = async (
 
         if (model === Constance.models.image.seedream) {
             if (publicUrls.length > 1) throw new Error(`${model} only supports one input image.`);
+
+            // Determine image_size format based on preset
+            let imageSize: string | { width: number; height: number };
+
+            if (options.imageSizePreset && options.imageSizePreset.startsWith('auto')) {
+                // For auto presets, send 'auto' string
+                imageSize = 'auto';
+            } else if (options.width && options.height) {
+                // For custom sizes (custom, custom_2K, custom_4K), send as object
+                imageSize = {
+                    width: options.width,
+                    height: options.height
+                };
+            } else {
+                // Fallback to auto
+                imageSize = 'auto';
+            }
+
             payload = {
                 prompt,
                 image_url: publicUrls[0],
-                width: options.width,
-                height: options.height,
-                image_size: options.imageSizePreset,
+                image_size: imageSize,
             };
             endpoint = Constance.endpoints.image.seedream;
         } else if (model === Constance.models.image.flux) {
