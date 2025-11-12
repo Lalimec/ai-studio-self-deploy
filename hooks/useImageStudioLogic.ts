@@ -7,6 +7,7 @@ import { uploadImageFromDataUrl } from '../services/imageUploadService';
 import { runConcurrentTasks } from '../services/apiUtils';
 import { logUserAction } from '../services/loggingService';
 import { downloadImageWithMetadata, downloadBulkImages } from '../services/downloadService';
+import { NANO_BANANA_RATIOS, FLUX_KONTEXT_PRO_RATIOS } from '../constants';
 
 declare const JSZip: any;
 
@@ -59,6 +60,62 @@ export const useImageStudioLogic = (
         'auto': { name: 'Auto' },
         'custom': { name: 'Custom', width: customWidth, height: customHeight },
     }), [customWidth, customHeight]);
+
+    // Helper function to convert aspect ratio string to numeric value
+    const aspectRatioToNumber = (ratio: string): number => {
+        if (ratio === 'auto') return 0; // Special case for auto
+        const [w, h] = ratio.split(':').map(Number);
+        return w / h;
+    };
+
+    // Helper function to find the nearest supported aspect ratio
+    const findNearestAspectRatio = (currentRatio: string, supportedRatios: readonly string[]): string => {
+        if (!currentRatio || currentRatio === 'auto') return 'auto';
+
+        // If the current ratio is already supported, return it
+        if (supportedRatios.includes(currentRatio)) {
+            return currentRatio;
+        }
+
+        // Find the nearest supported ratio
+        const currentValue = aspectRatioToNumber(currentRatio);
+        let nearestRatio = supportedRatios[0];
+        let smallestDiff = Math.abs(aspectRatioToNumber(supportedRatios[0]) - currentValue);
+
+        for (const ratio of supportedRatios) {
+            const diff = Math.abs(aspectRatioToNumber(ratio) - currentValue);
+            if (diff < smallestDiff) {
+                smallestDiff = diff;
+                nearestRatio = ratio;
+            }
+        }
+
+        return nearestRatio;
+    };
+
+    // Auto-adjust aspect ratio when model changes
+    useEffect(() => {
+        if (!aspectRatio || aspectRatio === 'auto') {
+            // If no aspect ratio is set or it's auto, don't change it
+            return;
+        }
+
+        let supportedRatios: readonly string[];
+        if (model === 'flux-kontext-pro') {
+            supportedRatios = FLUX_KONTEXT_PRO_RATIOS;
+        } else if (model === 'nano-banana') {
+            supportedRatios = NANO_BANANA_RATIOS;
+        } else {
+            // For other models (gemini, seedream), no automatic adjustment needed
+            return;
+        }
+
+        const nearestRatio = findNearestAspectRatio(aspectRatio, supportedRatios);
+        if (nearestRatio !== aspectRatio) {
+            setAspectRatio(nearestRatio);
+            addToast(`Aspect ratio adjusted to ${nearestRatio} for ${model === 'flux-kontext-pro' ? 'Flux Kontext Pro' : 'Nano Banana'} compatibility`, 'warning');
+        }
+    }, [model]); // Only run when model changes
 
     useEffect(() => {
         const preset = imageSizePresets[imageSizePreset];
