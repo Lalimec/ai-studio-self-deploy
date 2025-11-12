@@ -9,7 +9,7 @@ import { CropChoiceModal } from './imageStudio/CropChoiceModal';
 import { MultiCropView } from './imageStudio/MultiCropView';
 import { AdvancedOptions } from './imageStudio/AdvancedOptions';
 import { NANO_BANANA_RATIOS, FLUX_KONTEXT_PRO_RATIOS, ASPECT_RATIO_PRESETS } from '../constants';
-import { HelpIcon, PiSpinnerIcon, PiDownloadSimpleIcon, PiCloseIcon } from './Icons';
+import { HelpIcon, PiSpinnerIcon, PiDownloadSimpleIcon, PiCloseIcon, PiShootingStarIcon, PiFlowerLotusIcon, PiLightningIcon } from './Icons';
 import { ImageStudioConfirmationDialog } from './imageStudio/ImageStudioConfirmationDialog';
 
 
@@ -49,24 +49,30 @@ const ImageStudio: React.FC<ImageStudioProps> = ({ logic, onImageClick, onShowHe
                     <div className="w-full flex flex-col gap-4">
                         <div>
                             <label className="block text-sm font-medium text-[var(--color-text-light)] mb-2">2. Configure Model & Size</label>
-                            <div className="grid grid-cols-3 gap-2 rounded-lg bg-[var(--color-bg-muted)] p-1">
+                            <div className="flex justify-center gap-3 p-1">
                                 <button
                                     onClick={() => logic.setModel('nano-banana')}
-                                    className={`px-3 py-2 text-sm font-semibold rounded-md transition-colors ${logic.model === 'nano-banana' ? 'bg-[var(--color-bg-base)] text-[var(--color-primary-accent)] shadow' : 'bg-transparent text-[var(--color-text-dim)] hover:bg-[var(--color-bg-base)]/50'}`}
+                                    title="Nano Banana"
+                                    className={`group relative p-3 rounded-lg transition-all ${logic.model === 'nano-banana' ? 'bg-[var(--color-primary)] text-[var(--color-text-on-primary)] shadow-lg scale-110' : 'bg-[var(--color-bg-muted)] text-[var(--color-text-dim)] hover:bg-[var(--color-bg-muted-hover)] hover:scale-105'}`}
+                                    aria-label="Select Nano Banana model"
                                 >
-                                    Nano Banana
+                                    <PiShootingStarIcon className="w-6 h-6" />
                                 </button>
                                 <button
                                     onClick={() => logic.setModel('seedream')}
-                                    className={`px-3 py-2 text-sm font-semibold rounded-md transition-colors ${logic.model === 'seedream' ? 'bg-[var(--color-bg-base)] text-[var(--color-primary-accent)] shadow' : 'bg-transparent text-[var(--color-text-dim)] hover:bg-[var(--color-bg-base)]/50'}`}
+                                    title="Seedream Edit"
+                                    className={`group relative p-3 rounded-lg transition-all ${logic.model === 'seedream' ? 'bg-[var(--color-primary)] text-[var(--color-text-on-primary)] shadow-lg scale-110' : 'bg-[var(--color-bg-muted)] text-[var(--color-text-dim)] hover:bg-[var(--color-bg-muted-hover)] hover:scale-105'}`}
+                                    aria-label="Select Seedream Edit model"
                                 >
-                                    Seedream Edit
+                                    <PiFlowerLotusIcon className="w-6 h-6" />
                                 </button>
                                 <button
                                     onClick={() => logic.setModel('flux-kontext-pro')}
-                                    className={`px-3 py-2 text-sm font-semibold rounded-md transition-colors ${logic.model === 'flux-kontext-pro' ? 'bg-[var(--color-bg-base)] text-[var(--color-primary-accent)] shadow' : 'bg-transparent text-[var(--color-text-dim)] hover:bg-[var(--color-bg-base)]/50'}`}
+                                    title="Flux Kontext Pro"
+                                    className={`group relative p-3 rounded-lg transition-all ${logic.model === 'flux-kontext-pro' ? 'bg-[var(--color-primary)] text-[var(--color-text-on-primary)] shadow-lg scale-110' : 'bg-[var(--color-bg-muted)] text-[var(--color-text-dim)] hover:bg-[var(--color-bg-muted-hover)] hover:scale-105'}`}
+                                    aria-label="Select Flux Kontext Pro model"
                                 >
-                                    Flux Kontext
+                                    <PiLightningIcon className="w-6 h-6" />
                                 </button>
                             </div>
                         </div>
