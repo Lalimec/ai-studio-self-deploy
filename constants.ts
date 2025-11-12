@@ -664,30 +664,30 @@ export const FLUX_KONTEXT_PRO_RATIOS = [
   '21:9', '16:9', '4:3', '3:2', '1:1', '2:3', '3:4', '9:16', '9:21'
 ];
 
-// 2K Resolution Presets (2048px on longest edge)
+// 2K Resolution Presets (consistent 4.19 MP based on 2048x2048)
 export const ASPECT_RATIO_PRESETS_2K = [
     { label: '1:1', width: 2048, height: 2048 },
-    { label: '4:5', width: 1638, height: 2048 },
-    { label: '3:4', width: 1536, height: 2048 },
-    { label: '2:3', width: 1365, height: 2048 },
-    { label: '9:16', width: 1152, height: 2048 },
-    { label: '5:4', width: 2048, height: 1638 },
-    { label: '4:3', width: 2048, height: 1536 },
-    { label: '3:2', width: 2048, height: 1365 },
-    { label: '16:9', width: 2048, height: 1152 },
+    { label: '4:5', width: 1832, height: 2290 },
+    { label: '3:4', width: 1774, height: 2365 },
+    { label: '2:3', width: 1672, height: 2508 },
+    { label: '9:16', width: 1536, height: 2731 },
+    { label: '5:4', width: 2290, height: 1832 },
+    { label: '4:3', width: 2365, height: 1774 },
+    { label: '3:2', width: 2508, height: 1672 },
+    { label: '16:9', width: 2731, height: 1536 },
 ];
 
-// 4K Resolution Presets (4096px on longest edge)
+// 4K Resolution Presets (consistent 16.78 MP based on 4096x4096)
 export const ASPECT_RATIO_PRESETS_4K = [
     { label: '1:1', width: 4096, height: 4096 },
-    { label: '4:5', width: 3277, height: 4096 },
-    { label: '3:4', width: 3072, height: 4096 },
-    { label: '2:3', width: 2731, height: 4096 },
-    { label: '9:16', width: 2304, height: 4096 },
-    { label: '5:4', width: 4096, height: 3277 },
-    { label: '4:3', width: 4096, height: 3072 },
-    { label: '3:2', width: 4096, height: 2731 },
-    { label: '16:9', width: 4096, height: 2304 },
+    { label: '4:5', width: 3663, height: 4579 },
+    { label: '3:4', width: 3548, height: 4730 },
+    { label: '2:3', width: 3345, height: 5017 },
+    { label: '9:16', width: 3072, height: 5461 },
+    { label: '5:4', width: 4580, height: 3664 },
+    { label: '4:3', width: 4729, height: 3547 },
+    { label: '3:2', width: 5016, height: 3344 },
+    { label: '16:9', width: 5461, height: 3072 },
 ];
 
 // Legacy export for backward compatibility
