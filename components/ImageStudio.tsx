@@ -128,7 +128,7 @@ const ImageStudio: React.FC<ImageStudioProps> = ({ logic, onImageClick, onShowHe
                                         onChange={(e) => logic.setCustomWidth(Math.max(1024, Math.min(4096, parseInt(e.target.value, 10) || 1024)))}
                                         disabled={logic.imageSizePreset !== 'custom'}
                                         readOnly={logic.imageSizePreset === 'custom_4K' || logic.imageSizePreset === 'custom_2K'}
-                                        className="block w-14 rounded-md border-0 bg-[var(--color-bg-base)] py-2 px-2 text-[var(--color-text-light)] shadow-sm ring-1 ring-inset ring-[var(--color-border-default)] focus:ring-2 focus:ring-inset focus:ring-[var(--color-primary-ring)] sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed read-only:opacity-70 read-only:cursor-default [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                        className="block w-12 rounded-md border-0 bg-[var(--color-bg-base)] py-2 px-2 text-[var(--color-text-light)] shadow-sm ring-1 ring-inset ring-[var(--color-border-default)] focus:ring-2 focus:ring-inset focus:ring-[var(--color-primary-ring)] sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed read-only:opacity-70 read-only:cursor-default [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                         aria-label="Width"
                                         min="1024"
                                         max="4096"
@@ -141,7 +141,7 @@ const ImageStudio: React.FC<ImageStudioProps> = ({ logic, onImageClick, onShowHe
                                         onChange={(e) => logic.setCustomHeight(Math.max(1024, Math.min(4096, parseInt(e.target.value, 10) || 1024)))}
                                         disabled={logic.imageSizePreset !== 'custom'}
                                         readOnly={logic.imageSizePreset === 'custom_4K' || logic.imageSizePreset === 'custom_2K'}
-                                        className="block w-14 rounded-md border-0 bg-[var(--color-bg-base)] py-2 px-2 text-[var(--color-text-light)] shadow-sm ring-1 ring-inset ring-[var(--color-border-default)] focus:ring-2 focus:ring-inset focus:ring-[var(--color-primary-ring)] sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed read-only:opacity-70 read-only:cursor-default [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                        className="block w-12 rounded-md border-0 bg-[var(--color-bg-base)] py-2 px-2 text-[var(--color-text-light)] shadow-sm ring-1 ring-inset ring-[var(--color-border-default)] focus:ring-2 focus:ring-inset focus:ring-[var(--color-primary-ring)] sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed read-only:opacity-70 read-only:cursor-default [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                         aria-label="Height"
                                         min="1024"
                                         max="4096"
