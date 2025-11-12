@@ -115,7 +115,7 @@ const ImageStudio: React.FC<ImageStudioProps> = ({ logic, onImageClick, onShowHe
                                         id="image-size-preset"
                                         value={logic.imageSizePreset}
                                         onChange={(e) => logic.setImageSizePreset(e.target.value)}
-                                        className="block w-full rounded-md border-0 bg-[var(--color-bg-base)] py-2 px-3 text-[var(--color-text-light)] shadow-sm ring-1 ring-inset ring-[var(--color-border-default)] focus:ring-2 focus:ring-inset focus:ring-[var(--color-primary-ring)] sm:text-sm"
+                                        className="block flex-1 min-w-0 rounded-md border-0 bg-[var(--color-bg-base)] py-2 px-3 text-[var(--color-text-light)] shadow-sm ring-1 ring-inset ring-[var(--color-border-default)] focus:ring-2 focus:ring-inset focus:ring-[var(--color-primary-ring)] sm:text-sm"
                                     >
                                         {Object.keys(logic.imageSizePresets).map((key) => (
                                             <option key={key} value={key}>{logic.imageSizePresets[key].name}</option>
@@ -127,7 +127,8 @@ const ImageStudio: React.FC<ImageStudioProps> = ({ logic, onImageClick, onShowHe
                                         placeholder={logic.imageSizePreset.startsWith('auto') ? '?' : undefined}
                                         onChange={(e) => logic.setCustomWidth(Math.max(1024, Math.min(4096, parseInt(e.target.value, 10) || 1024)))}
                                         disabled={logic.imageSizePreset !== 'custom'}
-                                        className="block w-24 rounded-md border-0 bg-[var(--color-bg-base)] py-2 px-3 text-[var(--color-text-light)] shadow-sm ring-1 ring-inset ring-[var(--color-border-default)] focus:ring-2 focus:ring-inset focus:ring-[var(--color-primary-ring)] sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                                        readOnly={logic.imageSizePreset === 'custom_4K' || logic.imageSizePreset === 'custom_2K'}
+                                        className="block w-20 rounded-md border-0 bg-[var(--color-bg-base)] py-2 px-2 text-[var(--color-text-light)] shadow-sm ring-1 ring-inset ring-[var(--color-border-default)] focus:ring-2 focus:ring-inset focus:ring-[var(--color-primary-ring)] sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed read-only:opacity-70 read-only:cursor-default"
                                         aria-label="Width"
                                         min="1024"
                                         max="4096"
@@ -139,13 +140,14 @@ const ImageStudio: React.FC<ImageStudioProps> = ({ logic, onImageClick, onShowHe
                                         placeholder={logic.imageSizePreset.startsWith('auto') ? '?' : undefined}
                                         onChange={(e) => logic.setCustomHeight(Math.max(1024, Math.min(4096, parseInt(e.target.value, 10) || 1024)))}
                                         disabled={logic.imageSizePreset !== 'custom'}
-                                        className="block w-24 rounded-md border-0 bg-[var(--color-bg-base)] py-2 px-3 text-[var(--color-text-light)] shadow-sm ring-1 ring-inset ring-[var(--color-border-default)] focus:ring-2 focus:ring-inset focus:ring-[var(--color-primary-ring)] sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                                        readOnly={logic.imageSizePreset === 'custom_4K' || logic.imageSizePreset === 'custom_2K'}
+                                        className="block w-20 rounded-md border-0 bg-[var(--color-bg-base)] py-2 px-2 text-[var(--color-text-light)] shadow-sm ring-1 ring-inset ring-[var(--color-border-default)] focus:ring-2 focus:ring-inset focus:ring-[var(--color-primary-ring)] sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed read-only:opacity-70 read-only:cursor-default"
                                         aria-label="Height"
                                         min="1024"
                                         max="4096"
                                     />
                                 </div>
-                                {logic.imageSizePreset === 'custom' && (
+                                {(logic.imageSizePreset === 'custom' || logic.imageSizePreset === 'custom_4K' || logic.imageSizePreset === 'custom_2K') && (
                                     <div className="mt-2 flex flex-wrap gap-2">
                                         {ASPECT_RATIO_PRESETS.map(preset => {
                                             const isActive = preset.width === logic.customWidth && preset.height === logic.customHeight;
@@ -154,8 +156,14 @@ const ImageStudio: React.FC<ImageStudioProps> = ({ logic, onImageClick, onShowHe
                                                     key={preset.label}
                                                     type="button"
                                                     onClick={() => {
-                                                        logic.setCustomWidth(preset.width);
-                                                        logic.setCustomHeight(preset.height);
+                                                        if (logic.imageSizePreset === 'custom') {
+                                                            // For custom mode, directly set width/height
+                                                            logic.setCustomWidth(preset.width);
+                                                            logic.setCustomHeight(preset.height);
+                                                        } else if (logic.imageSizePreset === 'custom_4K' || logic.imageSizePreset === 'custom_2K') {
+                                                            // For custom_4K/custom_2K, set aspect ratio which triggers recalculation
+                                                            logic.setAspectRatio(preset.label);
+                                                        }
                                                     }}
                                                     className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
                                                         isActive
