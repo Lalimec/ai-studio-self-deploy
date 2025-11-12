@@ -536,7 +536,7 @@ export const useTimelineStudio = ({ addToast, setConfirmAction, setDownloadProgr
                     session_id: sessionId,
                     timestamp: timestamp,
                 };
-                zip.file(`${baseName}_info.txt`, JSON.stringify(info, null, 2));
+                zip.file(`${baseName}.txt`, JSON.stringify(info, null, 2));
                 setDownloadProgress({ visible: true, message: 'Compressing...', progress: 90 });
                 
                 const content = await zip.generateAsync({ type: 'blob' });
@@ -602,7 +602,7 @@ export const useTimelineStudio = ({ addToast, setConfirmAction, setDownloadProgr
                         session_id: sessionId,
                         timestamp: timestamp,
                     };
-                    zip.file(`${pairName}_info.txt`, JSON.stringify(info, null, 2));
+                    zip.file(`${pairName}.txt`, JSON.stringify(info, null, 2));
                 }
 
                 setDownloadProgress({ visible: true, message: 'Compressing ZIP...', progress: 99 });
