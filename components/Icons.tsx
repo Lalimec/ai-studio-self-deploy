@@ -32,6 +32,9 @@ import {
   LuSearch,
   LuFileSearch,
   LuCopy,
+  LuBanana,
+  LuWaves,
+  LuZap,
 } from 'react-icons/lu';
 import {
     PiCaretDown, PiSparkle, PiSpinner, PiTranslate, PiCheck,
@@ -96,3 +99,6 @@ export const PiSparkleFillIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props
 export const PiFlowerLotusIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <PiFlowerLotus {...props} />;
 export const PiLightningIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <PiLightning {...props} />;
 export const PiShootingStarIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <PiShootingStar {...props} />;
+export const BananaIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <LuBanana {...props} />;
+export const WavesIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <LuWaves {...props} />;
+export const ZapIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <LuZap {...props} />;

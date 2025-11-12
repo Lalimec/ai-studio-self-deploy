@@ -9,7 +9,7 @@ import { CropChoiceModal } from './imageStudio/CropChoiceModal';
 import { MultiCropView } from './imageStudio/MultiCropView';
 import { AdvancedOptions } from './imageStudio/AdvancedOptions';
 import { NANO_BANANA_RATIOS, FLUX_KONTEXT_PRO_RATIOS, ASPECT_RATIO_PRESETS } from '../constants';
-import { HelpIcon, PiSpinnerIcon, PiDownloadSimpleIcon, PiCloseIcon, PiShootingStarIcon, PiFlowerLotusIcon, PiLightningIcon } from './Icons';
+import { HelpIcon, PiSpinnerIcon, PiDownloadSimpleIcon, PiCloseIcon, BananaIcon, WavesIcon, ZapIcon } from './Icons';
 import { ImageStudioConfirmationDialog } from './imageStudio/ImageStudioConfirmationDialog';
 
 
@@ -56,7 +56,7 @@ const ImageStudio: React.FC<ImageStudioProps> = ({ logic, onImageClick, onShowHe
                                     className={`group relative p-3 rounded-lg transition-all ${logic.model === 'nano-banana' ? 'bg-[var(--color-primary)] text-[var(--color-text-on-primary)] shadow-lg scale-110' : 'bg-[var(--color-bg-muted)] text-[var(--color-text-dim)] hover:bg-[var(--color-bg-muted-hover)] hover:scale-105'}`}
                                     aria-label="Select Nano Banana model"
                                 >
-                                    <PiShootingStarIcon className="w-6 h-6" />
+                                    <BananaIcon className="w-6 h-6" />
                                 </button>
                                 <button
                                     onClick={() => logic.setModel('seedream')}
@@ -64,7 +64,7 @@ const ImageStudio: React.FC<ImageStudioProps> = ({ logic, onImageClick, onShowHe
                                     className={`group relative p-3 rounded-lg transition-all ${logic.model === 'seedream' ? 'bg-[var(--color-primary)] text-[var(--color-text-on-primary)] shadow-lg scale-110' : 'bg-[var(--color-bg-muted)] text-[var(--color-text-dim)] hover:bg-[var(--color-bg-muted-hover)] hover:scale-105'}`}
                                     aria-label="Select Seedream Edit model"
                                 >
-                                    <PiFlowerLotusIcon className="w-6 h-6" />
+                                    <WavesIcon className="w-6 h-6" />
                                 </button>
                                 <button
                                     onClick={() => logic.setModel('flux-kontext-pro')}
@@ -72,7 +72,7 @@ const ImageStudio: React.FC<ImageStudioProps> = ({ logic, onImageClick, onShowHe
                                     className={`group relative p-3 rounded-lg transition-all ${logic.model === 'flux-kontext-pro' ? 'bg-[var(--color-primary)] text-[var(--color-text-on-primary)] shadow-lg scale-110' : 'bg-[var(--color-bg-muted)] text-[var(--color-text-dim)] hover:bg-[var(--color-bg-muted-hover)] hover:scale-105'}`}
                                     aria-label="Select Flux Kontext Pro model"
                                 >
-                                    <PiLightningIcon className="w-6 h-6" />
+                                    <ZapIcon className="w-6 h-6" />
                                 </button>
                             </div>
                         </div>
