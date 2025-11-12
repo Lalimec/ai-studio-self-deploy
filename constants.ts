@@ -664,30 +664,30 @@ export const FLUX_KONTEXT_PRO_RATIOS = [
   '21:9', '16:9', '4:3', '3:2', '1:1', '2:3', '3:4', '9:16', '9:21'
 ];
 
-// 2K Resolution Presets (4 megapixels consistent across all aspect ratios)
+// 2K Resolution Presets (2048px on longest edge)
 export const ASPECT_RATIO_PRESETS_2K = [
-    { label: '1:1', width: 2000, height: 2000 },
-    { label: '4:5', width: 1789, height: 2236 },
-    { label: '3:4', width: 1732, height: 2309 },
-    { label: '2:3', width: 1633, height: 2449 },
-    { label: '9:16', width: 1500, height: 2667 },
-    { label: '5:4', width: 2236, height: 1789 },
-    { label: '4:3', width: 2309, height: 1732 },
-    { label: '3:2', width: 2449, height: 1633 },
-    { label: '16:9', width: 2667, height: 1500 },
+    { label: '1:1', width: 2048, height: 2048 },
+    { label: '4:5', width: 1638, height: 2048 },
+    { label: '3:4', width: 1536, height: 2048 },
+    { label: '2:3', width: 1365, height: 2048 },
+    { label: '9:16', width: 1152, height: 2048 },
+    { label: '5:4', width: 2048, height: 1638 },
+    { label: '4:3', width: 2048, height: 1536 },
+    { label: '3:2', width: 2048, height: 1365 },
+    { label: '16:9', width: 2048, height: 1152 },
 ];
 
-// 4K Resolution Presets (20 megapixels consistent across all aspect ratios)
+// 4K Resolution Presets (4096px on longest edge)
 export const ASPECT_RATIO_PRESETS_4K = [
-    { label: '1:1', width: 4472, height: 4472 },
-    { label: '4:5', width: 4000, height: 5000 },
-    { label: '3:4', width: 3873, height: 5164 },
-    { label: '2:3', width: 3651, height: 5477 },
-    { label: '9:16', width: 3353, height: 5963 },
-    { label: '5:4', width: 5000, height: 4000 },
-    { label: '4:3', width: 5164, height: 3873 },
-    { label: '3:2', width: 5477, height: 3651 },
-    { label: '16:9', width: 5963, height: 3353 },
+    { label: '1:1', width: 4096, height: 4096 },
+    { label: '4:5', width: 3277, height: 4096 },
+    { label: '3:4', width: 3072, height: 4096 },
+    { label: '2:3', width: 2731, height: 4096 },
+    { label: '9:16', width: 2304, height: 4096 },
+    { label: '5:4', width: 4096, height: 3277 },
+    { label: '4:3', width: 4096, height: 3072 },
+    { label: '3:2', width: 4096, height: 2731 },
+    { label: '16:9', width: 4096, height: 2304 },
 ];
 
 // Legacy export for backward compatibility
