@@ -40,7 +40,7 @@ export const GeneratedImageDisplay: React.FC<GeneratedImageDisplayProps> = ({
         return (
             <div className="col-span-full flex flex-col items-center justify-center text-center p-10 rounded-lg min-h-[500px]">
                 <div className="text-center">
-                    <PiCubeIcon className="mx-auto h-24 w-24 text-[var(--color-text-dimmer)] opacity-75"/>
+                    <PiCubeIcon className="mx-auto h-24 w-24 text-[var(--color-border-default)] opacity-75"/>
                     <h3 className="mt-4 text-xl font-semibold text-[var(--color-text-light)]">Your Images Await</h3>
                     <p className="mt-1 text-sm text-[var(--color-text-dimmer)]">Upload images, choose a prompt, and click generate.</p>
                 </div>
