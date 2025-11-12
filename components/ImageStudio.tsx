@@ -52,35 +52,43 @@ const ImageStudio: React.FC<ImageStudioProps> = ({ logic, onImageClick, onShowHe
                             <div className="flex justify-center gap-3 p-1">
                                 <button
                                     onClick={() => logic.setModel('nano-banana')}
-                                    title="Nano Banana"
                                     className={`group relative p-3 rounded-lg transition-all ${logic.model === 'nano-banana' ? 'bg-[var(--color-primary)] text-[var(--color-text-on-primary)] shadow-lg scale-110' : 'bg-[var(--color-bg-muted)] text-[var(--color-text-dim)] hover:bg-[var(--color-bg-muted-hover)] hover:scale-105'}`}
                                     aria-label="Select Nano Banana model"
                                 >
                                     <BananaIcon className="w-6 h-6" />
+                                    <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-[var(--color-primary-accent)] text-white text-xs font-semibold rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-100 pointer-events-none shadow-lg z-50">
+                                        Nano Banana
+                                    </span>
                                 </button>
                                 <button
                                     onClick={() => logic.setModel('seedream')}
-                                    title="Seedream Edit"
                                     className={`group relative p-3 rounded-lg transition-all ${logic.model === 'seedream' ? 'bg-[var(--color-primary)] text-[var(--color-text-on-primary)] shadow-lg scale-110' : 'bg-[var(--color-bg-muted)] text-[var(--color-text-dim)] hover:bg-[var(--color-bg-muted-hover)] hover:scale-105'}`}
                                     aria-label="Select Seedream Edit model"
                                 >
                                     <WavesIcon className="w-6 h-6" />
+                                    <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-[var(--color-primary-accent)] text-white text-xs font-semibold rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-100 pointer-events-none shadow-lg z-50">
+                                        Seedream Edit
+                                    </span>
                                 </button>
                                 <button
                                     onClick={() => logic.setModel('flux-kontext-pro')}
-                                    title="Flux Kontext Pro"
                                     className={`group relative p-3 rounded-lg transition-all ${logic.model === 'flux-kontext-pro' ? 'bg-[var(--color-primary)] text-[var(--color-text-on-primary)] shadow-lg scale-110' : 'bg-[var(--color-bg-muted)] text-[var(--color-text-dim)] hover:bg-[var(--color-bg-muted-hover)] hover:scale-105'}`}
                                     aria-label="Select Flux Kontext Pro model"
                                 >
                                     <ZapIcon className="w-6 h-6" />
+                                    <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-[var(--color-primary-accent)] text-white text-xs font-semibold rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-100 pointer-events-none shadow-lg z-50">
+                                        Flux Kontext Pro
+                                    </span>
                                 </button>
                                 <button
                                     disabled
-                                    title="Qwen Image Edit (Coming Soon)"
                                     className="group relative p-3 rounded-lg bg-[var(--color-bg-muted)] text-[var(--color-text-dimmer)] opacity-50 cursor-not-allowed"
                                     aria-label="Qwen Image Edit (Coming Soon)"
                                 >
                                     <FlowerIcon className="w-6 h-6" />
+                                    <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-[var(--color-primary-accent)] text-white text-xs font-semibold rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-100 pointer-events-none shadow-lg z-50">
+                                        Qwen Image Edit (Coming Soon)
+                                    </span>
                                 </button>
                             </div>
                         </div>

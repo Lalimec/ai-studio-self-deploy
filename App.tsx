@@ -370,7 +370,7 @@ function App() {
 
       <ToastContainer toasts={toasts} onRemove={removeToast} />
       <header className={"w-full max-w-7xl mx-auto mb-8 text-center"}>
-        <div className="flex items-center justify-center gap-4 mb-4">
+        <div className="flex items-center justify-center gap-4 mb-4 py-4">
             <PrepareMagicIcon className="h-12 w-12 text-[var(--color-primary-accent)]" />
             <h1 className="text-5xl sm:text-6xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-[var(--color-primary-accent)] to-[var(--color-secondary)]">
                 AI Studio
