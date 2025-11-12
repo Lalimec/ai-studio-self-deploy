@@ -7,6 +7,7 @@ import { uploadImageFromDataUrl } from '../services/imageUploadService';
 import { runConcurrentTasks } from '../services/apiUtils';
 import { logUserAction } from '../services/loggingService';
 import { downloadImageWithMetadata, downloadBulkImages } from '../services/downloadService';
+import { NANO_BANANA_RATIOS, FLUX_KONTEXT_PRO_RATIOS, ASPECT_RATIO_PRESETS_2K, ASPECT_RATIO_PRESETS_4K } from '../constants';
 
 declare const JSZip: any;
 
@@ -53,19 +54,112 @@ export const useImageStudioLogic = (
     const [inputImageWarnings, setInputImageWarnings] = useState<Record<string, string>>({});
 
 
-    const imageSizePresets: { [key: string]: { name: string; width?: number; height?: number } } = useMemo(() => ({
-        'auto_4K': { name: 'Auto (up to 4K)' },
-        'auto_2K': { name: 'Auto (up to 2K)' },
-        'auto': { name: 'Auto' },
-        'custom': { name: 'Custom', width: customWidth, height: customHeight },
-    }), [customWidth, customHeight]);
+    // Helper function to get resolution for a given aspect ratio and quality level
+    const getResolutionForAspectRatio = useCallback((aspectRatio: string | null, quality: '2K' | '4K'): { width: number; height: number } => {
+        if (!aspectRatio || aspectRatio === 'auto') {
+            return quality === '4K' ? { width: 4576, height: 4576 } : { width: 2048, height: 2048 };
+        }
+
+        const presets = quality === '4K' ? ASPECT_RATIO_PRESETS_4K : ASPECT_RATIO_PRESETS_2K;
+        const preset = presets.find(p => p.label === aspectRatio);
+
+        if (preset) {
+            return { width: preset.width, height: preset.height };
+        }
+
+        // Fallback: calculate from aspect ratio string
+        const [w, h] = aspectRatio.split(':').map(Number);
+        const ratio = w / h;
+        const maxDimension = quality === '4K' ? 4576 : 2048;
+
+        if (ratio >= 1) {
+            // Landscape or square
+            return { width: maxDimension, height: Math.round(maxDimension / ratio) };
+        } else {
+            // Portrait
+            return { width: Math.round(maxDimension * ratio), height: maxDimension };
+        }
+    }, []);
+
+    const imageSizePresets: { [key: string]: { name: string; width?: number; height?: number } } = useMemo(() => {
+        const custom2K = getResolutionForAspectRatio(aspectRatio, '2K');
+        const custom4K = getResolutionForAspectRatio(aspectRatio, '4K');
+
+        return {
+            'auto_4K': { name: 'Auto (up to 4K)' },
+            'auto_2K': { name: 'Auto (up to 2K)' },
+            'auto': { name: 'Auto' },
+            'custom_4K': { name: 'Custom 4K', width: custom4K.width, height: custom4K.height },
+            'custom_2K': { name: 'Custom 2K', width: custom2K.width, height: custom2K.height },
+            'custom': { name: 'Custom', width: customWidth, height: customHeight },
+        };
+    }, [customWidth, customHeight, aspectRatio, getResolutionForAspectRatio]);
+
+    // Helper function to convert aspect ratio string to numeric value
+    const aspectRatioToNumber = (ratio: string): number => {
+        if (ratio === 'auto') return 0; // Special case for auto
+        const [w, h] = ratio.split(':').map(Number);
+        return w / h;
+    };
+
+    // Helper function to find the nearest supported aspect ratio
+    const findNearestAspectRatio = (currentRatio: string, supportedRatios: readonly string[]): string => {
+        if (!currentRatio || currentRatio === 'auto') return 'auto';
+
+        // If the current ratio is already supported, return it
+        if (supportedRatios.includes(currentRatio)) {
+            return currentRatio;
+        }
+
+        // Find the nearest supported ratio
+        const currentValue = aspectRatioToNumber(currentRatio);
+        let nearestRatio = supportedRatios[0];
+        let smallestDiff = Math.abs(aspectRatioToNumber(supportedRatios[0]) - currentValue);
+
+        for (const ratio of supportedRatios) {
+            const diff = Math.abs(aspectRatioToNumber(ratio) - currentValue);
+            if (diff < smallestDiff) {
+                smallestDiff = diff;
+                nearestRatio = ratio;
+            }
+        }
+
+        return nearestRatio;
+    };
+
+    // Auto-adjust aspect ratio when model changes
+    useEffect(() => {
+        if (!aspectRatio || aspectRatio === 'auto') {
+            // If no aspect ratio is set or it's auto, don't change it
+            return;
+        }
+
+        let supportedRatios: readonly string[];
+        if (model === 'flux-kontext-pro') {
+            supportedRatios = FLUX_KONTEXT_PRO_RATIOS;
+        } else if (model === 'nano-banana') {
+            supportedRatios = NANO_BANANA_RATIOS;
+        } else {
+            // For other models (gemini, seedream), no automatic adjustment needed
+            return;
+        }
+
+        const nearestRatio = findNearestAspectRatio(aspectRatio, supportedRatios);
+        if (nearestRatio !== aspectRatio) {
+            setAspectRatio(nearestRatio);
+            addToast(`Aspect ratio adjusted to ${nearestRatio} for ${model === 'flux-kontext-pro' ? 'Flux Kontext Pro' : 'Nano Banana'} compatibility`, 'warning');
+        }
+    }, [model]); // Only run when model changes
 
     useEffect(() => {
         const preset = imageSizePresets[imageSizePreset];
         if (preset && preset.width && preset.height) {
-            setCustomWidth(preset.width);
-            setCustomHeight(preset.height);
-        } else if (!imageSizePreset.startsWith('auto') && imageSizePreset !== 'custom') {
+            // For custom_4K and custom_2K, update customWidth/customHeight so they reflect the calculated values
+            if (imageSizePreset === 'custom_4K' || imageSizePreset === 'custom_2K' || imageSizePreset === 'custom') {
+                setCustomWidth(preset.width);
+                setCustomHeight(preset.height);
+            }
+        } else if (!imageSizePreset.startsWith('auto') && !imageSizePreset.startsWith('custom')) {
             setImageSizePreset('custom');
         }
     }, [imageSizePreset, imageSizePresets]);
