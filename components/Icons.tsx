@@ -32,12 +32,16 @@ import {
   LuSearch,
   LuFileSearch,
   LuCopy,
+  LuBanana,
+  LuWaves,
+  LuZap,
+  LuFlower,
 } from 'react-icons/lu';
-import { 
-    PiCaretDown, PiSparkle, PiSpinner, PiTranslate, PiCheck, 
+import {
+    PiCaretDown, PiSparkle, PiSpinner, PiTranslate, PiCheck,
     PiWarning, PiDownloadSimple, PiX as PiXIcon, PiCube, PiTrash,
-    PiUploadSimple, PiMagicWandFill, PiRecycle, PiCaretLeft, 
-    PiCaretRight, PiSparkleFill
+    PiUploadSimple, PiMagicWandFill, PiRecycle, PiCaretLeft,
+    PiCaretRight, PiSparkleFill, PiFlowerLotus, PiLightning, PiShootingStar
 } from 'react-icons/pi';
 
 
@@ -93,3 +97,10 @@ export const PiRecycleIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) =>
 export const PiCaretLeftIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <PiCaretLeft {...props} />;
 export const PiCaretRightIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <PiCaretRight {...props} />;
 export const PiSparkleFillIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <PiSparkleFill {...props} />;
+export const PiFlowerLotusIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <PiFlowerLotus {...props} />;
+export const PiLightningIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <PiLightning {...props} />;
+export const PiShootingStarIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <PiShootingStar {...props} />;
+export const BananaIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <LuBanana {...props} />;
+export const WavesIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <LuWaves {...props} />;
+export const ZapIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <LuZap {...props} />;
+export const FlowerIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <LuFlower {...props} />;
