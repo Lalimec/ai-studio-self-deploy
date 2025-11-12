@@ -44,8 +44,8 @@ export const generateFigureImage = async (
             let imageSize: string | { width: number; height: number };
 
             if (options.imageSizePreset && options.imageSizePreset.startsWith('auto')) {
-                // For auto presets, send 'auto' string
-                imageSize = 'auto';
+                // For auto presets, send the specific preset value (auto, auto_2K, auto_4K)
+                imageSize = options.imageSizePreset;
             } else if (options.width && options.height) {
                 // For custom sizes (custom, custom_2K, custom_4K), send as object
                 imageSize = {
