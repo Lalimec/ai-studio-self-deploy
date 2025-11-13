@@ -172,7 +172,11 @@ const ImageStudio: React.FC<ImageStudioProps> = ({ logic, onImageClick, onShowHe
                                 {(logic.imageSizePreset === 'custom' || logic.imageSizePreset === 'custom_4K' || logic.imageSizePreset === 'custom_2K') && (
                                     <div className="mt-2 flex flex-wrap gap-2">
                                         {ASPECT_RATIO_PRESETS.map(preset => {
-                                            const isActive = preset.width === logic.customWidth && preset.height === logic.customHeight;
+                                            // For custom mode, check width/height match
+                                            // For custom_4K/custom_2K, check aspectRatio label match
+                                            const isActive = logic.imageSizePreset === 'custom'
+                                                ? preset.width === logic.customWidth && preset.height === logic.customHeight
+                                                : logic.aspectRatio === preset.label;
                                             return (
                                                 <button
                                                     key={preset.label}
