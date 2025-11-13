@@ -182,9 +182,34 @@ export const useVideoStudio = ({ addToast, setConfirmAction, setDownloadProgress
     };
     
     const handleGenerateAllVideos = async () => {
-        const toProcess = studioImages.filter(i => !!i.videoPrompt && !i.videoSrc && !i.isGeneratingVideo);
-        if (toProcess.length === 0) return addToast("No images ready to generate videos.", "info");
-        
+        // Find images ready to generate (have prompts, not currently generating)
+        const imagesWithPrompts = studioImages.filter(i => !!i.videoPrompt && !i.isGeneratingVideo);
+        const imagesWithoutVideos = imagesWithPrompts.filter(i => !i.videoSrc);
+        const imagesWithExistingVideos = imagesWithPrompts.filter(i => i.videoSrc);
+
+        if (imagesWithPrompts.length === 0) {
+            return addToast("No images ready to generate videos.", "info");
+        }
+
+        // If there are images with existing videos, warn the user
+        if (imagesWithExistingVideos.length > 0) {
+            setConfirmAction({
+                title: "Regenerate Videos?",
+                message: `${imagesWithExistingVideos.length} image(s) already have generated videos. Regenerating will replace the existing videos. Do you want to continue?`,
+                confirmText: "Regenerate All",
+                confirmVariant: 'primary',
+                onConfirm: () => {
+                    executeGenerateAllVideos(imagesWithPrompts);
+                },
+            });
+            return;
+        }
+
+        // No existing videos, proceed directly
+        executeGenerateAllVideos(imagesWithoutVideos);
+    };
+
+    const executeGenerateAllVideos = async (toProcess: typeof studioImages) => {
         logUserAction('GENERATE_VIDEO_ALL_VIDEOSTUDIO', { count: toProcess.length, sessionId });
         setIsGeneratingVideos(true);
         setStudioImages(p => p.map(i => toProcess.some(pr => pr.id === i.id) ? {...i, isGeneratingVideo: true, videoGenerationFailed: false} : i));
@@ -206,7 +231,7 @@ export const useVideoStudio = ({ addToast, setConfirmAction, setDownloadProgress
             if(videoTasks.length !== toProcess.length) {
                 addToast("Some images failed to upload and were skipped.", "warning");
             }
-            
+
             if(videoTasks.length > 0) {
                 await generateAllVideos(videoTasks,
                     (returnedId, videoSrc) => {
@@ -222,8 +247,8 @@ export const useVideoStudio = ({ addToast, setConfirmAction, setDownloadProgress
                     }
                 );
             }
-        } catch(e) { 
-            addToast(e instanceof Error ? e.message : 'Error generating all videos.', 'error'); 
+        } catch(e) {
+            addToast(e instanceof Error ? e.message : 'Error generating all videos.', 'error');
         } finally {
             setIsGeneratingVideos(false);
             setStudioImages(p => p.map(i => ({...i, isGeneratingVideo: false})));

@@ -274,11 +274,35 @@ export const useHairStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
     };
 
     const handleGenerateAllVideos = async () => {
-        const imagesToProcess = generatedImages.filter(img => !!img.videoPrompt && !img.videoSrc && !img.isGeneratingVideo);
-        if (imagesToProcess.length === 0) {
+        // Find images ready to generate (have prompts, not currently generating)
+        const imagesWithPrompts = generatedImages.filter(img => !!img.videoPrompt && !img.isGeneratingVideo);
+        const imagesWithoutVideos = imagesWithPrompts.filter(img => !img.videoSrc);
+        const imagesWithExistingVideos = imagesWithPrompts.filter(img => img.videoSrc);
+
+        if (imagesWithPrompts.length === 0) {
             addToast("All prepared images already have videos or are currently generating.", "info");
             return;
         }
+
+        // If there are images with existing videos, warn the user
+        if (imagesWithExistingVideos.length > 0) {
+            setConfirmAction({
+                title: "Regenerate Videos?",
+                message: `${imagesWithExistingVideos.length} image(s) already have generated videos. Regenerating will replace the existing videos. Do you want to continue?`,
+                confirmText: "Regenerate All",
+                confirmVariant: 'primary',
+                onConfirm: () => {
+                    executeGenerateAllVideos(imagesWithPrompts);
+                },
+            });
+            return;
+        }
+
+        // No existing videos, proceed directly
+        executeGenerateAllVideos(imagesWithoutVideos);
+    };
+
+    const executeGenerateAllVideos = async (imagesToProcess: typeof generatedImages) => {
         logUserAction('GENERATE_HAIR_VIDEO_ALL', { count: imagesToProcess.length, sessionId });
         setIsGeneratingVideos(true);
         setGeneratedImages(prev => prev.map(img => imagesToProcess.some(p => p.filename === img.filename) ? { ...img, isGeneratingVideo: true, videoGenerationFailed: false } : img));

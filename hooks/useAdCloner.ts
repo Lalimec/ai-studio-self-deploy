@@ -215,15 +215,36 @@ export const useAdCloner = ({ addToast, setConfirmAction, withMultiDownloadWarni
     
     const handleGenerateAllImages = async () => {
         if (!generationResult || isBusy) return;
-        const indicesToGenerate = generationResult.variations
-            .map((_, index) => index)
-            .filter(index => !variationStates[index] || variationStates[index].imageHistory.length === 0);
 
-        if (indicesToGenerate.length === 0) {
-            addToast("All variations already have generated images.", "info");
+        // Find variations ready to generate
+        const allIndices = generationResult.variations.map((_, index) => index);
+        const indicesWithoutImages = allIndices.filter(index => !variationStates[index] || variationStates[index].imageHistory.length === 0);
+        const indicesWithExistingImages = allIndices.filter(index => variationStates[index] && variationStates[index].imageHistory.length > 0);
+
+        if (allIndices.length === 0) {
+            addToast("No variations available to generate.", "info");
             return;
         }
 
+        // If there are variations with existing images, warn the user
+        if (indicesWithExistingImages.length > 0) {
+            setConfirmAction({
+                title: "Regenerate Images?",
+                message: `${indicesWithExistingImages.length} variation(s) already have generated images. Regenerating will add new images to their history. Do you want to continue?`,
+                confirmText: "Regenerate All",
+                confirmVariant: 'primary',
+                onConfirm: () => {
+                    executeGenerateAllImages(allIndices);
+                },
+            });
+            return;
+        }
+
+        // No existing images, proceed directly
+        executeGenerateAllImages(indicesWithoutImages);
+    };
+
+    const executeGenerateAllImages = async (indicesToGenerate: number[]) => {
         logUserAction('GENERATE_ADCLONER_ALL_IMAGES', { count: indicesToGenerate.length, sessionId });
         setIsGeneratingAllImages(true);
         addToast(`Generating ${indicesToGenerate.length} images... This may take a moment.`, "info");
@@ -231,7 +252,7 @@ export const useAdCloner = ({ addToast, setConfirmAction, withMultiDownloadWarni
         const processSingle = async (index: number) => {
             await handleGenerateAdImage(index, true);
         };
-        
+
         await processWithConcurrency(indicesToGenerate, processSingle, 4);
 
         setIsGeneratingAllImages(false);

@@ -431,12 +431,35 @@ export const useTimelineStudio = ({ addToast, setConfirmAction, setDownloadProgr
     };
 
     const handleGenerateAllVideos = async () => {
-        const pairsToProcess = timelinePairs.filter(p => p.videoPrompt && !p.videoSrc && !p.isGeneratingVideo && !p.isDisabled);
-        if (pairsToProcess.length === 0) {
+        // Find pairs ready to generate (have prompts, enabled, not currently generating)
+        const pairsWithPrompts = timelinePairs.filter(p => p.videoPrompt && !p.isGeneratingVideo && !p.isDisabled);
+        const pairsWithoutVideos = pairsWithPrompts.filter(p => !p.videoSrc);
+        const pairsWithExistingVideos = pairsWithPrompts.filter(p => p.videoSrc);
+
+        if (pairsWithPrompts.length === 0) {
             addToast("No enabled pairs are ready for video generation.", "info");
             return;
         }
 
+        // If there are pairs with existing videos, warn the user
+        if (pairsWithExistingVideos.length > 0) {
+            setConfirmAction({
+                title: "Regenerate Videos?",
+                message: `${pairsWithExistingVideos.length} pair(s) already have generated videos. Regenerating will replace the existing videos. Do you want to continue?`,
+                confirmText: "Regenerate All",
+                confirmVariant: 'primary',
+                onConfirm: () => {
+                    executeGenerateAllVideos(pairsWithPrompts);
+                },
+            });
+            return;
+        }
+
+        // No existing videos, proceed directly
+        executeGenerateAllVideos(pairsWithoutVideos);
+    };
+
+    const executeGenerateAllVideos = async (pairsToProcess: TimelinePair[]) => {
         logUserAction('GENERATE_TIMELINE_VIDEO_ALL', { count: pairsToProcess.length, sessionId });
         setIsGeneratingAllVideos(true);
         addToast(`Generating ${pairsToProcess.length} transition videos... This may take some time.`, 'info');
@@ -460,7 +483,7 @@ export const useTimelineStudio = ({ addToast, setConfirmAction, setDownloadProgr
             if(videoTasks.length !== pairsToProcess.length) {
                 addToast("Some images failed to upload and were skipped.", "warning");
             }
-            
+
             if(videoTasks.length > 0) {
                 await generateAllVideos(
                     videoTasks,

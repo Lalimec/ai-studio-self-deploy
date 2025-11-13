@@ -233,22 +233,60 @@ export const useBabyStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
     };
     
     const handleGenerateAllVideos = async () => {
-        const babiesToProcess = generatedImages.filter(img => !!img.videoPrompt && !img.videoSrc && !img.isGeneratingVideo);
-        
-        const parentsToProcess: ParentImageState[] = [];
-        if (parent1.videoPrompt && !parent1.videoSrc && !parent1.isGeneratingVideo) {
-            parentsToProcess.push(parent1);
+        // Find items ready to generate (have prompts, not currently generating)
+        const babiesWithPrompts = generatedImages.filter(img => !!img.videoPrompt && !img.isGeneratingVideo);
+        const babiesWithoutVideos = babiesWithPrompts.filter(img => !img.videoSrc);
+        const babiesWithExistingVideos = babiesWithPrompts.filter(img => img.videoSrc);
+
+        const parentsWithPrompts: ParentImageState[] = [];
+        const parentsWithoutVideos: ParentImageState[] = [];
+        const parentsWithExistingVideos: ParentImageState[] = [];
+
+        if (parent1.videoPrompt && !parent1.isGeneratingVideo) {
+            parentsWithPrompts.push(parent1);
+            if (parent1.videoSrc) {
+                parentsWithExistingVideos.push(parent1);
+            } else {
+                parentsWithoutVideos.push(parent1);
+            }
         }
-        if (parent2.videoPrompt && !parent2.videoSrc && !parent2.isGeneratingVideo) {
-            parentsToProcess.push(parent2);
+        if (parent2.videoPrompt && !parent2.isGeneratingVideo) {
+            parentsWithPrompts.push(parent2);
+            if (parent2.videoSrc) {
+                parentsWithExistingVideos.push(parent2);
+            } else {
+                parentsWithoutVideos.push(parent2);
+            }
         }
-    
-        const allToProcessCount = babiesToProcess.length + parentsToProcess.length;
-    
-        if (allToProcessCount === 0) {
+
+        const allWithPromptsCount = babiesWithPrompts.length + parentsWithPrompts.length;
+        const existingVideosCount = babiesWithExistingVideos.length + parentsWithExistingVideos.length;
+
+        if (allWithPromptsCount === 0) {
             return addToast("All prepared items have videos or are currently generating.", "info");
         }
-    
+
+        // If there are items with existing videos, warn the user
+        if (existingVideosCount > 0) {
+            setConfirmAction({
+                title: "Regenerate Videos?",
+                message: `${existingVideosCount} item(s) already have generated videos. Regenerating will replace the existing videos. Do you want to continue?`,
+                confirmText: "Regenerate All",
+                confirmVariant: 'primary',
+                onConfirm: () => {
+                    executeGenerateAllVideos(babiesWithPrompts, parentsWithPrompts);
+                },
+            });
+            return;
+        }
+
+        // No existing videos, proceed directly
+        executeGenerateAllVideos(babiesWithoutVideos, parentsWithoutVideos);
+    };
+
+    const executeGenerateAllVideos = async (babiesToProcess: typeof generatedImages, parentsToProcess: ParentImageState[]) => {
+        const allToProcessCount = babiesToProcess.length + parentsToProcess.length;
+
         logUserAction('GENERATE_BABY_VIDEO_ALL', { count: allToProcessCount, sessionId });
         setIsGeneratingVideos(true);
         setGeneratedImages(prev => prev.map(img => babiesToProcess.some(p => p.filename === img.filename) ? { ...img, isGeneratingVideo: true, videoGenerationFailed: false } : img));
@@ -257,7 +295,7 @@ export const useBabyStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
             setParent(prev => ({ ...prev, isGeneratingVideo: true, videoGenerationFailed: false }));
         });
         addToast(`Generating ${allToProcessCount} videos...`, "info");
-    
+
         try {
             const videoTasks: VideoTask[] = [];
             const allItems: (GeneratedBabyImage | ParentImageState)[] = [...babiesToProcess, ...parentsToProcess];
@@ -272,7 +310,7 @@ export const useBabyStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
                 } else {
                     publicUrl = await ensurePublicUrlForBaby((item as GeneratedBabyImage).filename);
                 }
-                
+
                 if(publicUrl && item.videoPrompt) {
                      videoTasks.push({
                         startImageUrl: publicUrl,
@@ -281,7 +319,7 @@ export const useBabyStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
                     });
                 }
             }
-            
+
             if (videoTasks.length !== allToProcessCount) {
                 addToast("Some images failed to upload and were skipped.", "warning");
             }
