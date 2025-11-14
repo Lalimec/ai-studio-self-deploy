@@ -2,27 +2,11 @@ import { TimelinePairWithImages } from '../types';
 import { processWithConcurrency } from './apiUtils';
 import { ai, dataUrlToBlob } from './geminiClient';
 import { Constance } from './endpoints';
+import { parseErrorResponse } from './apiResponseAdapter';
 
+// Use centralized error parser
 const parseGenerationError = (error: Error, task: { filename: string }): string => {
-  const prefix = `Failed on image ${task.filename}`;
-
-  const jsonMatch = error.message.match(/{.*}/s);
-  if (jsonMatch) {
-    try {
-      const errorJson = JSON.parse(jsonMatch[0]);
-      const apiMessage = errorJson?.error?.message || 'An unknown API error occurred.';
-      return `${prefix}: ${apiMessage.split('. For more information')[0]}`;
-    } catch (e) {}
-  }
-
-  if (error.message.includes('429') || error.message.includes('RESOURCE_EXHAUSTED')) {
-    return `${prefix}: Your API key has exceeded its quota.`;
-  }
-  if (error.message.includes('SAFETY')) {
-      return `${prefix}: Generation failed due to safety filters.`;
-  }
-
-  return `${prefix}. The model could not complete this request.`;
+  return parseErrorResponse(error, `image ${task.filename}`);
 };
 
 

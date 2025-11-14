@@ -1,5 +1,6 @@
 // This service uses an n8n webhook to stitch multiple videos together.
 import { Constance } from './endpoints';
+import { adaptStitcherResponse } from './apiResponseAdapter';
 
 type ProgressCallback = (progress: number, message: string) => void;
 
@@ -34,15 +35,13 @@ export async function stitchVideos(videoUrls: string[], onProgress: ProgressCall
     
     if (contentType && contentType.includes('application/json')) {
         const result = await response.json();
-        const stitchedUrl = result.url || result.stitched_video_url;
 
-        if (!stitchedUrl || typeof stitchedUrl !== 'string') {
-            throw new Error("Stitching service did not return a valid video URL in the JSON response.");
-        }
-        
+        // Use centralized adapter to parse stitcher response
+        const stitcherResult = adaptStitcherResponse(result);
+
         onProgress(75, "Downloading stitched video...");
 
-        const videoResponse = await fetch(stitchedUrl);
+        const videoResponse = await fetch(stitcherResult.videoUrl);
         if (!videoResponse.ok) {
             throw new Error(`Failed to download stitched video from URL: ${videoResponse.statusText}`);
         }

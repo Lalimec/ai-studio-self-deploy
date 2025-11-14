@@ -3,6 +3,12 @@ import { processWithConcurrency } from './apiUtils';
 import { ai, dataUrlToBlob as dataUrlToBlobUtil } from './geminiClient';
 import { GenerateContentResponse } from '@google/genai';
 import { Constance } from './endpoints';
+import {
+    adaptVideoInitResponse,
+    adaptVideoStatusResponse,
+    fetchAndAdapt,
+    parseErrorResponse
+} from './apiResponseAdapter';
 
 const POLLING_INTERVAL_MS = 5000;
 const MAX_POLLING_ATTEMPTS = 60; // 5 minutes timeout (60 attempts * 5 seconds)
@@ -16,12 +22,9 @@ export const dataUrlToBlob = dataUrlToBlobUtil;
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
+// Use centralized error parser
 const parseGenerationError = (error: Error, task: { filename: string }): string => {
-  const prefix = `Failed on ${task.filename}`;
-  if (error.message.includes('SAFETY')) {
-      return `${prefix}: Generation failed due to safety filters.`;
-  }
-  return `${prefix}. The model could not complete this request.`;
+  return parseErrorResponse(error, task.filename);
 };
 
 
@@ -30,44 +33,41 @@ const pollForResult = async (requestId: string): Promise<string> => {
         await delay(POLLING_INTERVAL_MS);
 
         try {
-            const response = await fetch(Constance.endpoints.videoStatus, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id: requestId }),
-            });
+            // Use centralized adapter for status polling
+            const statusResult = await fetchAndAdapt(
+                Constance.endpoints.videoStatus,
+                { id: requestId },
+                adaptVideoStatusResponse
+            );
 
-            const result = await response.json();
-
-            if (!response.ok) {
-                if (result && (result.Error || result.error)) {
-                    throw new Error(result.Error || result.error); // Definitive failure with specific message
-                }
-                console.warn(`Polling attempt ${attempt + 1} failed with status ${response.status}. Retrying...`);
-                continue; // Generic server error, retry
+            // Check if completed with video URL
+            if (statusResult.status === 'completed' && statusResult.videoUrl) {
+                return statusResult.videoUrl;
             }
 
-            if (result.videos && Array.isArray(result.videos) && result.videos.length > 0) {
-                return result.videos[0]; // Success
+            // If still generating, continue polling
+            if (statusResult.status === 'generating') {
+                continue;
             }
 
-            if (result.Error) {
-                throw new Error(result.Error); // Definitive failure with specific message
-            }
+            // If status is 'failed', error will be thrown by adapter
+            // This line shouldn't be reached but included for completeness
+            throw new Error(`Video generation failed with unexpected status: ${statusResult.status}`);
 
-            if (result.status !== 'generating') {
-                throw new Error(`Video generation failed with status: ${result.status || 'unknown'}`); // Definitive failure
-            }
-
-            // If status is 'generating', loop continues...
-
-        } catch (error) {
-            // Distinguish between transient errors (network, parsing) and definitive failures.
+        } catch (error: any) {
+            // Distinguish between transient errors (network, parsing) and definitive failures
             if (error instanceof SyntaxError || error instanceof TypeError) {
                 console.warn(`Polling attempt ${attempt + 1} encountered a transient error. Retrying...`, error);
                 if (attempt === MAX_POLLING_ATTEMPTS - 1) throw error; // Fail on last attempt
                 continue; // Retry on transient errors
             }
-            // Re-throw definitive errors (the ones we created with `new Error`).
+
+            // If it's an ApiError (from adapter), re-throw immediately
+            if (error.isUserFacing !== undefined) {
+                throw error;
+            }
+
+            // Re-throw other definitive errors
             throw error;
         }
     }
@@ -97,28 +97,15 @@ const generateSingleVideo = async (params: VideoGenerationParams): Promise<strin
         payload.end_image_url = params.endImageUrl;
     }
 
-    // Step 1: Initiate video generation and get a request ID
-    const initialResponse = await fetch(Constance.endpoints.videoGeneration, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-    });
-    
-    // We assume error responses are also JSON, so we parse the body first.
-    const initialResult = await initialResponse.json();
-
-    // Check for an error payload OR a non-200 status code
-    if (!initialResponse.ok || (initialResult && initialResult.Error)) {
-        const errorMessage = initialResult.Error || `Video generation initiation failed with status ${initialResponse.status}`;
-        throw new Error(errorMessage);
-    }
-
-    if (!initialResult.request_id) {
-        throw new Error('API response did not contain a request_id.');
-    }
+    // Step 1: Initiate video generation and get a request ID using centralized adapter
+    const initResult = await fetchAndAdapt(
+        Constance.endpoints.videoGeneration,
+        payload,
+        adaptVideoInitResponse
+    );
 
     // Step 2: Poll for the video URL using the request ID
-    return pollForResult(initialResult.request_id);
+    return pollForResult(initResult.requestId);
 };
 
 export type VideoTask = VideoGenerationParams & { filename: string };

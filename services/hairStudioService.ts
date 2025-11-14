@@ -1,8 +1,8 @@
 import { GoogleGenAI, Modality, GenerateContentResponse } from '@google/genai';
 import { GenerationOptions, Gender, PoseStyle, Hairstyle, ColorOption, Beard, Accessory, AspectRatio, AdornmentOption } from '../types';
-import { 
-    POSE_PROMPTS, 
-    HAIR_COLORS, 
+import {
+    POSE_PROMPTS,
+    HAIR_COLORS,
     BOLD_HAIR_COLORS,
     COMPLEX_NATURAL_HAIR_COLORS,
     MULTICOLOR_BOLD_HAIR_COLORS,
@@ -17,6 +17,7 @@ import { ai, dataUrlToBlob } from './geminiClient';
 import { Constance } from './endpoints';
 import { generateFigureImage } from './geminiService';
 import { uploadImageFromDataUrl } from './imageUploadService';
+import { parseErrorResponse } from './apiResponseAdapter';
 
 const imageModel = Constance.models.image.flash;
 
@@ -28,29 +29,10 @@ type GenerationTask = {
   adornmentPrompt: string | null;
 };
 
+// Use centralized error parser with context-specific naming
 const parseGenerationError = (error: Error, task: GenerationTask | { filename: string }): string => {
   const taskName = 'hairstyle' in task ? `"${task.hairstyle.name}" (${task.color || 'original'})` : `image ${task.filename}`;
-  const prefix = `Failed on ${taskName}`;
-
-  const jsonMatch = error.message.match(/{.*}/s);
-  if (jsonMatch) {
-    try {
-      const errorJson = JSON.parse(jsonMatch[0]);
-      const apiMessage = errorJson?.error?.message || 'An unknown API error occurred.';
-      return `${prefix}: ${apiMessage.split('. For more information')[0]}`;
-    } catch (e) {
-      // JSON parsing failed, fall back to simpler checks
-    }
-  }
-
-  if (error.message.includes('429') || error.message.includes('RESOURCE_EXHAUSTED')) {
-    return `${prefix}: Your API key has exceeded its quota.`;
-  }
-  if (error.message.includes('SAFETY')) {
-      return `${prefix}: Generation failed due to safety filters.`;
-  }
-
-  return `${prefix}. The model could not complete this request.`;
+  return parseErrorResponse(error, taskName);
 };
 
 const generateFilename = (

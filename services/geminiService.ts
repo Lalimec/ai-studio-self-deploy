@@ -8,6 +8,13 @@ import { GoogleGenAI, Modality, GenerateContentResponse } from '@google/genai';
 import { ai } from './geminiClient';
 import { Constance } from './endpoints';
 import { uploadImageFromDataUrl } from './imageUploadService';
+import {
+    adaptImageGenerationResponse,
+    fetchAndAdapt,
+    parseWebhookImageResponse,
+    parseNativeImageResponse,
+    createApiError
+} from './apiResponseAdapter';
 
 // A generic image generation function for models like gemini-2.5-flash-image
 export const generateFigureImage = async (
@@ -82,32 +89,14 @@ export const generateFigureImage = async (
             throw new Error(`Model ${model} requires an external API call, but no handler is implemented.`);
         }
 
-        const response = await fetch(endpoint, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-        });
+        // Use centralized adapter for webhook response handling
+        const result = await fetchAndAdapt(
+            endpoint,
+            payload,
+            (rawResponse) => adaptImageGenerationResponse(rawResponse, model, endpoint)
+        );
 
-        if (!response.ok) {
-            let errorMsg = `Image generation failed with status ${response.status}.`;
-            try {
-                const errorBody = await response.json();
-                errorMsg = errorBody.error || errorBody.message || errorMsg;
-            } catch (e) {
-                // response was not json
-            }
-            throw new Error(errorMsg);
-        }
-
-        const result = await response.json();
-        
-        // All external models (seedream, flux, nano-banana webhook) are expected to return an 'images' array
-        if (result && Array.isArray(result.images) && result.images.length > 0 && typeof result.images[0] === 'string') {
-            const base64String = result.images[0];
-            return `data:image/jpeg;base64,${base64String}`;
-        }
-        
-        throw new Error(`External API for ${model} did not return a valid 'images' array in the response.`);
+        return result.dataUrl;
     }
     
     // If we're here, it's a native Gemini call
@@ -130,20 +119,17 @@ export const generateFigureImage = async (
         config,
     });
 
-    for (const part of response.candidates?.[0]?.content.parts ?? []) {
-        if (part.inlineData) {
-            return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
+    // Use centralized adapter for native Gemini response parsing
+    try {
+        const result = adaptImageGenerationResponse(response, imageModel);
+        return result.dataUrl;
+    } catch (error: any) {
+        // Re-throw with model text if available (for safety filter debugging)
+        if (response.text) {
+            (error as any).modelText = response.text;
         }
-    }
-    
-    // Handle cases where the model returns text instead of an image (e.g., safety rejection)
-    if (response.text) {
-        const error = new Error("The model returned a text response instead of an image. This may be due to a safety policy violation or an unclear prompt.");
-        (error as any).modelText = response.text;
         throw error;
     }
-
-    throw new Error('Image generation failed. The model did not return an image.');
 };
 
 // Function to translate text to English using Gemini
