@@ -10,6 +10,60 @@
 import JSZip from 'jszip';
 import { blobToDataUrl, embedPromptInJpeg, embedPromptInPng } from './imageUtils';
 
+/**
+ * Validates that a base64 string contains a valid image header (JPEG or PNG).
+ * @param base64 - Pure base64 string (without data URL prefix)
+ * @returns true if the header is valid, false otherwise
+ */
+const validateImageHeader = (base64: string): boolean => {
+    try {
+        // Decode first few bytes to check magic bytes
+        const binaryString = atob(base64.substring(0, 20));
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+        }
+
+        // Valid PNG: 89 50 4E 47
+        const isPng = bytes.length >= 4 &&
+                      bytes[0] === 0x89 && bytes[1] === 0x50 &&
+                      bytes[2] === 0x4E && bytes[3] === 0x47;
+
+        // Valid JPEG: FF D8 FF
+        const isJpeg = bytes.length >= 3 &&
+                       bytes[0] === 0xFF && bytes[1] === 0xD8 && bytes[2] === 0xFF;
+
+        if (!isPng && !isJpeg) {
+            console.error('Invalid image header detected. First bytes:',
+                Array.from(bytes.slice(0, 8)).map(b => b.toString(16).padStart(2, '0')).join(' '));
+        }
+
+        return isPng || isJpeg;
+    } catch (error) {
+        console.error('Error validating image header:', error);
+        return false;
+    }
+};
+
+/**
+ * Corrects file extension based on actual MIME type
+ * @param filename - Original filename (may have wrong extension)
+ * @param mimeType - Actual MIME type of the file
+ * @returns Filename with correct extension
+ */
+const correctFileExtension = (filename: string, mimeType: string): string => {
+    const correctExtension = mimeType === 'image/png' ? '.png' : '.jpg';
+    const currentExtension = filename.match(/\.(jpg|jpeg|png)$/i);
+
+    if (currentExtension) {
+        // Replace existing image extension
+        return filename.replace(/\.(jpg|jpeg|png)$/i, correctExtension);
+    } else {
+        // Append correct extension
+        return filename + correctExtension;
+    }
+};
+
 // ============================================================================
 // Types
 // ============================================================================
@@ -36,6 +90,9 @@ export interface DownloadWithMetadataOptions {
     prompt?: string; // For EXIF embedding
     metadata?: Record<string, any>; // Additional metadata for .txt file
     embedInImage?: boolean; // Whether to embed prompt in EXIF (default: true if prompt provided)
+    includeMetadataFile?: boolean; // Whether to download .txt metadata file (default: true if metadata/prompt provided)
+    videoUrl?: string; // Optional video to download alongside image
+    videoFilename?: string; // Optional video filename
 }
 
 export interface ZipFileEntry {
@@ -98,7 +155,7 @@ export const downloadFile = async (options: DownloadFileOptions): Promise<void> 
 export const downloadImageWithMetadata = async (
     options: DownloadWithMetadataOptions
 ): Promise<void> => {
-    const {
+    let {
         imageUrl,
         imageBlob,
         imageBase64,
@@ -106,6 +163,9 @@ export const downloadImageWithMetadata = async (
         prompt,
         metadata,
         embedInImage = !!prompt,
+        includeMetadataFile = true,
+        videoUrl,
+        videoFilename,
     } = options;
 
     // Get image blob
@@ -115,10 +175,25 @@ export const downloadImageWithMetadata = async (
         finalBlob = imageBlob;
     } else if (imageBase64) {
         // Handle base64 (with or without data:image prefix)
-        const base64Data = imageBase64.includes(',') ? imageBase64.split(',')[1] : imageBase64;
+        let base64Data = imageBase64.includes(',') ? imageBase64.split(',')[1] : imageBase64;
+
+        // CRITICAL: Remove any whitespace from base64 string
+        // Some APIs may return base64 with newlines or spaces which corrupt the decode
+        base64Data = base64Data.replace(/\s/g, '');
+
+        // Validate image header before processing
+        if (!validateImageHeader(base64Data)) {
+            throw new Error(`Image "${filename}" has an invalid or corrupted header. The file cannot be downloaded. This may indicate encoding issues.`);
+        }
+
         const mimeType = imageBase64.includes('data:')
             ? imageBase64.match(/data:([^;]+);/)?.[1] || 'image/jpeg'
             : 'image/jpeg';
+
+        // CRITICAL: Correct filename extension to match actual MIME type
+        filename = correctFileExtension(filename, mimeType);
+
+        // Decode base64 to binary
         const byteCharacters = atob(base64Data);
         const byteNumbers = new Array(byteCharacters.length);
         for (let i = 0; i < byteCharacters.length; i++) {
@@ -146,8 +221,16 @@ export const downloadImageWithMetadata = async (
     // Download image
     await downloadFile({ url: '', filename, blob: finalBlob });
 
-    // Download metadata file if provided
-    if (metadata || prompt) {
+    // Download video if provided
+    if (videoUrl) {
+        await new Promise((res) => setTimeout(res, 200)); // Small delay between downloads
+        const videoBlob = await fetch(videoUrl).then((res) => res.blob());
+        const videoName = videoFilename || filename.replace(/\.[^/.]+$/, '.mp4');
+        await downloadFile({ url: '', filename: videoName, blob: videoBlob });
+    }
+
+    // Download metadata file if provided AND enabled
+    if (includeMetadataFile && (metadata || prompt)) {
         await new Promise((res) => setTimeout(res, 200)); // Small delay between downloads
         const metadataContent = metadata || { prompt };
         const textBlob = new Blob([JSON.stringify(metadataContent, null, 2)], {
@@ -233,7 +316,7 @@ export const downloadBulkImages = async (
     let processedFiles = 0;
 
     for (const image of images) {
-        const { imageUrl, imageBlob, imageBase64, filename, prompt, metadata, videoUrl, videoFilename } = image;
+        let { imageUrl, imageBlob, imageBase64, filename, prompt, metadata, videoUrl, videoFilename } = image;
 
         // Process image
         let finalBlob: Blob;
@@ -241,10 +324,26 @@ export const downloadBulkImages = async (
         if (imageBlob) {
             finalBlob = imageBlob;
         } else if (imageBase64) {
-            const base64Data = imageBase64.includes(',') ? imageBase64.split(',')[1] : imageBase64;
+            let base64Data = imageBase64.includes(',') ? imageBase64.split(',')[1] : imageBase64;
+
+            // CRITICAL: Remove any whitespace from base64 string
+            base64Data = base64Data.replace(/\s/g, '');
+
+            // Validate image header before processing
+            if (!validateImageHeader(base64Data)) {
+                console.error(`Image "${filename}" has an invalid or corrupted header. Skipping this file.`);
+                // Continue to next image instead of failing the entire batch
+                processedFiles++;
+                continue;
+            }
+
             const mimeType = imageBase64.includes('data:')
                 ? imageBase64.match(/data:([^;]+);/)?.[1] || 'image/jpeg'
                 : 'image/jpeg';
+
+            // CRITICAL: Correct filename extension to match actual MIME type
+            filename = correctFileExtension(filename, mimeType);
+
             const byteCharacters = atob(base64Data);
             const byteNumbers = new Array(byteCharacters.length);
             for (let i = 0; i < byteCharacters.length; i++) {
@@ -269,7 +368,7 @@ export const downloadBulkImages = async (
             }
         }
 
-        // Add image to ZIP
+        // Add image to ZIP (filename has been corrected above)
         const imageBuffer = await finalBlob.arrayBuffer();
         targetFolder.file(filename, imageBuffer);
 
@@ -281,7 +380,7 @@ export const downloadBulkImages = async (
             targetFolder.file(videoName, videoBuffer);
         }
 
-        // Add metadata file if requested
+        // Add metadata file if requested (use corrected filename)
         if (includeMetadataFiles && (metadata || prompt)) {
             const metadataContent = metadata || { prompt };
             const metadataFilename = filename.replace(/\.[^/.]+$/, '.txt');

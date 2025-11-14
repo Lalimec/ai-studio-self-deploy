@@ -1,10 +1,10 @@
 /// <reference lib="dom" />
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import JSZip from 'jszip';
-import { 
-    GeneratedImage, GeneratedBabyImage, Toast as ToastType, 
+import {
+    GeneratedImage, GeneratedBabyImage, Toast as ToastType,
     DisplayImage, StudioImage, ImageStudioResultImage, VariationState,
-    NanoBananaWebhookSettings
+    NanoBananaWebhookSettings, DownloadSettings
 } from './types';
 
 import { useHairStudio } from './hooks/useHairStudio';
@@ -108,6 +108,32 @@ function App() {
     }
   };
 
+  // Download Settings State
+  const [downloadSettings, setDownloadSettings] = useState<DownloadSettings>(() => {
+    try {
+        const stored = localStorage.getItem('downloadSettings');
+        if (stored) {
+            return JSON.parse(stored);
+        }
+    } catch (error) {
+        console.error("Could not load download settings from localStorage", error);
+    }
+    // Default: do NOT include metadata files (cleaner downloads)
+    return {
+        includeMetadataFiles: false,
+    };
+  });
+
+  const handleSetDownloadSettings = (newSettings: Partial<DownloadSettings>) => {
+    const updated = { ...downloadSettings, ...newSettings };
+    setDownloadSettings(updated);
+    try {
+        localStorage.setItem('downloadSettings', JSON.stringify(updated));
+    } catch (error) {
+        console.error("Could not save download settings to localStorage", error);
+    }
+  };
+
   const handleSetShowBetaFeatures = (enabled: boolean) => {
     setShowBetaFeatures(enabled);
     try {
@@ -149,13 +175,13 @@ function App() {
   }, []);
 
   // --- Studio Hooks ---
-  const hairStudioLogic = useHairStudio({ addToast, setConfirmAction, withMultiDownloadWarning, setDownloadProgress, useNanoBananaWebhook: nanoBananaWebhookSettings.hair });
-  const babyStudioLogic = useBabyStudio({ addToast, setConfirmAction, withMultiDownloadWarning, setDownloadProgress, useNanoBananaWebhook: nanoBananaWebhookSettings.baby });
+  const hairStudioLogic = useHairStudio({ addToast, setConfirmAction, withMultiDownloadWarning, setDownloadProgress, useNanoBananaWebhook: nanoBananaWebhookSettings.hair, downloadSettings });
+  const babyStudioLogic = useBabyStudio({ addToast, setConfirmAction, withMultiDownloadWarning, setDownloadProgress, useNanoBananaWebhook: nanoBananaWebhookSettings.baby, downloadSettings });
   const videoStudioLogic = useVideoStudio({ addToast, setConfirmAction, setDownloadProgress, withMultiDownloadWarning });
   const timelineStudioLogic = useTimelineStudio({ addToast, setConfirmAction, setDownloadProgress, withMultiDownloadWarning });
-  const imageStudioLogic = useImageStudioLogic(addToast, setConfirmAction, setDownloadProgress, withMultiDownloadWarning, nanoBananaWebhookSettings.image);
+  const imageStudioLogic = useImageStudioLogic(addToast, setConfirmAction, setDownloadProgress, withMultiDownloadWarning, nanoBananaWebhookSettings.image, downloadSettings);
   const adClonerLogic = useAdCloner({ addToast, setConfirmAction, withMultiDownloadWarning, setDownloadProgress, useNanoBananaWebhook: nanoBananaWebhookSettings.adCloner });
-  const videoAnalyzerLogic = useVideoAnalyzerStudio({ addToast, setConfirmAction, setDownloadProgress, withMultiDownloadWarning, useNanoBananaWebhook: nanoBananaWebhookSettings.videoAnalyzer });
+  const videoAnalyzerLogic = useVideoAnalyzerStudio({ addToast, setConfirmAction, setDownloadProgress, withMultiDownloadWarning, useNanoBananaWebhook: nanoBananaWebhookSettings.videoAnalyzer, downloadSettings });
   
   useEffect(() => {
     const isModalOpen = isCropping || timelineStudioLogic.isCropping || lightboxIndex !== null || confirmAction || showHelpModal || downloadProgress.visible || timelineStudioLogic.showCropChoice || timelineStudioLogic.isLightboxOpen || !!imageStudioLogic.pendingFiles || imageStudioLogic.croppingFiles || adClonerLogic.settingsModalOpen || showGlobalSettings;
@@ -533,6 +559,8 @@ function App() {
             onToggleBetaFeatures={handleSetShowBetaFeatures}
             nanoBananaWebhookSettings={nanoBananaWebhookSettings}
             onToggleNanoBananaWebhookSetting={handleSetNanoBananaWebhookSetting}
+            downloadSettings={downloadSettings}
+            onUpdateDownloadSettings={handleSetDownloadSettings}
         />
       )}
     </div>

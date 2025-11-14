@@ -1,6 +1,6 @@
 import React from 'react';
 import { CloseIcon } from './Icons';
-import { NanoBananaWebhookSettings } from '../types';
+import { NanoBananaWebhookSettings, DownloadSettings } from '../types';
 
 interface GlobalSettingsModalProps {
   isOpen: boolean;
@@ -9,6 +9,8 @@ interface GlobalSettingsModalProps {
   onToggleBetaFeatures: (enabled: boolean) => void;
   nanoBananaWebhookSettings: NanoBananaWebhookSettings;
   onToggleNanoBananaWebhookSetting: (studio: keyof NanoBananaWebhookSettings, enabled: boolean) => void;
+  downloadSettings: DownloadSettings;
+  onUpdateDownloadSettings: (settings: Partial<DownloadSettings>) => void;
 }
 
 const Toggle: React.FC<{id: string, label: string, checked: boolean, onChange: (e: React.ChangeEvent<HTMLInputElement>) => void}> = ({id, label, checked, onChange}) => (
@@ -30,9 +32,10 @@ const Toggle: React.FC<{id: string, label: string, checked: boolean, onChange: (
 );
 
 
-const GlobalSettingsModal: React.FC<GlobalSettingsModalProps> = ({ 
-    isOpen, onClose, showBetaFeatures, onToggleBetaFeatures, 
-    nanoBananaWebhookSettings, onToggleNanoBananaWebhookSetting 
+const GlobalSettingsModal: React.FC<GlobalSettingsModalProps> = ({
+    isOpen, onClose, showBetaFeatures, onToggleBetaFeatures,
+    nanoBananaWebhookSettings, onToggleNanoBananaWebhookSetting,
+    downloadSettings, onUpdateDownloadSettings
 }) => {
     if (!isOpen) return null;
 
@@ -71,6 +74,19 @@ const GlobalSettingsModal: React.FC<GlobalSettingsModalProps> = ({
                             />
                             <div className="w-11 h-6 bg-[var(--color-bg-muted)] rounded-full peer peer-focus:ring-2 peer-focus:ring-[var(--color-primary-ring)] peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[var(--color-primary)]"></div>
                         </label>
+                    </div>
+
+                    <div className="pt-4 border-t border-[var(--color-border-muted)]">
+                        <h3 className="font-semibold text-[var(--color-text-light)] mb-2">Download Options</h3>
+                        <p className="text-sm text-[var(--color-text-dim)] mb-4">
+                            Control what gets downloaded with your images.
+                        </p>
+                        <Toggle
+                            id="metadata-files-toggle"
+                            label="Include .txt Metadata Files"
+                            checked={downloadSettings.includeMetadataFiles}
+                            onChange={(e) => onUpdateDownloadSettings({ includeMetadataFiles: e.target.checked })}
+                        />
                     </div>
 
                     <div className="pt-4 border-t border-[var(--color-border-muted)]">
