@@ -156,7 +156,11 @@ export const downloadImageWithMetadata = async (
         finalBlob = imageBlob;
     } else if (imageBase64) {
         // Handle base64 (with or without data:image prefix)
-        const base64Data = imageBase64.includes(',') ? imageBase64.split(',')[1] : imageBase64;
+        let base64Data = imageBase64.includes(',') ? imageBase64.split(',')[1] : imageBase64;
+
+        // CRITICAL: Remove any whitespace from base64 string
+        // Some APIs may return base64 with newlines or spaces which corrupt the decode
+        base64Data = base64Data.replace(/\s/g, '');
 
         // Validate image header before processing
         if (!validateImageHeader(base64Data)) {
@@ -166,6 +170,8 @@ export const downloadImageWithMetadata = async (
         const mimeType = imageBase64.includes('data:')
             ? imageBase64.match(/data:([^;]+);/)?.[1] || 'image/jpeg'
             : 'image/jpeg';
+
+        // Decode base64 to binary
         const byteCharacters = atob(base64Data);
         const byteNumbers = new Array(byteCharacters.length);
         for (let i = 0; i < byteCharacters.length; i++) {
@@ -296,7 +302,10 @@ export const downloadBulkImages = async (
         if (imageBlob) {
             finalBlob = imageBlob;
         } else if (imageBase64) {
-            const base64Data = imageBase64.includes(',') ? imageBase64.split(',')[1] : imageBase64;
+            let base64Data = imageBase64.includes(',') ? imageBase64.split(',')[1] : imageBase64;
+
+            // CRITICAL: Remove any whitespace from base64 string
+            base64Data = base64Data.replace(/\s/g, '');
 
             // Validate image header before processing
             if (!validateImageHeader(base64Data)) {

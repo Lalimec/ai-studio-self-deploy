@@ -77,26 +77,39 @@ const validateImageHeader = (base64: string): boolean => {
  * @returns An object with pure base64 and detected MIME type
  */
 const normalizeBase64Response = (imageString: string): { base64: string; mimeType: string } => {
+    let base64: string;
+    let mimeType: string;
+
     // Check if it's already a data URL
     if (imageString.startsWith('data:')) {
         const match = imageString.match(/^data:([^;]+);base64,(.+)$/);
         if (match) {
-            return { base64: match[2], mimeType: match[1] };
+            base64 = match[2];
+            mimeType = match[1];
+        } else {
+            // Malformed data URL - try to extract base64 part
+            const parts = imageString.split(',');
+            if (parts.length === 2) {
+                const mimeMatch = parts[0].match(/data:([^;]+)/);
+                base64 = parts[1];
+                mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+            } else {
+                // Fallback
+                base64 = imageString;
+                mimeType = 'image/jpeg';
+            }
         }
-        // Malformed data URL - try to extract base64 part
-        const parts = imageString.split(',');
-        if (parts.length === 2) {
-            const mimeMatch = parts[0].match(/data:([^;]+)/);
-            return {
-                base64: parts[1],
-                mimeType: mimeMatch ? mimeMatch[1] : 'image/jpeg'
-            };
-        }
+    } else {
+        // It's pure base64 - detect the format
+        base64 = imageString;
+        mimeType = detectImageFormat(imageString);
     }
 
-    // It's pure base64 - detect the format
-    const mimeType = detectImageFormat(imageString);
-    return { base64: imageString, mimeType };
+    // CRITICAL: Remove any whitespace from base64 string
+    // Some APIs may return base64 with newlines or spaces which corrupt the decode
+    base64 = base64.replace(/\s/g, '');
+
+    return { base64, mimeType };
 };
 
 // A generic image generation function for models like gemini-2.5-flash-image
