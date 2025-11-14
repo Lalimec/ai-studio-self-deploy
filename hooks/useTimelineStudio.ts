@@ -8,8 +8,7 @@ import { generateAllVideos, generateSingleVideoForImage, VideoTask } from '../se
 import { generateSetId, generateShortId, getTimestamp } from '../services/imageUtils';
 import { stitchVideos } from '../services/videoStitcher';
 import { logUserAction } from '../services/loggingService';
-
-declare const JSZip: any;
+import { downloadSingleTimelinePair, downloadAllTimelinePairs } from '../services/timelineDownloadService';
 
 type TimelineStudioHookProps = {
     addToast: (message: string, type: ToastType['type']) => void;
@@ -521,7 +520,7 @@ export const useTimelineStudio = ({ addToast, setConfirmAction, setDownloadProgr
                 addToast("Video not generated for this pair yet.", "error");
                 return;
             }
-            
+
             const startImage = findImageById(pair.startImageId);
             const endImage = findImageById(pair.endImageId);
             if (!startImage || !endImage) {
@@ -530,51 +529,19 @@ export const useTimelineStudio = ({ addToast, setConfirmAction, setDownloadProgr
             }
 
             const index = timelinePairs.findIndex(p => p.id === pair.id);
-            const startShortId = getShortIdFromFullId(startImage.id);
-            const endShortId = getShortIdFromFullId(endImage.id);
-            const timestamp = getTimestamp();
-            const baseName = `${sessionId}_Timeline_Transition_${String(index + 1).padStart(2, '0')}_${startShortId}-to-${endShortId}_${timestamp}`;
-
-            setDownloadProgress({ visible: true, message: `Preparing: ${baseName}.zip`, progress: 0 });
 
             try {
-                const zip = new JSZip();
-                
-                zip.file(`${baseName}_start.jpg`, startImage.src.split(',')[1], { base64: true });
-                setDownloadProgress({ visible: true, message: 'Adding start image...', progress: 25 });
-
-                zip.file(`${baseName}_end.jpg`, endImage.src.split(',')[1], { base64: true });
-                setDownloadProgress({ visible: true, message: 'Adding end image...', progress: 50 });
-
-                const videoBlob = await fetch(pair.videoSrc).then(res => res.blob());
-                zip.file(`${baseName}.mp4`, videoBlob);
-                setDownloadProgress({ visible: true, message: 'Adding video...', progress: 75 });
-                
-                const info = {
-                    pair_index: index + 1,
-                    start_image_filename: startImage.filename,
-                    end_image_filename: endImage.filename,
-                    video_prompt: pair.videoPrompt,
-                    general_instruction: generalPrompt,
-                    session_id: sessionId,
-                    timestamp: timestamp,
-                };
-                zip.file(`${baseName}.txt`, JSON.stringify(info, null, 2));
-                setDownloadProgress({ visible: true, message: 'Compressing...', progress: 90 });
-                
-                const content = await zip.generateAsync({ type: 'blob' });
-                const link = document.createElement('a');
-                link.href = URL.createObjectURL(content);
-                link.download = `${baseName}.zip`;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                URL.revokeObjectURL(link.href);
-
-                setDownloadProgress({ visible: false, message: '', progress: 0 });
+                await downloadSingleTimelinePair({
+                    pair,
+                    pairIndex: index,
+                    startImage,
+                    endImage,
+                    sessionId: sessionId || 'AI_Studio',
+                    generalPrompt,
+                    progressCallback: setDownloadProgress,
+                });
             } catch (err) {
-                addToast("Error creating ZIP file.", "error");
-                setDownloadProgress({ visible: false, message: '', progress: 0 });
+                addToast(err instanceof Error ? err.message : "Error creating ZIP file.", "error");
             }
         });
     };
@@ -582,67 +549,18 @@ export const useTimelineStudio = ({ addToast, setConfirmAction, setDownloadProgr
     const handleDownloadAll = () => {
         withMultiDownloadWarning(async () => {
             const pairsWithContent = timelinePairs.filter(p => !p.isDisabled && (p.videoSrc || p.videoPrompt));
-            if (pairsWithContent.length === 0) {
-                addToast("No content available to download.", "info");
-                return;
-            }
-
-            setDownloadProgress({ visible: true, message: 'Starting download...', progress: 0 });
 
             try {
-                const zip = new JSZip();
-                const timestamp = getTimestamp();
-                let filesProcessed = 0;
-                const totalFiles = pairsWithContent.length;
-
-                for (const pair of pairsWithContent) {
-                    const startImage = findImageById(pair.startImageId);
-                    const endImage = findImageById(pair.endImageId);
-                    if (!startImage || !endImage) continue;
-
-                    const index = timelinePairs.findIndex(p => p.id === pair.id);
-                    const startShortId = getShortIdFromFullId(startImage.id);
-                    const endShortId = getShortIdFromFullId(endImage.id);
-                    const pairName = `${sessionId}_Timeline_Transition_${String(index + 1).padStart(2, '0')}_${startShortId}-to-${endShortId}_${timestamp}`;
-                    
-                    filesProcessed++;
-                    setDownloadProgress({ visible: true, message: `Zipping: Transition ${index + 1}`, progress: (filesProcessed / totalFiles) * 100 });
-
-                    zip.file(`${pairName}_start.jpg`, startImage.src.split(',')[1], { base64: true });
-                    zip.file(`${pairName}_end.jpg`, endImage.src.split(',')[1], { base64: true });
-                    
-                    if(pair.videoSrc) {
-                        const videoBlob = await fetch(pair.videoSrc).then(res => res.blob());
-                        zip.file(`${pairName}.mp4`, videoBlob);
-                    }
-
-                    const info = {
-                        pair_index: index + 1,
-                        start_image_filename: startImage.filename,
-                        end_image_filename: endImage.filename,
-                        video_prompt: pair.videoPrompt,
-                        general_instruction: generalPrompt,
-                        session_id: sessionId,
-                        timestamp: timestamp,
-                    };
-                    zip.file(`${pairName}.txt`, JSON.stringify(info, null, 2));
-                }
-
-                setDownloadProgress({ visible: true, message: 'Compressing ZIP...', progress: 99 });
-                const content = await zip.generateAsync({ type: 'blob' });
-                const link = document.createElement('a');
-                link.href = URL.createObjectURL(content);
-                link.download = `${sessionId || 'AI_Studio'}_Timeline_${getTimestamp()}.zip`;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                URL.revokeObjectURL(link.href);
-
-                setDownloadProgress({ visible: false, message: '', progress: 0 });
-
+                await downloadAllTimelinePairs({
+                    pairs: pairsWithContent,
+                    allPairs: timelinePairs,
+                    images: timelineImages,
+                    sessionId: sessionId || 'AI_Studio',
+                    generalPrompt,
+                    progressCallback: setDownloadProgress,
+                });
             } catch (err) {
-                addToast("Error creating ZIP file.", "error");
-                setDownloadProgress({ visible: false, message: '', progress: 0 });
+                addToast(err instanceof Error ? err.message : "Error creating ZIP file.", "error");
             }
         });
     };

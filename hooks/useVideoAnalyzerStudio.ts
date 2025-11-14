@@ -14,8 +14,7 @@ import {
 import { imageModels, analysisModels } from '../constants';
 import { logUserAction } from '../services/loggingService';
 import { mockVideoAnalysisData, mockExtractedFrames } from '../components/videoAnalyzer/mockData';
-
-declare const JSZip: any;
+import { downloadSingleScene, downloadAllVideoAnalyzerAssets } from '../services/videoAnalyzerDownloadService';
 
 type VideoAnalyzerHookProps = {
     addToast: (message: string, type: Toast['type']) => void;
@@ -476,66 +475,20 @@ export const useVideoAnalyzerStudio = ({ addToast, setConfirmAction, setDownload
             if (!videoAnalysis) return;
             const scene = videoAnalysis.storyboard[sceneIndex];
             const frame = extractedFrames[sceneIndex];
-            const timestampId = scene.timestamp.replace(/[:.]/g, '_');
-            const sceneFilenameBase = `${sessionId}_scene-${sceneIndex + 1}_${timestampId}`;
-        
-            setDownloadProgress({ visible: true, message: `Zipping scene ${sceneIndex + 1}...`, progress: 0 });
-            try {
-                const zip = new JSZip();
-                const folder = zip.folder(sceneFilenameBase);
-                if (!folder) throw new Error("Could not create folder in zip.");
-    
-                const frameFilename = `frame_${timestampId}.jpg`;
-                if (frame) {
-                    folder.file(frameFilename, frame.split(',')[1], { base64: true });
-                }
-                
-                const modelToUse = settings.sceneImageModel;
-                let compositePrompt = scene.still_prompt;
-                if (modelToUse === 'gemini-2.5-flash-image') {
-                     compositePrompt = `${settings.nanoBananaPrompt}\n\nOriginal Prompt: "${scene.still_prompt}"\n\nAdditional Instructions: "${sceneInstructions[sceneIndex] || settings.sceneInstructions}"`;
-                }
 
-                const generationPayload = {
-                    composite_prompt: compositePrompt,
-                    user_instructions: sceneInstructions[sceneIndex] || settings.sceneInstructions,
-                    input_images: [
-                        ...sceneSubjectImages.map(f => f.name),
-                        frameFilename
-                    ]
-                };
-    
-                const info = { 
-                    ...scene, 
-                    scene_index: sceneIndex + 1,
-                    generation_payload: generationPayload,
-                    generated_images: scene.generated_images?.map((_, i) => `variations/variation_${i + 1}.jpg`) || []
-                };
-                folder.file('info.json', JSON.stringify(info, null, 2));
-    
-                if (scene.generated_images) {
-                    const variationsFolder = folder.folder('variations');
-                    const imagePromises = scene.generated_images.map(async (imgUrl, i) => {
-                        const response = await fetch(imgUrl);
-                        const blob = await response.blob();
-                        variationsFolder?.file(`variation_${i + 1}.jpg`, blob);
-                    });
-                    await Promise.all(imagePromises);
-                }
-    
-                setDownloadProgress({ visible: true, message: 'Compressing...', progress: 90 });
-    
-                const content = await zip.generateAsync({ type: 'blob' });
-                const link = document.createElement('a');
-                link.href = URL.createObjectURL(content);
-                link.download = `${sceneFilenameBase}.zip`;
-                link.click();
-                URL.revokeObjectURL(link.href);
-                setDownloadProgress({ visible: false, message: '', progress: 0 });
-    
+            try {
+                await downloadSingleScene({
+                    scene,
+                    sceneIndex,
+                    extractedFrame: frame,
+                    sessionId,
+                    settings,
+                    sceneInstructions,
+                    sceneSubjectImages,
+                    progressCallback: setDownloadProgress,
+                });
             } catch (err) {
-                addToast("Failed to create scene ZIP.", 'error');
-                setDownloadProgress({ visible: false, message: '', progress: 0 });
+                addToast(err instanceof Error ? err.message : "Failed to create scene ZIP.", 'error');
             }
         });
     }, [videoAnalysis, extractedFrames, addToast, setDownloadProgress, withMultiDownloadWarning, sessionId, settings, sceneInstructions, sceneSubjectImages]);
@@ -546,117 +499,23 @@ export const useVideoAnalyzerStudio = ({ addToast, setConfirmAction, setDownload
                 addToast("No analysis to download.", "error");
                 return;
             }
-        
-            setDownloadProgress({ visible: true, message: 'Starting asset export...', progress: 0 });
+
             try {
-                const zip = new JSZip();
-                const parsedTimestamps = videoAnalysis.storyboard.map(s => parseTimestamp(s.timestamp));
-        
-                zip.file(videoFile.name, videoFile);
-                setDownloadProgress({ visible: true, message: 'Adding video...', progress: 10 });
-        
-                const summaryJson = {
-                    metadata: {
-                        session_id: sessionId,
-                        created_at: new Date().toISOString(),
-                        video_filename: videoFile?.name,
-                        analysis_model: settings.analysisModel,
-                        total_scenes: videoAnalysis.storyboard.length
-                    },
-                    overall_video_style_prompt: videoAnalysis.overall_video_style_prompt,
-                    analysis: videoAnalysis.analysis,
-                    concept_approaches: videoAnalysis.concept_approaches,
-                    storyboard: videoAnalysis.storyboard.map((scene, index) => {
-                        const originalTime = parsedTimestamps[index];
-                        const offsetMs = scene.manual_offset_ms || 0;
-                        let calculatedBuffer = 0;
-                        if (index > 0 && index < videoAnalysis.storyboard.length - 1) {
-                            const nextTime = parsedTimestamps[index + 1];
-                            const duration = nextTime - originalTime;
-                            if (duration > 0) calculatedBuffer = duration / 3;
-                        }
-                        const finalTime = originalTime + calculatedBuffer + (offsetMs / 1000);
-                        const timestampId = scene.timestamp.replace(/[:.]/g, '_');
-                        
-                        return {
-                            ...scene,
-                            index: index,
-                            timestamps: {
-                                original_time_seconds: originalTime,
-                                calculated_buffer_seconds: calculatedBuffer,
-                                manual_offset_seconds: offsetMs / 1000,
-                                final_time_seconds: finalTime,
-                                formatted_final_time: formatTimeWithMS(finalTime),
-                            },
-                            frame_filename: extractedFrames[index] ? `scenes/scene_${index + 1}/frame_${timestampId}.jpg` : null,
-                            generated_images: scene.generated_images?.map((_, i) => `scenes/scene_${index + 1}/variations/variation_${i + 1}.jpg`) || []
-                        };
-                    })
-                };
-                zip.file('analysis_summary.json', JSON.stringify(summaryJson, null, 2));
-                setDownloadProgress({ visible: true, message: 'Adding analysis JSON...', progress: 20 });
-        
-                const scenesFolder = zip.folder('scenes');
-                if (scenesFolder) {
-                    const scenePromises = videoAnalysis.storyboard.map(async (scene, i) => {
-                        const timestampId = scene.timestamp.replace(/[:.]/g, '_');
-                        const sceneFolder = scenesFolder.folder(`scene_${i + 1}`);
-                        if (sceneFolder) {
-                            const frame = extractedFrames[i];
-                            if (frame) sceneFolder.file(`frame_${timestampId}.jpg`, frame.split(',')[1], { base64: true });
-                            sceneFolder.file('info.json', JSON.stringify(summaryJson.storyboard[i], null, 2));
-    
-                            if (scene.generated_images) {
-                                const variationsFolder = sceneFolder.folder('variations');
-                                const variationPromises = scene.generated_images.map(async (imgUrl, j) => {
-                                    const response = await fetch(imgUrl);
-                                    const blob = await response.blob();
-                                    variationsFolder?.file(`variation_${j + 1}.jpg`, blob);
-                                });
-                                await Promise.all(variationPromises);
-                            }
-                        }
-                    });
-                    await Promise.all(scenePromises);
-                }
-                setDownloadProgress({ visible: true, message: 'Adding scenes and frames...', progress: 60 });
-        
-                if (generatedAds.length > 0) {
-                    const conceptsFolder = zip.folder('concepts');
-                    if (conceptsFolder) {
-                        const conceptPromises = generatedAds.map(async (ad, i) => {
-                            const conceptFolder = conceptsFolder.folder(`concept_${i + 1}`);
-                            if (conceptFolder) {
-                                conceptFolder.file('info.json', JSON.stringify(ad, null, 2));
-                                if (ad.generatedImages && ad.generatedImages[0]) {
-                                    const response = await fetch(ad.generatedImages[0]);
-                                    const blob = await response.blob();
-                                    conceptFolder.file('image.jpg', blob);
-                                }
-                            }
-                        });
-                        await Promise.all(conceptPromises);
-                    }
-                }
-                setDownloadProgress({ visible: true, message: 'Adding concepts...', progress: 80 });
-                
-                setDownloadProgress({ visible: true, message: 'Compressing all assets...', progress: 95 });
-        
-                const content = await zip.generateAsync({ type: 'blob' });
-                const link = document.createElement('a');
-                link.href = URL.createObjectURL(content);
-                link.download = `VideoAnalyzer_${sessionId}_FullExport.zip`;
-                link.click();
-                URL.revokeObjectURL(link.href);
-                setDownloadProgress({ visible: false, message: '', progress: 0 });
-                
+                await downloadAllVideoAnalyzerAssets({
+                    videoFile,
+                    videoAnalysis,
+                    extractedFrames,
+                    generatedAds,
+                    sessionId,
+                    settings,
+                    progressCallback: setDownloadProgress,
+                });
             } catch (err) {
                 console.error("Download all assets error:", err);
-                addToast("Failed to create full asset ZIP.", 'error');
-                setDownloadProgress({ visible: false, message: '', progress: 0 });
+                addToast(err instanceof Error ? err.message : "Failed to create full asset ZIP.", 'error');
             }
         });
-    }, [videoFile, videoAnalysis, extractedFrames, generatedAds, addToast, setDownloadProgress, withMultiDownloadWarning, sessionId, settings.analysisModel]);
+    }, [videoFile, videoAnalysis, extractedFrames, generatedAds, addToast, setDownloadProgress, withMultiDownloadWarning, sessionId, settings]);
     
     const extractFrame = useCallback(async (videoFile: File, timeInSeconds: number): Promise<string> => {
         return new Promise((resolve, reject) => {

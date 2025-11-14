@@ -18,8 +18,7 @@ import { uploadImageFromDataUrl } from '../services/imageUploadService';
 import { generateSetId, generateShortId, getTimestamp } from '../services/imageUtils';
 import { logUserAction } from '../services/loggingService';
 import { processWithConcurrency } from '../services/apiUtils';
-
-declare const JSZip: any;
+import { downloadSingleVideoStudioImage, downloadAllVideoStudioImages } from '../services/videoStudioDownloadService';
 
 type VideoStudioHookProps = {
     addToast: (message: string, type: ToastType['type']) => void;
@@ -353,38 +352,14 @@ export const useVideoStudio = ({ addToast, setConfirmAction, setDownloadProgress
                 addToast("Could not find image to download.", "error");
                 return;
             }
-            
-            const baseName = image.filename.substring(0, image.filename.lastIndexOf('.'));
-            setDownloadProgress({ visible: true, message: `Preparing: ${baseName}.zip`, progress: 0 });
 
             try {
-                const zip = new JSZip();
-                zip.file(`${baseName}.jpg`, image.src.split(',')[1], { base64: true });
-                setDownloadProgress({ visible: true, message: 'Adding image...', progress: 33 });
-
-                if (image.videoSrc) {
-                    const videoBlob = await fetch(image.videoSrc).then(res => res.blob());
-                    zip.file(`${baseName}.mp4`, videoBlob);
-                    setDownloadProgress({ visible: true, message: 'Adding video...', progress: 66 });
-                }
-
-                const info = { type: "video_studio_image", video_prompt: image.videoPrompt };
-                zip.file(`${baseName}.txt`, JSON.stringify(info, null, 2));
-                setDownloadProgress({ visible: true, message: 'Compressing...', progress: 90 });
-
-                const content = await zip.generateAsync({ type: 'blob' });
-                const link = document.createElement('a');
-                link.href = URL.createObjectURL(content);
-                link.download = `${baseName}.zip`;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                URL.revokeObjectURL(link.href);
-
-                setDownloadProgress({ visible: false, message: '', progress: 0 });
+                await downloadSingleVideoStudioImage({
+                    image,
+                    progressCallback: setDownloadProgress,
+                });
             } catch (err) {
-                addToast("Error creating ZIP file.", "error");
-                setDownloadProgress({ visible: false, message: '', progress: 0 });
+                addToast(err instanceof Error ? err.message : "Error creating ZIP file.", "error");
             }
         });
     };
@@ -395,49 +370,18 @@ export const useVideoStudio = ({ addToast, setConfirmAction, setDownloadProgress
                 addToast("No images to download.", "info");
                 return;
             }
-            setDownloadProgress({ visible: true, message: 'Starting download...', progress: 0 });
+
             const currentSessionId = sessionId || generateSetId();
-            if(!sessionId) setSessionId(currentSessionId);
-            
+            if (!sessionId) setSessionId(currentSessionId);
+
             try {
-                const zip = new JSZip();
-                let filesProcessed = 0;
-                
-                for (const image of studioImages) {
-                    const baseName = image.filename.substring(0, image.filename.lastIndexOf('.'));
-                    zip.file(`${baseName}.jpg`, image.src.split(',')[1], { base64: true });
-
-                    if (image.videoSrc) {
-                        const videoBlob = await fetch(image.videoSrc).then(res => res.blob());
-                        zip.file(`${baseName}.mp4`, videoBlob);
-                    }
-
-                    const info = { type: "video_studio_image", video_prompt: image.videoPrompt };
-                    zip.file(`${baseName}.txt`, JSON.stringify(info, null, 2));
-                    
-                    filesProcessed++;
-                    setDownloadProgress({ 
-                        visible: true, 
-                        message: `Zipping: ${image.filename}`, 
-                        progress: (filesProcessed / studioImages.length) * 100 
-                    });
-                }
-                
-                setDownloadProgress({ visible: true, message: 'Compressing ZIP...', progress: 99 });
-                const content = await zip.generateAsync({ type: 'blob' });
-                const link = document.createElement('a');
-                link.href = URL.createObjectURL(content);
-                link.download = `AI_Studio_Video_${currentSessionId}_${getTimestamp()}.zip`;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                URL.revokeObjectURL(link.href);
-
-                setDownloadProgress({ visible: false, message: '', progress: 0 });
-
+                await downloadAllVideoStudioImages({
+                    images: studioImages,
+                    sessionId: currentSessionId,
+                    progressCallback: setDownloadProgress,
+                });
             } catch (err) {
-                addToast("Error creating ZIP file.", "error");
-                setDownloadProgress({ visible: false, message: '', progress: 0 });
+                addToast(err instanceof Error ? err.message : "Error creating ZIP file.", "error");
             }
         });
     };
