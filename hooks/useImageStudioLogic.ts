@@ -1,7 +1,7 @@
 /// <reference lib="dom" />
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { generateFigureImage, translateToEnglish, generatePromptList, generatePromptVariation, enhancePrompt } from '../services/geminiService';
-import { ImageStudioRunResult, ImageStudioGenerationResult, AppFile, Toast } from '../types';
+import { ImageStudioRunResult, ImageStudioGenerationResult, AppFile, Toast, DownloadSettings } from '../types';
 import { fileToBase64, blobToDataUrl, generateSetId, generateShortId, sanitizeFilename, getTimestamp } from '../services/imageUtils';
 import { uploadImageFromDataUrl } from '../services/imageUploadService';
 import { runConcurrentTasks } from '../services/apiUtils';
@@ -16,7 +16,8 @@ export const useImageStudioLogic = (
     setConfirmAction: React.Dispatch<React.SetStateAction<any>>,
     setDownloadProgress: React.Dispatch<React.SetStateAction<{ visible: boolean; message: string; progress: number }>>,
     withMultiDownloadWarning: (action: () => void) => void,
-    useNanoBananaWebhook: boolean
+    useNanoBananaWebhook: boolean,
+    downloadSettings: DownloadSettings
 ) => {
     const [numberOfVersions, setNumberOfVersions] = useState<number>(1);
     const [promptContents, setPromptContents] = useState<string[]>(['']);
@@ -494,12 +495,13 @@ export const useImageStudioLogic = (
                         image_generation_prompt: result.prompt
                     },
                     embedInImage: true,
+                    includeMetadataFile: downloadSettings.includeMetadataFiles,
                 });
             } catch (err) {
                 addToast(err instanceof Error ? err.message : "An error occurred while preparing files.", "error");
             }
         });
-    }, [generationResults, withMultiDownloadWarning, addToast, getDownloadFilename]);
+    }, [generationResults, withMultiDownloadWarning, addToast, getDownloadFilename, downloadSettings]);
     
     const handleDownloadAll = useCallback(async () => {
         withMultiDownloadWarning(async () => {
@@ -563,7 +565,7 @@ export const useImageStudioLogic = (
                     zipFilename: `AI_Studio_Image_Batch_${setId}_${getTimestamp()}.zip`,
                     progressCallback: setDownloadProgress,
                     embedPrompts: true,
-                    includeMetadataFiles: false, // Image Studio doesn't include metadata files in bulk download
+                    includeMetadataFiles: downloadSettings.includeMetadataFiles,
                 });
 
             } catch (err) {
@@ -571,7 +573,7 @@ export const useImageStudioLogic = (
                 setDownloadProgress({ visible: false, message: '', progress: 0 });
             }
         });
-    }, [generationResults, withMultiDownloadWarning, setDownloadProgress, addToast, includeOriginals, imageFiles, getDownloadFilename, setId]);
+    }, [generationResults, withMultiDownloadWarning, setDownloadProgress, addToast, includeOriginals, imageFiles, getDownloadFilename, setId, downloadSettings]);
 
     const handleSuccess = useCallback((newImage: ImageStudioRunResult) => {
         const key = `${newImage.batchTimestamp}-${newImage.originalImageIndex}-${newImage.originalPromptIndex}`;
