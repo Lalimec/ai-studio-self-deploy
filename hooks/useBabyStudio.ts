@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import {
-    BabyGenerationOptions, BabyAge, BabyGender, GeneratedBabyImage, Toast as ToastType, ParentImageState, ImageForVideoProcessing
+    BabyGenerationOptions, BabyAge, BabyGender, GeneratedBabyImage, Toast as ToastType, ParentImageState, ImageForVideoProcessing, DownloadSettings
 } from '../types';
 import {
     generateBabyImages, prepareBabyVideoPrompts, generateVideoPromptForBabyImage
@@ -10,7 +10,7 @@ import { uploadImageFromDataUrl } from '../services/imageUploadService';
 import { generateAllVideos, generateSingleVideoForImage, generateVideoPromptForImage, VideoTask } from '../services/videoService';
 import { getTimestamp, generateSetId, sanitizeFilename } from '../services/imageUtils';
 import { logUserAction } from '../services/loggingService';
-import { downloadBulkImages } from '../services/downloadService';
+import { downloadBulkImages, downloadImageWithMetadata } from '../services/downloadService';
 
 declare const JSZip: any;
 
@@ -22,9 +22,10 @@ type BabyStudioHookProps = {
     withMultiDownloadWarning: (action: () => void) => void;
     setDownloadProgress: (progress: { visible: boolean; message: string; progress: number }) => void;
     useNanoBananaWebhook: boolean;
+    downloadSettings: DownloadSettings;
 };
 
-export const useBabyStudio = ({ addToast, setConfirmAction, withMultiDownloadWarning, setDownloadProgress, useNanoBananaWebhook }: BabyStudioHookProps) => {
+export const useBabyStudio = ({ addToast, setConfirmAction, withMultiDownloadWarning, setDownloadProgress, useNanoBananaWebhook, downloadSettings }: BabyStudioHookProps) => {
     const [parent1, setParent1] = useState<ParentImageState>({...initialParentState, id: 'parent1'});
     const [parent2, setParent2] = useState<ParentImageState>({...initialParentState, id: 'parent2'});
     const [options, setOptions] = useState<BabyGenerationOptions>({
@@ -473,28 +474,24 @@ export const useBabyStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
             const baseName = `${sessionId}_${parentIdString}_${sanitizedBaseFilename}_${timestamp}`;
 
             try {
-                await downloadBulkImages({
-                    images: [{
-                        imageBase64: parentToDownload.croppedSrc,
-                        filename: `${baseName}.jpg`,
-                        metadata: {
-                            type: "parent_image",
-                            id: parentToDownload.id,
-                            video_prompt: parentToDownload.videoPrompt,
-                            session_id: sessionId,
-                            timestamp: timestamp,
-                        },
-                        videoUrl: parentToDownload.videoSrc,
-                        videoFilename: `${baseName}.mp4`,
-                    }],
-                    zipFilename: `${baseName}.zip`,
-                    progressCallback: setDownloadProgress,
-                    embedPrompts: false, // Baby Studio uses metadata files instead
-                    includeMetadataFiles: true,
+                await downloadImageWithMetadata({
+                    imageBase64: parentToDownload.croppedSrc,
+                    filename: `${baseName}.jpg`,
+                    metadata: {
+                        type: "parent_image",
+                        id: parentToDownload.id,
+                        video_prompt: parentToDownload.videoPrompt,
+                        session_id: sessionId,
+                        timestamp: timestamp,
+                    },
+                    videoUrl: parentToDownload.videoSrc,
+                    videoFilename: `${baseName}.mp4`,
+                    embedInImage: false,
+                    includeMetadataFile: downloadSettings.includeMetadataFiles,
                 });
+                addToast("Download complete!", "success");
             } catch (err) {
-                addToast("Error creating ZIP file.", "error");
-                setDownloadProgress({ visible: false, message: '', progress: 0 });
+                addToast(err instanceof Error ? err.message : "Error downloading files.", "error");
             }
         });
     };
@@ -510,29 +507,25 @@ export const useBabyStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
             const baseName = image.filename.substring(0, image.filename.lastIndexOf('.'));
 
             try {
-                await downloadBulkImages({
-                    images: [{
-                        imageBase64: image.src,
-                        filename: `${baseName}.jpg`,
-                        metadata: {
-                            type: "generated_baby_image",
-                            description: image.description,
-                            image_generation_prompt: image.imageGenerationPrompt,
-                            video_prompt: image.videoPrompt,
-                            session_id: sessionId,
-                            timestamp: getTimestamp(),
-                        },
-                        videoUrl: image.videoSrc,
-                        videoFilename: `${baseName}.mp4`,
-                    }],
-                    zipFilename: `${baseName}.zip`,
-                    progressCallback: setDownloadProgress,
-                    embedPrompts: false, // Baby Studio uses metadata files instead
-                    includeMetadataFiles: true,
+                await downloadImageWithMetadata({
+                    imageBase64: image.src,
+                    filename: `${baseName}.jpg`,
+                    metadata: {
+                        type: "generated_baby_image",
+                        description: image.description,
+                        image_generation_prompt: image.imageGenerationPrompt,
+                        video_prompt: image.videoPrompt,
+                        session_id: sessionId,
+                        timestamp: getTimestamp(),
+                    },
+                    videoUrl: image.videoSrc,
+                    videoFilename: `${baseName}.mp4`,
+                    embedInImage: false,
+                    includeMetadataFile: downloadSettings.includeMetadataFiles,
                 });
+                addToast("Download complete!", "success");
             } catch (err) {
-                addToast("Error creating ZIP file.", "error");
-                setDownloadProgress({ visible: false, message: '', progress: 0 });
+                addToast(err instanceof Error ? err.message : "Error downloading files.", "error");
             }
         });
     };
@@ -615,7 +608,7 @@ export const useBabyStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
                     zipFilename: `AI_Studio_Baby_${sessionId}_${timestamp}.zip`,
                     progressCallback: setDownloadProgress,
                     embedPrompts: false, // Baby Studio uses metadata files instead
-                    includeMetadataFiles: true,
+                    includeMetadataFiles: downloadSettings.includeMetadataFiles,
                 });
             } catch (err) {
                 console.error("Error creating ZIP file for Baby Studio:", err);

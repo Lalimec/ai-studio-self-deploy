@@ -71,6 +71,9 @@ export interface DownloadWithMetadataOptions {
     prompt?: string; // For EXIF embedding
     metadata?: Record<string, any>; // Additional metadata for .txt file
     embedInImage?: boolean; // Whether to embed prompt in EXIF (default: true if prompt provided)
+    includeMetadataFile?: boolean; // Whether to download .txt metadata file (default: true if metadata/prompt provided)
+    videoUrl?: string; // Optional video to download alongside image
+    videoFilename?: string; // Optional video filename
 }
 
 export interface ZipFileEntry {
@@ -141,6 +144,9 @@ export const downloadImageWithMetadata = async (
         prompt,
         metadata,
         embedInImage = !!prompt,
+        includeMetadataFile = true,
+        videoUrl,
+        videoFilename,
     } = options;
 
     // Get image blob
@@ -187,8 +193,16 @@ export const downloadImageWithMetadata = async (
     // Download image
     await downloadFile({ url: '', filename, blob: finalBlob });
 
-    // Download metadata file if provided
-    if (metadata || prompt) {
+    // Download video if provided
+    if (videoUrl) {
+        await new Promise((res) => setTimeout(res, 200)); // Small delay between downloads
+        const videoBlob = await fetch(videoUrl).then((res) => res.blob());
+        const videoName = videoFilename || filename.replace(/\.[^/.]+$/, '.mp4');
+        await downloadFile({ url: '', filename: videoName, blob: videoBlob });
+    }
+
+    // Download metadata file if provided AND enabled
+    if (includeMetadataFile && (metadata || prompt)) {
         await new Promise((res) => setTimeout(res, 200)); // Small delay between downloads
         const metadataContent = metadata || { prompt };
         const textBlob = new Blob([JSON.stringify(metadataContent, null, 2)], {
