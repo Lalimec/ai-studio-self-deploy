@@ -316,7 +316,8 @@ export type ImageModel =
     'gemini-2.5-flash-image' |
     'nano-banana' |
     'seedream' |
-    'flux-kontext-pro';
+    'flux-kontext-pro' |
+    'qwen';
 
 export type VideoAnalyzerSettings = {
     analysisModel: AnalysisModel;

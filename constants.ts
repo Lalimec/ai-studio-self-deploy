@@ -705,6 +705,7 @@ export const imageModels: { id: ImageModel; name: string; requiresImage: boolean
     { id: 'nano-banana', name: 'Nano Banana (Webhook)', requiresImage: true },
     { id: 'seedream', name: 'Seedream 4.0', requiresImage: true },
     { id: 'flux-kontext-pro', name: 'Flux Kontext Pro', requiresImage: true },
+    { id: 'qwen', name: 'Qwen Image Edit', requiresImage: true },
 ];
 
 export const analysisModels: { id: AnalysisModel; name: string }[] = [
