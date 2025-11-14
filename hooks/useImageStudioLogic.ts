@@ -17,7 +17,7 @@ export const useImageStudioLogic = (
     setDownloadProgress: React.Dispatch<React.SetStateAction<{ visible: boolean; message: string; progress: number }>>,
     withMultiDownloadWarning: (action: () => void) => void,
     useNanoBananaWebhook: boolean,
-    downloadSettings: DownloadSettings
+    downloadSettings: DownloadSettings = { includeMetadataFiles: false }
 ) => {
     const [numberOfVersions, setNumberOfVersions] = useState<number>(1);
     const [promptContents, setPromptContents] = useState<string[]>(['']);
