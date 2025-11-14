@@ -45,6 +45,25 @@ const validateImageHeader = (base64: string): boolean => {
     }
 };
 
+/**
+ * Corrects file extension based on actual MIME type
+ * @param filename - Original filename (may have wrong extension)
+ * @param mimeType - Actual MIME type of the file
+ * @returns Filename with correct extension
+ */
+const correctFileExtension = (filename: string, mimeType: string): string => {
+    const correctExtension = mimeType === 'image/png' ? '.png' : '.jpg';
+    const currentExtension = filename.match(/\.(jpg|jpeg|png)$/i);
+
+    if (currentExtension) {
+        // Replace existing image extension
+        return filename.replace(/\.(jpg|jpeg|png)$/i, correctExtension);
+    } else {
+        // Append correct extension
+        return filename + correctExtension;
+    }
+};
+
 // ============================================================================
 // Types
 // ============================================================================
@@ -136,7 +155,7 @@ export const downloadFile = async (options: DownloadFileOptions): Promise<void> 
 export const downloadImageWithMetadata = async (
     options: DownloadWithMetadataOptions
 ): Promise<void> => {
-    const {
+    let {
         imageUrl,
         imageBlob,
         imageBase64,
@@ -170,6 +189,9 @@ export const downloadImageWithMetadata = async (
         const mimeType = imageBase64.includes('data:')
             ? imageBase64.match(/data:([^;]+);/)?.[1] || 'image/jpeg'
             : 'image/jpeg';
+
+        // CRITICAL: Correct filename extension to match actual MIME type
+        filename = correctFileExtension(filename, mimeType);
 
         // Decode base64 to binary
         const byteCharacters = atob(base64Data);
@@ -294,7 +316,7 @@ export const downloadBulkImages = async (
     let processedFiles = 0;
 
     for (const image of images) {
-        const { imageUrl, imageBlob, imageBase64, filename, prompt, metadata, videoUrl, videoFilename } = image;
+        let { imageUrl, imageBlob, imageBase64, filename, prompt, metadata, videoUrl, videoFilename } = image;
 
         // Process image
         let finalBlob: Blob;
@@ -318,6 +340,10 @@ export const downloadBulkImages = async (
             const mimeType = imageBase64.includes('data:')
                 ? imageBase64.match(/data:([^;]+);/)?.[1] || 'image/jpeg'
                 : 'image/jpeg';
+
+            // CRITICAL: Correct filename extension to match actual MIME type
+            filename = correctFileExtension(filename, mimeType);
+
             const byteCharacters = atob(base64Data);
             const byteNumbers = new Array(byteCharacters.length);
             for (let i = 0; i < byteCharacters.length; i++) {
@@ -342,7 +368,7 @@ export const downloadBulkImages = async (
             }
         }
 
-        // Add image to ZIP
+        // Add image to ZIP (filename has been corrected above)
         const imageBuffer = await finalBlob.arrayBuffer();
         targetFolder.file(filename, imageBuffer);
 
@@ -354,7 +380,7 @@ export const downloadBulkImages = async (
             targetFolder.file(videoName, videoBuffer);
         }
 
-        // Add metadata file if requested
+        // Add metadata file if requested (use corrected filename)
         if (includeMetadataFiles && (metadata || prompt)) {
             const metadataContent = metadata || { prompt };
             const metadataFilename = filename.replace(/\.[^/.]+$/, '.txt');
