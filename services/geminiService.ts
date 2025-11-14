@@ -24,7 +24,8 @@ export const generateFigureImage = async (
 
     const requiresUpload = (model === Constance.models.image.nanoBanana && useNanoBananaWebhook) ||
                            model === Constance.models.image.seedream ||
-                           model === Constance.models.image.flux;
+                           model === Constance.models.image.flux ||
+                           model === Constance.models.image.qwen;
 
     if (requiresUpload) {
         const publicUrls = await Promise.all(
@@ -78,6 +79,20 @@ export const generateFigureImage = async (
                 aspect_ratio: options.aspectRatio || 'auto',
             };
             endpoint = Constance.endpoints.image.nanoBanana;
+        } else if (model === Constance.models.image.qwen) {
+            if (publicUrls.length > 1) throw new Error(`${model} only supports one input image.`);
+            payload = {
+                prompt,
+                image_url: publicUrls[0],
+                num_inference_steps: 30,
+                guidance_scale: 4,
+                num_images: 1,
+                enable_safety_checker: false,
+                output_format: 'png',
+                negative_prompt: 'blurry, ugly',
+                acceleration: 'regular',
+            };
+            endpoint = Constance.endpoints.image.qwen;
         } else {
             throw new Error(`Model ${model} requires an external API call, but no handler is implemented.`);
         }
