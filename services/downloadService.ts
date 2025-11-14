@@ -10,6 +10,41 @@
 import JSZip from 'jszip';
 import { blobToDataUrl, embedPromptInJpeg, embedPromptInPng } from './imageUtils';
 
+/**
+ * Validates that a base64 string contains a valid image header (JPEG or PNG).
+ * @param base64 - Pure base64 string (without data URL prefix)
+ * @returns true if the header is valid, false otherwise
+ */
+const validateImageHeader = (base64: string): boolean => {
+    try {
+        // Decode first few bytes to check magic bytes
+        const binaryString = atob(base64.substring(0, 20));
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+        }
+
+        // Valid PNG: 89 50 4E 47
+        const isPng = bytes.length >= 4 &&
+                      bytes[0] === 0x89 && bytes[1] === 0x50 &&
+                      bytes[2] === 0x4E && bytes[3] === 0x47;
+
+        // Valid JPEG: FF D8 FF
+        const isJpeg = bytes.length >= 3 &&
+                       bytes[0] === 0xFF && bytes[1] === 0xD8 && bytes[2] === 0xFF;
+
+        if (!isPng && !isJpeg) {
+            console.error('Invalid image header detected. First bytes:',
+                Array.from(bytes.slice(0, 8)).map(b => b.toString(16).padStart(2, '0')).join(' '));
+        }
+
+        return isPng || isJpeg;
+    } catch (error) {
+        console.error('Error validating image header:', error);
+        return false;
+    }
+};
+
 // ============================================================================
 // Types
 // ============================================================================
@@ -116,6 +151,12 @@ export const downloadImageWithMetadata = async (
     } else if (imageBase64) {
         // Handle base64 (with or without data:image prefix)
         const base64Data = imageBase64.includes(',') ? imageBase64.split(',')[1] : imageBase64;
+
+        // Validate image header before processing
+        if (!validateImageHeader(base64Data)) {
+            throw new Error(`Image "${filename}" has an invalid or corrupted header. The file cannot be downloaded. This may indicate encoding issues.`);
+        }
+
         const mimeType = imageBase64.includes('data:')
             ? imageBase64.match(/data:([^;]+);/)?.[1] || 'image/jpeg'
             : 'image/jpeg';
@@ -242,6 +283,15 @@ export const downloadBulkImages = async (
             finalBlob = imageBlob;
         } else if (imageBase64) {
             const base64Data = imageBase64.includes(',') ? imageBase64.split(',')[1] : imageBase64;
+
+            // Validate image header before processing
+            if (!validateImageHeader(base64Data)) {
+                console.error(`Image "${filename}" has an invalid or corrupted header. Skipping this file.`);
+                // Continue to next image instead of failing the entire batch
+                processedFiles++;
+                continue;
+            }
+
             const mimeType = imageBase64.includes('data:')
                 ? imageBase64.match(/data:([^;]+);/)?.[1] || 'image/jpeg'
                 : 'image/jpeg';
