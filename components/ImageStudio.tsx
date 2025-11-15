@@ -81,13 +81,13 @@ const ImageStudio: React.FC<ImageStudioProps> = ({ logic, onImageClick, onShowHe
                                     </span>
                                 </button>
                                 <button
-                                    disabled
-                                    className="group relative p-3 rounded-lg bg-[var(--color-bg-muted)] text-[var(--color-text-dimmer)] opacity-50 cursor-not-allowed"
-                                    aria-label="Qwen Image Edit (Coming Soon)"
+                                    onClick={() => logic.setModel('qwen')}
+                                    className={`group relative p-3 rounded-lg transition-all ${logic.model === 'qwen' ? 'bg-[var(--color-primary)] text-[var(--color-text-on-primary)] shadow-lg scale-110' : 'bg-[var(--color-bg-muted)] text-[var(--color-text-dim)] hover:bg-[var(--color-bg-muted-hover)] hover:scale-105'}`}
+                                    aria-label="Select Qwen Image Edit model"
                                 >
                                     <FlowerIcon className="w-6 h-6" />
                                     <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-[var(--color-primary-accent)] text-white text-xs font-semibold rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-100 pointer-events-none shadow-lg z-50">
-                                        Qwen Image Edit (Coming Soon)
+                                        Qwen Image Edit
                                     </span>
                                 </button>
                             </div>

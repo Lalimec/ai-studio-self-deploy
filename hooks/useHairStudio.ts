@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import {
-    GenerationOptions, Gender, PoseStyle, ColorOption, GeneratedImage, Toast as ToastType, AdornmentOption
+    GenerationOptions, Gender, PoseStyle, ColorOption, GeneratedImage, Toast as ToastType, AdornmentOption, DownloadSettings
 } from '../types';
 import {
     generateHairstyles, regenerateSingleHairstyle
@@ -14,7 +14,7 @@ import { generateAllVideos, generateSingleVideoForImage } from '../services/vide
 import { getTimestamp, generateSetId } from '../services/imageUtils';
 import { logUserAction } from '../services/loggingService';
 import { uploadImageFromDataUrl } from '../services/imageUploadService';
-import { downloadBulkImages } from '../services/downloadService';
+import { downloadBulkImages, downloadImageWithMetadata } from '../services/downloadService';
 
 declare const JSZip: any;
 
@@ -24,9 +24,10 @@ type HairStudioHookProps = {
     withMultiDownloadWarning: (action: () => void) => void;
     setDownloadProgress: (progress: { visible: boolean; message: string; progress: number }) => void;
     useNanoBananaWebhook: boolean;
+    downloadSettings: DownloadSettings;
 };
 
-export const useHairStudio = ({ addToast, setConfirmAction, withMultiDownloadWarning, setDownloadProgress, useNanoBananaWebhook }: HairStudioHookProps) => {
+export const useHairStudio = ({ addToast, setConfirmAction, withMultiDownloadWarning, setDownloadProgress, useNanoBananaWebhook, downloadSettings }: HairStudioHookProps) => {
     const [originalFile, setOriginalFile] = useState<File | null>(null);
     const [croppedImage, setCroppedImage] = useState<string | null>(null);
     const [croppedImageAspectRatio, setCroppedImageAspectRatio] = useState<number>(4 / 5);
@@ -357,31 +358,27 @@ export const useHairStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
             const baseName = image.filename.substring(0, image.filename.lastIndexOf('.'));
 
             try {
-                await downloadBulkImages({
-                    images: [{
-                        imageBase64: image.src,
-                        filename: `${baseName}.jpg`,
-                        prompt: image.imageGenerationPrompt,
-                        metadata: {
-                            type: "generated_hairstyle",
-                            hairstyle: image.hairstyle.name,
-                            color: image.color,
-                            image_generation_prompt: image.imageGenerationPrompt,
-                            video_prompt: image.videoPrompt,
-                            session_id: sessionId,
-                            timestamp: getTimestamp(),
-                        },
-                        videoUrl: image.videoSrc,
-                        videoFilename: `${baseName}.mp4`,
-                    }],
-                    zipFilename: `${baseName}.zip`,
-                    progressCallback: setDownloadProgress,
-                    embedPrompts: false, // Hair Studio uses metadata files instead
-                    includeMetadataFiles: true,
+                await downloadImageWithMetadata({
+                    imageBase64: image.src,
+                    filename: `${baseName}.jpg`,
+                    prompt: image.imageGenerationPrompt,
+                    metadata: {
+                        type: "generated_hairstyle",
+                        hairstyle: image.hairstyle.name,
+                        color: image.color,
+                        image_generation_prompt: image.imageGenerationPrompt,
+                        video_prompt: image.videoPrompt,
+                        session_id: sessionId,
+                        timestamp: getTimestamp(),
+                    },
+                    videoUrl: image.videoSrc,
+                    videoFilename: `${baseName}.mp4`,
+                    embedInImage: false,
+                    includeMetadataFile: downloadSettings.includeMetadataFiles,
                 });
+                addToast("Download complete!", "success");
             } catch (err) {
-                addToast("Error creating ZIP file.", "error");
-                setDownloadProgress({ visible: false, message: '', progress: 0 });
+                addToast(err instanceof Error ? err.message : "Error downloading files.", "error");
             }
         });
     };
@@ -418,7 +415,7 @@ export const useHairStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
                     zipFilename: `AI_Studio_Hair_${sessionId}_${getTimestamp()}.zip`,
                     progressCallback: setDownloadProgress,
                     embedPrompts: false, // Hair Studio uses metadata files instead
-                    includeMetadataFiles: true,
+                    includeMetadataFiles: downloadSettings.includeMetadataFiles,
                 });
             } catch (err) {
                 addToast("Error creating ZIP file.", "error");

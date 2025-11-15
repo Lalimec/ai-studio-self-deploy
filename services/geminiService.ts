@@ -16,6 +16,135 @@ import {
     createApiError
 } from './apiResponseAdapter';
 
+/**
+ * Detects the image format from base64-encoded data by examining the magic bytes.
+ * @param base64 - Pure base64 string (without data URL prefix)
+ * @returns The detected MIME type ('image/jpeg', 'image/png', or 'image/jpeg' as fallback)
+ */
+const detectImageFormat = (base64: string): string => {
+    try {
+        // Decode first few bytes to check magic bytes
+        const binaryString = atob(base64.substring(0, 20));
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+        }
+
+        // Check PNG signature: 89 50 4E 47 0D 0A 1A 0A
+        if (bytes.length >= 8 &&
+            bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4E && bytes[3] === 0x47) {
+            return 'image/png';
+        }
+
+        // Check JPEG signature: FF D8 FF
+        if (bytes.length >= 3 &&
+            bytes[0] === 0xFF && bytes[1] === 0xD8 && bytes[2] === 0xFF) {
+            return 'image/jpeg';
+        }
+
+        // Default to JPEG if unable to detect
+        console.warn('Unable to detect image format from magic bytes, defaulting to JPEG');
+        return 'image/jpeg';
+    } catch (error) {
+        console.error('Error detecting image format:', error);
+        return 'image/jpeg';
+    }
+};
+
+/**
+ * Validates that a base64 string contains a valid image header.
+ * @param base64 - Pure base64 string (without data URL prefix)
+ * @returns true if the header is valid, false otherwise
+ */
+const validateImageHeader = (base64: string): boolean => {
+    try {
+        const binaryString = atob(base64.substring(0, 20));
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+        }
+
+        // Valid PNG: 89 50 4E 47
+        const isPng = bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4E && bytes[3] === 0x47;
+
+        // Valid JPEG: FF D8 FF
+        const isJpeg = bytes[0] === 0xFF && bytes[1] === 0xD8 && bytes[2] === 0xFF;
+
+        return isPng || isJpeg;
+    } catch (error) {
+        console.error('Error validating image header:', error);
+        return false;
+    }
+};
+
+/**
+ * Normalizes the base64 response from external APIs.
+ * Handles cases where the API might return a data URL or pure base64.
+ * @param imageString - The image string from the API (could be data URL or pure base64)
+ * @returns An object with pure base64 and detected MIME type
+ */
+const normalizeBase64Response = (imageString: string): { base64: string; mimeType: string } => {
+    let base64: string;
+    let mimeType: string;
+
+    // Check if it's already a data URL
+    if (imageString.startsWith('data:')) {
+        const match = imageString.match(/^data:([^;]+);base64,(.+)$/);
+        if (match) {
+            base64 = match[2];
+            mimeType = match[1];
+        } else {
+            // Malformed data URL - try to extract base64 part
+            const parts = imageString.split(',');
+            if (parts.length === 2) {
+                const mimeMatch = parts[0].match(/data:([^;]+)/);
+                base64 = parts[1];
+                mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+            } else {
+                // Fallback
+                base64 = imageString;
+                mimeType = 'image/jpeg';
+            }
+        }
+    } else {
+        // It's pure base64 - detect the format
+        base64 = imageString;
+        mimeType = detectImageFormat(imageString);
+    }
+
+    // CRITICAL: Remove any whitespace from base64 string
+    // Some APIs may return base64 with newlines or spaces which corrupt the decode
+    base64 = base64.replace(/\s/g, '');
+
+    return { base64, mimeType };
+};
+
+/**
+ * Validates and normalizes an image response data URL
+ * @param dataUrl - The data URL to validate
+ * @param modelName - The model name for error messages
+ * @returns The validated and normalized data URL
+ */
+const validateAndNormalizeImageResponse = (dataUrl: string, modelName: string): string => {
+    // Extract base64 from data URL
+    const match = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
+    if (!match) {
+        throw new Error(`Invalid data URL format from ${modelName}`);
+    }
+
+    const mimeType = match[1];
+    const base64 = match[2];
+
+    // Validate the image header
+    if (!validateImageHeader(base64)) {
+        console.error('Invalid image header detected from API response');
+        throw new Error(`${modelName} returned an image with invalid or corrupted header. The file may be damaged.`);
+    }
+
+    // Return normalized data URL
+    return `data:${mimeType};base64,${base64}`;
+};
+
 // A generic image generation function for models like gemini-2.5-flash-image
 export const generateFigureImage = async (
     model: string,
@@ -24,14 +153,15 @@ export const generateFigureImage = async (
     options: { width?: number; height?: number; imageSizePreset?: string; aspectRatio?: string },
     useNanoBananaWebhook?: boolean
 ): Promise<string> => {
-    
+
     if (imageSources.length === 0) {
         throw new Error("At least one image source must be provided.");
     }
 
     const requiresUpload = (model === Constance.models.image.nanoBanana && useNanoBananaWebhook) ||
                            model === Constance.models.image.seedream ||
-                           model === Constance.models.image.flux;
+                           model === Constance.models.image.flux ||
+                           model === Constance.models.image.qwen;
 
     if (requiresUpload) {
         const publicUrls = await Promise.all(
@@ -40,7 +170,7 @@ export const generateFigureImage = async (
                 return uploadImageFromDataUrl(dataUrl, `upload-${Date.now()}-${index}.jpg`);
             })
         );
-        
+
         let endpoint: string;
         let payload: any;
 
@@ -85,6 +215,20 @@ export const generateFigureImage = async (
                 aspect_ratio: options.aspectRatio || 'auto',
             };
             endpoint = Constance.endpoints.image.nanoBanana;
+        } else if (model === Constance.models.image.qwen) {
+            if (publicUrls.length > 1) throw new Error(`${model} only supports one input image.`);
+            payload = {
+                prompt,
+                image_url: publicUrls[0],
+                num_inference_steps: 30,
+                guidance_scale: 4,
+                num_images: 1,
+                enable_safety_checker: false,
+                output_format: 'png',
+                negative_prompt: 'blurry, ugly',
+                acceleration: 'regular',
+            };
+            endpoint = Constance.endpoints.image.qwen;
         } else {
             throw new Error(`Model ${model} requires an external API call, but no handler is implemented.`);
         }
@@ -96,9 +240,10 @@ export const generateFigureImage = async (
             (rawResponse) => adaptImageGenerationResponse(rawResponse, model, endpoint)
         );
 
-        return result.dataUrl;
+        // Validate the image response
+        return validateAndNormalizeImageResponse(result.dataUrl, model);
     }
-    
+
     // If we're here, it's a native Gemini call
     const imageModel = Constance.models.image.flash;
 
@@ -106,7 +251,7 @@ export const generateFigureImage = async (
     if (options.aspectRatio && options.aspectRatio !== 'auto') {
         config.imageConfig = { aspectRatio: options.aspectRatio };
     }
-    
+
     const parts: any[] = [];
     imageSources.forEach(source => {
         parts.push({ inlineData: { data: source.base64, mimeType: source.mimeType } });
@@ -122,7 +267,11 @@ export const generateFigureImage = async (
     // Use centralized adapter for native Gemini response parsing
     try {
         const result = adaptImageGenerationResponse(response, imageModel);
-        return result.dataUrl;
+
+        // Validate the image response
+        const validatedDataUrl = validateAndNormalizeImageResponse(result.dataUrl, imageModel);
+
+        return validatedDataUrl;
     } catch (error: any) {
         // Re-throw with model text if available (for safety filter debugging)
         if (response.text) {
@@ -135,8 +284,8 @@ export const generateFigureImage = async (
 // Function to translate text to English using Gemini
 export const translateToEnglish = async (text: string): Promise<string> => {
     const systemInstruction = `You are an AI prompt assistant. Your task is to translate and refine the given text into a clear, effective prompt for an AI image generator. Return ONLY the final, refined prompt string, with no additional commentary, explanations, or introductory phrases.`;
-    const response = await ai.models.generateContent({ 
-        model: Constance.models.text.flash, 
+    const response = await ai.models.generateContent({
+        model: Constance.models.text.flash,
         contents: `The text to process is: "${text}"`,
         config: {
             systemInstruction

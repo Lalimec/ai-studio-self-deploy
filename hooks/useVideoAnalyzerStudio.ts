@@ -1,9 +1,10 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
-import { 
-    VideoAnalysis, AdIdea, Toast, AnalysisModel, ImageModel, 
-    AspectRatio, JsonParseError, 
+import {
+    VideoAnalysis, AdIdea, Toast, AnalysisModel, ImageModel,
+    AspectRatio, JsonParseError,
     VideoAnalyzerSettings,
-    StoryboardScene
+    StoryboardScene,
+    DownloadSettings
 } from '../types';
 import { 
     analyzeVideo, generateAnalysis, generateAdConcept, generateImage, 
@@ -23,6 +24,7 @@ type VideoAnalyzerHookProps = {
     setDownloadProgress: (progress: { visible: boolean; message: string; progress: number }) => void;
     withMultiDownloadWarning: (action: () => void) => void;
     useNanoBananaWebhook?: boolean;
+    downloadSettings?: DownloadSettings;
 };
 
 const constructReplicationPrompt = (analysis: VideoAnalysis): string => {
@@ -94,7 +96,7 @@ const addLabelToImage = (file: File, label: string): Promise<File> => {
     });
 };
 
-export const useVideoAnalyzerStudio = ({ addToast, setConfirmAction, setDownloadProgress, withMultiDownloadWarning, useNanoBananaWebhook = true }: VideoAnalyzerHookProps) => {
+export const useVideoAnalyzerStudio = ({ addToast, setConfirmAction, setDownloadProgress, withMultiDownloadWarning, useNanoBananaWebhook = true, downloadSettings = { includeMetadataFiles: false } }: VideoAnalyzerHookProps) => {
     // --- State Declarations ---
     const [videoFile, setVideoFile] = useState<File | null>(null);
     const [subjectImages, setSubjectImages] = useState<File[]>([]);
@@ -505,13 +507,15 @@ export const useVideoAnalyzerStudio = ({ addToast, setConfirmAction, setDownload
                     ]
                 };
     
-                const info = { 
-                    ...scene, 
-                    scene_index: sceneIndex + 1,
-                    generation_payload: generationPayload,
-                    generated_images: scene.generated_images?.map((_, i) => `variations/variation_${i + 1}.jpg`) || []
-                };
-                folder.file('info.json', JSON.stringify(info, null, 2));
+                if (downloadSettings.includeMetadataFiles) {
+                    const info = {
+                        ...scene,
+                        scene_index: sceneIndex + 1,
+                        generation_payload: generationPayload,
+                        generated_images: scene.generated_images?.map((_, i) => `variations/variation_${i + 1}.jpg`) || []
+                    };
+                    folder.file('info.json', JSON.stringify(info, null, 2));
+                }
     
                 if (scene.generated_images) {
                     const variationsFolder = folder.folder('variations');
@@ -538,7 +542,7 @@ export const useVideoAnalyzerStudio = ({ addToast, setConfirmAction, setDownload
                 setDownloadProgress({ visible: false, message: '', progress: 0 });
             }
         });
-    }, [videoAnalysis, extractedFrames, addToast, setDownloadProgress, withMultiDownloadWarning, sessionId, settings, sceneInstructions, sceneSubjectImages]);
+    }, [videoAnalysis, extractedFrames, addToast, setDownloadProgress, withMultiDownloadWarning, sessionId, settings, sceneInstructions, sceneSubjectImages, downloadSettings]);
     
     const handleDownloadAllAssets = useCallback(() => {
         withMultiDownloadWarning(async () => {
@@ -593,7 +597,9 @@ export const useVideoAnalyzerStudio = ({ addToast, setConfirmAction, setDownload
                         };
                     })
                 };
-                zip.file('analysis_summary.json', JSON.stringify(summaryJson, null, 2));
+                if (downloadSettings.includeMetadataFiles) {
+                    zip.file('analysis_summary.json', JSON.stringify(summaryJson, null, 2));
+                }
                 setDownloadProgress({ visible: true, message: 'Adding analysis JSON...', progress: 20 });
         
                 const scenesFolder = zip.folder('scenes');
@@ -604,8 +610,10 @@ export const useVideoAnalyzerStudio = ({ addToast, setConfirmAction, setDownload
                         if (sceneFolder) {
                             const frame = extractedFrames[i];
                             if (frame) sceneFolder.file(`frame_${timestampId}.jpg`, frame.split(',')[1], { base64: true });
-                            sceneFolder.file('info.json', JSON.stringify(summaryJson.storyboard[i], null, 2));
-    
+                            if (downloadSettings.includeMetadataFiles) {
+                                sceneFolder.file('info.json', JSON.stringify(summaryJson.storyboard[i], null, 2));
+                            }
+
                             if (scene.generated_images) {
                                 const variationsFolder = sceneFolder.folder('variations');
                                 const variationPromises = scene.generated_images.map(async (imgUrl, j) => {
@@ -627,7 +635,9 @@ export const useVideoAnalyzerStudio = ({ addToast, setConfirmAction, setDownload
                         const conceptPromises = generatedAds.map(async (ad, i) => {
                             const conceptFolder = conceptsFolder.folder(`concept_${i + 1}`);
                             if (conceptFolder) {
-                                conceptFolder.file('info.json', JSON.stringify(ad, null, 2));
+                                if (downloadSettings.includeMetadataFiles) {
+                                    conceptFolder.file('info.json', JSON.stringify(ad, null, 2));
+                                }
                                 if (ad.generatedImages && ad.generatedImages[0]) {
                                     const response = await fetch(ad.generatedImages[0]);
                                     const blob = await response.blob();
@@ -656,7 +666,7 @@ export const useVideoAnalyzerStudio = ({ addToast, setConfirmAction, setDownload
                 setDownloadProgress({ visible: false, message: '', progress: 0 });
             }
         });
-    }, [videoFile, videoAnalysis, extractedFrames, generatedAds, addToast, setDownloadProgress, withMultiDownloadWarning, sessionId, settings.analysisModel]);
+    }, [videoFile, videoAnalysis, extractedFrames, generatedAds, addToast, setDownloadProgress, withMultiDownloadWarning, sessionId, settings.analysisModel, downloadSettings]);
     
     const extractFrame = useCallback(async (videoFile: File, timeInSeconds: number): Promise<string> => {
         return new Promise((resolve, reject) => {

@@ -307,6 +307,10 @@ export type NanoBananaWebhookSettings = {
     videoAnalyzer: boolean;
 };
 
+export type DownloadSettings = {
+    includeMetadataFiles: boolean; // Whether to download .txt metadata files alongside images
+};
+
 // --- VIDEO ANALYZER TYPES ---
 export type AnalysisModel = 'gemini-2.5-pro' | 'gemini-2.5-flash';
 export type ImageModel =
@@ -316,7 +320,8 @@ export type ImageModel =
     'gemini-2.5-flash-image' |
     'nano-banana' |
     'seedream' |
-    'flux-kontext-pro';
+    'flux-kontext-pro' |
+    'qwen';
 
 export type VideoAnalyzerSettings = {
     analysisModel: AnalysisModel;
