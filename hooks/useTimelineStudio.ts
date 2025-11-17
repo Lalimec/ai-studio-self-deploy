@@ -1,6 +1,6 @@
 /// <reference lib="dom" />
 import { useState, useCallback, useEffect } from 'react';
-import { StudioImage, TimelinePair, Toast as ToastType, TimelinePairWithImages, ImageForVideoProcessing } from '../types';
+import { StudioImage, TimelinePair, Toast as ToastType, TimelinePairWithImages, ImageForVideoProcessing, VideoGenerationSettings } from '../types';
 import { translateTextToEnglish, generateTimelineTransitionPrompt, prepareAllTimelinePrompts, enhanceGeneralPrompt } from '../services/timelineStudioService';
 import { dataUrlToBlob } from '../services/geminiClient';
 import { uploadImageFromDataUrl } from '../services/imageUploadService';
@@ -8,6 +8,7 @@ import { generateAllVideos, generateSingleVideoForImage, VideoTask } from '../se
 import { generateSetId, generateShortId, getTimestamp } from '../services/imageUtils';
 import { stitchVideos } from '../services/videoStitcher';
 import { logUserAction } from '../services/loggingService';
+import { videoModels } from '../constants';
 
 declare const JSZip: any;
 
@@ -18,6 +19,8 @@ type TimelineStudioHookProps = {
     withMultiDownloadWarning: (action: () => void) => void;
 };
 
+const STORAGE_KEY_VIDEO_SETTINGS = 'videoGenerationSettings';
+
 export const useTimelineStudio = ({ addToast, setConfirmAction, setDownloadProgress, withMultiDownloadWarning }: TimelineStudioHookProps) => {
     const [timelineImages, setTimelineImages] = useState<StudioImage[]>([]);
     const [timelinePairs, setTimelinePairs] = useState<TimelinePair[]>([]);
@@ -26,12 +29,36 @@ export const useTimelineStudio = ({ addToast, setConfirmAction, setDownloadProgr
     const [generalPrompt, setGeneralPrompt] = useState<string>('');
     const [isPreparingAll, setIsPreparingAll] = useState(false);
     const [isGeneratingAllVideos, setIsGeneratingAllVideos] = useState(false);
-    
+
+    // Video generation settings with defaults from first model
+    const defaultModel = videoModels[0];
+    const [videoSettings, setVideoSettings] = useState<VideoGenerationSettings>(() => {
+        const stored = localStorage.getItem(STORAGE_KEY_VIDEO_SETTINGS);
+        if (stored) {
+            try {
+                return JSON.parse(stored);
+            } catch {
+                // Fall through to default
+            }
+        }
+        return {
+            model: defaultModel.id,
+            resolution: defaultModel.defaultResolution,
+            duration: defaultModel.defaultDuration,
+            aspectRatio: defaultModel.defaultAspectRatio,
+        };
+    });
+
+    // Persist video settings to localStorage
+    useEffect(() => {
+        localStorage.setItem(STORAGE_KEY_VIDEO_SETTINGS, JSON.stringify(videoSettings));
+    }, [videoSettings]);
+
     // State for the cropping workflow
     const [filesForCrop, setFilesForCrop] = useState<File[] | null>(null);
     const [showCropChoice, setShowCropChoice] = useState(false);
     const [isCropping, setIsCropping] = useState(false);
-    
+
     // State for the lightbox
     const [lightboxPairIndex, setLightboxPairIndex] = useState<number | null>(null);
     const isLightboxOpen = lightboxPairIndex !== null;
@@ -318,6 +345,9 @@ export const useTimelineStudio = ({ addToast, setConfirmAction, setDownloadProgr
                 endImageUrl,
                 videoPrompt: pair.videoPrompt,
                 filename: pair.id,
+                resolution: videoSettings.resolution,
+                duration: videoSettings.duration,
+                aspectRatio: videoSettings.aspectRatio,
             });
 
             setTimelinePairs(prev => prev.map(p => p.id === pairId ? { ...p, videoSrc, isGeneratingVideo: false, videoGenerationFailed: false } : p));
@@ -476,6 +506,9 @@ export const useTimelineStudio = ({ addToast, setConfirmAction, setDownloadProgr
                         endImageUrl,
                         videoPrompt: pair.videoPrompt,
                         filename: pair.id,
+                        resolution: videoSettings.resolution,
+                        duration: videoSettings.duration,
+                        aspectRatio: videoSettings.aspectRatio,
                     });
                 }
             }
@@ -720,6 +753,7 @@ export const useTimelineStudio = ({ addToast, setConfirmAction, setDownloadProgr
         timelineAspectRatio,
         sessionId,
         generalPrompt, setGeneralPrompt,
+        videoSettings, setVideoSettings,
         isPreparingAll,
         isGeneratingAllVideos,
         isStitching,

@@ -239,6 +239,33 @@ export type TimelinePairWithImages = TimelinePair & {
   endImage: StudioImage;
 };
 
+// --- VIDEO GENERATION TYPES ---
+export type VideoModel = 'seedance-v1-pro';
+
+export type VideoResolution = '480p' | '720p' | '1080p';
+
+export type VideoDuration = 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12;
+
+export type VideoGenerationSettings = {
+  model: VideoModel;
+  resolution: VideoResolution;
+  duration: VideoDuration;
+  aspectRatio: string; // e.g., 'auto', '16:9', '9:16', etc.
+};
+
+// Model-specific parameter schemas for extensibility
+export type SeedanceV1ProParams = {
+  prompt: string;
+  image_url: string;
+  end_image_url?: string;
+  aspect_ratio: string;
+  resolution: VideoResolution;
+  duration: string; // API expects string
+};
+
+// Union type for all model params (extensible for future models)
+export type VideoModelParams = SeedanceV1ProParams;
+
 // --- AD CLONER TYPES ---
 export type AdImageState = {
   file: File | null;

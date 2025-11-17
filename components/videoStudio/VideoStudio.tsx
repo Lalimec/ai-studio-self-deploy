@@ -11,6 +11,7 @@ import {
     AlertCircleIcon
 } from '../Icons';
 import { useVideoStudio } from '../../hooks/useVideoStudio';
+import { VideoSettingsPanel } from '../VideoSettingsPanel';
 
 interface VideoStudioProps {
   logic: ReturnType<typeof useVideoStudio>;
@@ -130,11 +131,12 @@ const VideoStudio: React.FC<VideoStudioProps> = (props) => {
         onImageClick
     } = props;
     
-    const { 
+    const {
         studioImages, isBusy, isGeneratingVideos, isPreparing,
         handleImagesUpload, handleClearAll, handleGenerateAllVideos, handlePrepareAll, sessionId,
         handleDownloadAll, handleDownloadSingle, generalPrompt, setGeneralPrompt,
         handleEnhanceGeneralPrompt, handleTranslateGeneralPrompt, handleRewriteAllPrompts,
+        videoSettings, setVideoSettings,
     } = logic;
     
     const [isDragging, setIsDragging] = useState(false);
@@ -276,7 +278,13 @@ const VideoStudio: React.FC<VideoStudioProps> = (props) => {
                     </button>
                 </div>
             </header>
-            
+
+            <VideoSettingsPanel
+                settings={videoSettings}
+                onSettingsChange={setVideoSettings}
+                disabled={isBusy}
+            />
+
             <div className="flex items-start gap-4 mb-6">
                 <div className="relative flex-grow">
                     <textarea

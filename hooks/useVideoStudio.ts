@@ -1,9 +1,9 @@
 /// <reference lib="dom" />
-import { useState, useCallback } from 'react';
-import { StudioImage, Toast as ToastType, ImageForVideoProcessing } from '../types';
+import { useState, useCallback, useEffect } from 'react';
+import { StudioImage, Toast as ToastType, ImageForVideoProcessing, VideoGenerationSettings } from '../types';
 // FIX: Consolidate multiple imports from videoService and add the missing 'prepareVideoPrompts' function.
-import { 
-    generateVideoPromptForImage, 
+import {
+    generateVideoPromptForImage,
     enhanceVideoPromptForImage,
     translateTextToEnglish,
     prepareVideoPrompts,
@@ -18,6 +18,7 @@ import { uploadImageFromDataUrl } from '../services/imageUploadService';
 import { generateSetId, generateShortId, getTimestamp } from '../services/imageUtils';
 import { logUserAction } from '../services/loggingService';
 import { processWithConcurrency } from '../services/apiUtils';
+import { videoModels } from '../constants';
 
 declare const JSZip: any;
 
@@ -28,12 +29,38 @@ type VideoStudioHookProps = {
     withMultiDownloadWarning: (action: () => void) => void;
 };
 
+const STORAGE_KEY_VIDEO_SETTINGS = 'videoGenerationSettings';
+
 export const useVideoStudio = ({ addToast, setConfirmAction, setDownloadProgress, withMultiDownloadWarning }: VideoStudioHookProps) => {
     const [studioImages, setStudioImages] = useState<StudioImage[]>([]);
     const [sessionId, setSessionId] = useState<string | null>(null);
     const [isPreparing, setIsPreparing] = useState(false);
     const [isGeneratingVideos, setIsGeneratingVideos] = useState(false);
     const [generalPrompt, setGeneralPrompt] = useState<string>('');
+
+    // Video generation settings with defaults from first model
+    const defaultModel = videoModels[0];
+    const [videoSettings, setVideoSettings] = useState<VideoGenerationSettings>(() => {
+        const stored = localStorage.getItem(STORAGE_KEY_VIDEO_SETTINGS);
+        if (stored) {
+            try {
+                return JSON.parse(stored);
+            } catch {
+                // Fall through to default
+            }
+        }
+        return {
+            model: defaultModel.id,
+            resolution: defaultModel.defaultResolution,
+            duration: defaultModel.defaultDuration,
+            aspectRatio: defaultModel.defaultAspectRatio,
+        };
+    });
+
+    // Persist video settings to localStorage
+    useEffect(() => {
+        localStorage.setItem(STORAGE_KEY_VIDEO_SETTINGS, JSON.stringify(videoSettings));
+    }, [videoSettings]);
 
     const isBusy = isPreparing || isGeneratingVideos;
     
@@ -172,6 +199,9 @@ export const useVideoStudio = ({ addToast, setConfirmAction, setDownloadProgress
                 startImageUrl: publicUrl,
                 videoPrompt: image.videoPrompt,
                 filename: image.id,
+                resolution: videoSettings.resolution,
+                duration: videoSettings.duration,
+                aspectRatio: videoSettings.aspectRatio,
             });
             setStudioImages(prev => prev.map(img => img.id === id ? { ...img, videoSrc, isGeneratingVideo: false, videoGenerationFailed: false } : img));
             addToast("Video generated!", "success");
@@ -224,6 +254,9 @@ export const useVideoStudio = ({ addToast, setConfirmAction, setDownloadProgress
                         startImageUrl: publicUrl,
                         videoPrompt: image.videoPrompt,
                         filename: image.id,
+                        resolution: videoSettings.resolution,
+                        duration: videoSettings.duration,
+                        aspectRatio: videoSettings.aspectRatio,
                     });
                 }
             }
@@ -449,6 +482,7 @@ export const useVideoStudio = ({ addToast, setConfirmAction, setDownloadProgress
         isGeneratingVideos,
         isBusy,
         generalPrompt, setGeneralPrompt,
+        videoSettings, setVideoSettings,
         handleImagesUpload,
         handleRemoveImage,
         handleClearAll,
