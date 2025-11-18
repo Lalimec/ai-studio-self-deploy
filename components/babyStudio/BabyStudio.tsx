@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { BabyGenerationOptions, GeneratedBabyImage, Toast as ToastType, ParentImageState } from '../../types';
-import { UploadIcon, TrashIcon, PrepareMagicIcon, VideoIcon, DownloadIcon, HelpIcon, AlertCircleIcon } from '../Icons';
+import { UploadIcon, TrashIcon, PrepareMagicIcon, VideoIcon, DownloadIcon, HelpIcon, AlertCircleIcon, CheckCircleIcon } from '../Icons';
 import BabyOptionsPanel from './BabyOptionsPanel';
 import ImageGrid from '../ImageGrid';
 import { useBabyStudio } from '../../hooks/useBabyStudio';
@@ -84,7 +84,18 @@ const CroppedParentImage: React.FC<{
                         <AlertCircleIcon className="w-8 h-8 text-white/80" />
                     </div>
                 )}
-                
+
+                {videoSrc && !isThisParentBusy && (
+                    <div className="absolute top-2 left-2 p-1 bg-black bg-opacity-60 rounded-full text-[var(--color-primary-accent)] pointer-events-none" title="Video is ready">
+                        <VideoIcon className="w-5 h-5" />
+                    </div>
+                )}
+                {!videoSrc && videoPrompt && !isThisParentBusy && (
+                    <div className="absolute top-2 left-2 p-1 bg-black bg-opacity-60 rounded-full text-[var(--color-success-accent)] pointer-events-none" title="Video prompt is ready">
+                        <CheckCircleIcon className="w-5 h-5" />
+                    </div>
+                )}
+
                 <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl">
                     <button onClick={onRecrop} className="bg-[var(--color-bg-surface)]/80 text-[var(--color-text-main)] py-2 px-4 rounded-md text-sm font-semibold hover:bg-black/80" disabled={isParentDataLocked || isThisParentBusy}>Recrop</button>
                 </div>
