@@ -151,14 +151,14 @@ const GenerationToolbar: React.FC<GenerationToolbarConfig> = ({
                 </div>
               </div>
             )}
+          </div>
 
+          {/* Right side: Mode Selection + Additional Buttons + Generate + Start Over */}
+          <div className="flex flex-wrap items-center gap-2">
             {/* Mode Selection Buttons */}
             {modeButtons.length > 0 && (
-              <div className="flex items-center gap-2 border-l-2 border-[var(--color-border-muted)] pl-6">
-                <label className="text-xs font-medium text-[var(--color-text-light)] whitespace-nowrap">
-                  Mode:
-                </label>
-                <div className="flex gap-1">
+              <>
+                <div className="flex items-center gap-1">
                   {modeButtons.map((btn) => (
                     <button
                       key={btn.key}
@@ -175,12 +175,9 @@ const GenerationToolbar: React.FC<GenerationToolbarConfig> = ({
                     </button>
                   ))}
                 </div>
-              </div>
+                <div className="w-px h-8 bg-[var(--color-border-muted)]"></div>
+              </>
             )}
-          </div>
-
-          {/* Right side: Additional Buttons + Generate + Start Over */}
-          <div className="flex flex-wrap items-center gap-2">
             {additionalButtons.map((btn) => {
               const variantClass = btn.isActive
                 ? 'bg-[var(--color-secondary)] text-[var(--color-text-on-primary)]'

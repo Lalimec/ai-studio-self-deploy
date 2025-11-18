@@ -67,7 +67,7 @@ export const useArchitectureStudio = ({
         styles: [],
         customStyles: '',
         useCustomStyles: false,
-        styleSelectionMode: 'selected',
+        styleSelectionMode: 'random',
         colorScheme: 'none',
         tidy: 'tidy',
         showUnfinished: false,
@@ -75,7 +75,7 @@ export const useArchitectureStudio = ({
         time: 'current',
         theme: 'none',
         cameraAngle: 'preserve',
-        imageCount: 1,
+        imageCount: 4,
         aspectRatio: 'auto',
     });
     const [generatedImages, setGeneratedImages] = useState<GeneratedArchitectureImage[]>([]);
