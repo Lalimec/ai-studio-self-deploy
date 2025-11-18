@@ -438,6 +438,9 @@ export type GeneratedArchitectureImage = {
   isGeneratingVideo?: boolean;
   videoGenerationFailed?: boolean;
   publicUrl?: string;
+  depthMapSrc?: string;
+  isGeneratingDepthMap?: boolean;
+  depthMapGenerationFailed?: boolean;
 };
 
 // --- SHARED DISPLAY TYPE ---

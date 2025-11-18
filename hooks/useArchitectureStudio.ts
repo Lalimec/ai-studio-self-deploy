@@ -7,7 +7,8 @@ import {
 } from '../types';
 import {
     generateArchitecturalStyles,
-    regenerateSingleArchitecturalStyle
+    regenerateSingleArchitecturalStyle,
+    generateDepthMap
 } from '../services/architectureStudioService';
 import {
     prepareVideoPrompts,
@@ -61,8 +62,9 @@ export const useArchitectureStudio = ({
     const [generationTimestamp, setGenerationTimestamp] = useState<string>('');
     const [isPreparing, setIsPreparing] = useState(false);
     const [isGeneratingVideos, setIsGeneratingVideos] = useState(false);
+    const [isGeneratingDepthMaps, setIsGeneratingDepthMaps] = useState(false);
 
-    const isBusy = isPreparing || isGeneratingVideos || pendingImageCount > 0;
+    const isBusy = isPreparing || isGeneratingVideos || isGeneratingDepthMaps || pendingImageCount > 0;
     const isGenerateDisabled = !croppedImage;
 
     const onCropConfirm = (croppedImageDataUrl: string, aspectRatio: number) => {
@@ -372,6 +374,97 @@ export const useArchitectureStudio = ({
         }
     };
 
+    const handleGenerateSingleDepthMap = async (filename: string) => {
+        const image = generatedImages.find(img => img.filename === filename);
+        if (!image || image.isGeneratingDepthMap) {
+            return;
+        }
+        logUserAction('GENERATE_ARCHITECTURE_DEPTH_MAP_SINGLE', { filename, sessionId });
+        setGeneratedImages(prev => prev.map(img => img.filename === filename ? { ...img, isGeneratingDepthMap: true, depthMapGenerationFailed: false } : img));
+        addToast(`Generating depth map...`, 'info');
+        try {
+            // Ensure we have a public URL (use cached one if available)
+            const publicUrl = await ensurePublicUrl(filename);
+            const depthMapSrc = await generateDepthMap(image.src, publicUrl || undefined);
+            setGeneratedImages(prev => prev.map(img => img.filename === filename ? { ...img, depthMapSrc, isGeneratingDepthMap: false, depthMapGenerationFailed: false, publicUrl } : img));
+            addToast("Depth map generated!", "success");
+        } catch (err) {
+            addToast(err instanceof Error ? err.message : 'An unknown error occurred during depth map generation.', 'error');
+            setGeneratedImages(prev => prev.map(img => img.filename === filename ? { ...img, isGeneratingDepthMap: false, depthMapGenerationFailed: true } : img));
+        }
+    };
+
+    const handleGenerateAllDepthMaps = async () => {
+        const imagesWithoutDepthMaps = generatedImages.filter(img => !img.depthMapSrc && !img.isGeneratingDepthMap);
+        const imagesWithExistingDepthMaps = generatedImages.filter(img => img.depthMapSrc);
+
+        if (imagesWithoutDepthMaps.length === 0 && imagesWithExistingDepthMaps.length === 0) {
+            addToast("No images available for depth map generation.", "info");
+            return;
+        }
+
+        if (imagesWithoutDepthMaps.length === 0) {
+            addToast("All images already have depth maps.", "info");
+            return;
+        }
+
+        // If there are images with existing depth maps, warn the user
+        if (imagesWithExistingDepthMaps.length > 0) {
+            setConfirmAction({
+                title: "Regenerate Depth Maps?",
+                message: `${imagesWithExistingDepthMaps.length} image(s) already have generated depth maps. Regenerating will replace the existing depth maps. Do you want to continue?`,
+                confirmText: "Regenerate All",
+                confirmVariant: 'primary',
+                onConfirm: () => {
+                    executeGenerateAllDepthMaps(generatedImages);
+                },
+            });
+            return;
+        }
+
+        // No existing depth maps, proceed directly
+        executeGenerateAllDepthMaps(imagesWithoutDepthMaps);
+    };
+
+    const executeGenerateAllDepthMaps = async (imagesToProcess: typeof generatedImages) => {
+        logUserAction('GENERATE_ARCHITECTURE_DEPTH_MAP_ALL', { count: imagesToProcess.length, sessionId });
+        setIsGeneratingDepthMaps(true);
+        setGeneratedImages(prev => prev.map(img => imagesToProcess.some(p => p.filename === img.filename) ? { ...img, isGeneratingDepthMap: true, depthMapGenerationFailed: false } : img));
+        addToast(`Generating ${imagesToProcess.length} depth maps...`, "info");
+
+        let successCount = 0;
+        let failureCount = 0;
+
+        try {
+            for (const image of imagesToProcess) {
+                try {
+                    // Ensure we have a public URL
+                    const publicUrl = await ensurePublicUrl(image.filename);
+                    const depthMapSrc = await generateDepthMap(image.src, publicUrl || undefined);
+                    setGeneratedImages(prev => prev.map(img => img.filename === image.filename ? { ...img, depthMapSrc, isGeneratingDepthMap: false, depthMapGenerationFailed: false, publicUrl } : img));
+                    successCount++;
+                } catch (err) {
+                    console.error(`Failed to generate depth map for ${image.filename}:`, err);
+                    setGeneratedImages(prev => prev.map(img => img.filename === image.filename ? { ...img, isGeneratingDepthMap: false, depthMapGenerationFailed: true } : img));
+                    failureCount++;
+                }
+            }
+
+            if (successCount > 0 && failureCount === 0) {
+                addToast("All depth maps generated successfully!", "success");
+            } else if (successCount > 0 && failureCount > 0) {
+                addToast(`Generated ${successCount} depth map(s). ${failureCount} failed.`, "warning");
+            } else {
+                addToast("All depth map generations failed.", "error");
+            }
+        } catch (err) {
+            addToast(err instanceof Error ? err.message : 'An unknown error occurred during depth map generation.', 'error');
+        } finally {
+            setIsGeneratingDepthMaps(false);
+            setGeneratedImages(prev => prev.map(img => ({ ...img, isGeneratingDepthMap: false })));
+        }
+    };
+
     const handleDownloadSingle = (filename: string) => {
         withMultiDownloadWarning(async () => {
             logUserAction('DOWNLOAD_ARCHITECTURE_SINGLE', { filename, sessionId });
@@ -400,6 +493,8 @@ export const useArchitectureStudio = ({
                     },
                     videoUrl: image.videoSrc,
                     videoFilename: `${baseName}.mp4`,
+                    depthMapUrl: image.depthMapSrc,
+                    depthMapFilename: `depth_map_${baseName}.jpg`,
                     embedInImage: false,
                     includeMetadataFile: downloadSettings.includeMetadataFiles,
                 });
@@ -435,6 +530,8 @@ export const useArchitectureStudio = ({
                         },
                         videoUrl: image.videoSrc,
                         videoFilename: `${baseName}.mp4`,
+                        depthMapUrl: image.depthMapSrc,
+                        depthMapFilename: `${baseName}.jpg`, // Same filename as original in depth_maps folder
                     };
                 });
 
@@ -466,6 +563,7 @@ export const useArchitectureStudio = ({
         sessionId,
         isPreparing,
         isGeneratingVideos,
+        isGeneratingDepthMaps,
         isBusy,
         isGenerateDisabled,
         onCropConfirm,
@@ -478,6 +576,8 @@ export const useArchitectureStudio = ({
         handleRemoveGeneratedImage,
         handlePrepareAll,
         handleGenerateAllVideos,
+        handleGenerateSingleDepthMap,
+        handleGenerateAllDepthMaps,
         handleDownloadSingle,
         handleDownloadAll,
     };

@@ -4,7 +4,7 @@ import { ArchitectureGenerationOptions } from '../../types';
 import ImageUploader from '../ImageUploader';
 import ArchitectureOptionsPanel from './ArchitectureOptionsPanel';
 import ImageGrid from '../ImageGrid';
-import { TrashIcon, HelpIcon, DownloadIcon, PrepareMagicIcon, VideoIcon } from '../Icons';
+import { TrashIcon, HelpIcon, DownloadIcon, PrepareMagicIcon, VideoIcon, DepthMapIcon } from '../Icons';
 import { useArchitectureStudio } from '../../hooks/useArchitectureStudio';
 
 type ArchitectureStudioProps = {
@@ -33,16 +33,19 @@ const ArchitectureStudio: React.FC<ArchitectureStudioProps> = ({
         isPreparing,
         handleGenerateAllVideos,
         isGeneratingVideos,
+        handleGenerateAllDepthMaps,
+        isGeneratingDepthMaps,
         generatedImages,
         handleRegenerateSingle,
         handleRemoveGeneratedImage,
         handlePrepareSingleImage,
         handleGenerateSingleVideo,
+        handleGenerateSingleDepthMap,
         handleDownloadAll,
         handleDownloadSingle,
     } = logic;
 
-    const areGlobalActionsDisabled = isPreparing || isGeneratingVideos || pendingImageCount > 0 || generatedImages.length === 0;
+    const areGlobalActionsDisabled = isPreparing || isGeneratingVideos || isGeneratingDepthMaps || pendingImageCount > 0 || generatedImages.length === 0;
 
     return (
         <div className="w-full max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-12">
@@ -78,6 +81,7 @@ const ArchitectureStudio: React.FC<ArchitectureStudioProps> = ({
                     <div className="flex items-center gap-2 flex-shrink-0">
                         <button onClick={handlePrepareAll} disabled={areGlobalActionsDisabled || isPreparing} className="flex items-center gap-2 bg-[var(--color-action-prepare)] hover:bg-[var(--color-action-prepare-hover)] text-[var(--color-text-on-primary)] font-bold py-2 px-4 rounded-lg transition-colors disabled:bg-[var(--color-bg-muted)] disabled:text-[var(--color-text-dimmer)] text-sm"><PrepareMagicIcon className={`w-4 h-4 ${isPreparing ? 'animate-spin' : ''}`} />{isPreparing ? 'Preparing...' : 'Prepare All'}</button>
                         <button onClick={handleGenerateAllVideos} disabled={areGlobalActionsDisabled || isGeneratingVideos} className="flex items-center gap-2 bg-[var(--color-action-generate)] hover:bg-[var(--color-action-generate-hover)] text-[var(--color-text-on-primary)] font-bold py-2 px-4 rounded-lg transition-colors disabled:bg-[var(--color-bg-muted)] disabled:text-[var(--color-text-dimmer)] text-sm"><VideoIcon className={`w-4 h-4 ${isGeneratingVideos ? 'animate-spin' : ''}`} />{isGeneratingVideos ? 'Generating...' : 'Generate Videos'}</button>
+                        <button onClick={handleGenerateAllDepthMaps} disabled={areGlobalActionsDisabled || isGeneratingDepthMaps} className="flex items-center gap-2 bg-[var(--color-action-generate)] hover:bg-[var(--color-action-generate-hover)] text-[var(--color-text-on-primary)] font-bold py-2 px-4 rounded-lg transition-colors disabled:bg-[var(--color-bg-muted)] disabled:text-[var(--color-text-dimmer)] text-sm"><DepthMapIcon className={`w-4 h-4 ${isGeneratingDepthMaps ? 'animate-spin' : ''}`} />{isGeneratingDepthMaps ? 'Generating...' : 'Generate Depth Maps'}</button>
                         <button onClick={handleDownloadAll} disabled={isBusy || generatedImages.length === 0} className="flex items-center gap-2 bg-[var(--color-secondary)] hover:bg-[var(--color-secondary-hover)] text-[var(--color-text-on-primary)] font-bold py-2 px-4 rounded-lg transition-colors disabled:bg-[var(--color-bg-muted)] disabled:text-[var(--color-text-dimmer)] text-sm"><DownloadIcon className="w-4 h-4" />Download All</button>
                     </div>
                 </div>
@@ -97,6 +101,7 @@ const ArchitectureStudio: React.FC<ArchitectureStudioProps> = ({
                     onReprepare={handlePrepareSingleImage}
                     onDownloadSingle={handleDownloadSingle}
                     onGenerateSingleVideo={handleGenerateSingleVideo}
+                    onGenerateDepthMap={handleGenerateSingleDepthMap}
                     mode="architectureStudio"
                 />
             </div>

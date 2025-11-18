@@ -14,6 +14,7 @@ import { processWithConcurrency } from './apiUtils';
 import { dataUrlToBlob } from './geminiClient';
 import { Constance } from './endpoints';
 import { generateFigureImage } from './geminiService';
+import { uploadImageFromDataUrl } from './imageUploadService';
 
 const imageModel = Constance.models.image.nanoBanana;
 
@@ -314,4 +315,67 @@ export const regenerateSingleArchitecturalStyle = async (
     filename: task.filename,
     imageGenerationPrompt: promptText
   };
+};
+
+/**
+ * Generates a depth map for a single architecture image
+ * @param imageSrc - The source data URL of the image
+ * @param publicUrl - Optional cached public URL to avoid re-uploading
+ * @returns The depth map image as a data URL
+ */
+export const generateDepthMap = async (
+  imageSrc: string,
+  publicUrl?: string
+): Promise<string> => {
+  try {
+    // Upload image if we don't have a cached public URL
+    let imageUrl = publicUrl;
+    if (!imageUrl) {
+      imageUrl = await uploadImageFromDataUrl(imageSrc);
+    }
+
+    // Call depth map endpoint
+    const payload = {
+      image_url: imageUrl,
+      num_inference_steps: 5,
+      ensemble_size: 5,
+    };
+
+    const response = await fetch(Constance.endpoints.image.depthMap, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      let errorMsg = `Depth map generation failed with status ${response.status}.`;
+      try {
+        const errorBody = await response.json();
+        errorMsg = errorBody.error || errorBody.message || errorMsg;
+      } catch (e) {
+        // response was not json
+      }
+      throw new Error(errorMsg);
+    }
+
+    const result = await response.json();
+
+    // Extract depth map from response (same pattern as Flux/Seedream)
+    if (result && Array.isArray(result.images) && result.images.length > 0 && typeof result.images[0] === 'string') {
+      const imageString = result.images[0];
+
+      // Check if it's already a data URL
+      if (imageString.startsWith('data:')) {
+        return imageString;
+      }
+
+      // Otherwise assume it's base64 and add the data URL prefix
+      return `data:image/png;base64,${imageString}`;
+    }
+
+    throw new Error('Depth map endpoint did not return a valid images array.');
+  } catch (error) {
+    console.error('Depth map generation error:', error);
+    throw error;
+  }
 };
