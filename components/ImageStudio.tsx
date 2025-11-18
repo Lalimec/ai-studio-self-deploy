@@ -3,14 +3,15 @@ import React from 'react';
 import { useImageStudioLogic } from '../hooks/useImageStudioLogic';
 import { ImageUploader } from './imageStudio/ImageUploader';
 import { PromptEditor } from './imageStudio/PromptEditor';
-import { GenerateButton } from './imageStudio/GenerateButton';
 import { GeneratedImageDisplay } from './imageStudio/GeneratedImageDisplay';
 import { CropChoiceModal } from './imageStudio/CropChoiceModal';
 import { MultiCropView } from './imageStudio/MultiCropView';
 import { AdvancedOptions } from './imageStudio/AdvancedOptions';
+import GenerationToolbar from './GenerationToolbar';
 import { NANO_BANANA_RATIOS, FLUX_KONTEXT_PRO_RATIOS, ASPECT_RATIO_PRESETS } from '../constants';
 import { HelpIcon, PiSpinnerIcon, PiDownloadSimpleIcon, PiCloseIcon, BananaIcon, WavesIcon, ZapIcon, FlowerIcon } from './Icons';
 import { ImageStudioConfirmationDialog } from './imageStudio/ImageStudioConfirmationDialog';
+import { AspectRatio } from '../types';
 
 
 interface ImageStudioProps {
@@ -34,7 +35,8 @@ const ImageStudio: React.FC<ImageStudioProps> = ({ logic, onImageClick, onShowHe
     }
 
     return (
-        <div className="w-full max-w-7xl mx-auto flex flex-col gap-6">
+        <>
+        <div className="w-full max-w-7xl mx-auto flex flex-col gap-6 pb-28">
              <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-12">
                 <div className="bg-[var(--color-bg-surface)] p-6 rounded-2xl shadow-lg border border-[var(--color-border-muted)] flex flex-col items-center gap-6">
                     <ImageUploader 
@@ -234,7 +236,6 @@ const ImageStudio: React.FC<ImageStudioProps> = ({ logic, onImageClick, onShowHe
                             </div>
                         )}
                     </div>
-                    <GenerateButton onClick={logic.handleGenerate} disabled={logic.isGenerateDisabled} />
                 </div>
                 
                 <div>
@@ -267,23 +268,6 @@ const ImageStudio: React.FC<ImageStudioProps> = ({ logic, onImageClick, onShowHe
                                 />
                                 <span>Include originals</span>
                             </label>
-                            <button
-                                onClick={logic.handleDownloadAll}
-                                disabled={logic.isLoading || logic.generationResults.filter(r => r.status === 'success').length === 0}
-                                className="flex items-center gap-2 bg-[var(--color-secondary)] hover:bg-[var(--color-secondary-hover)] text-[var(--color-text-on-primary)] font-bold py-2 px-4 rounded-lg transition-colors text-sm disabled:bg-[var(--color-bg-muted)] disabled:text-[var(--color-text-dimmer)]"
-                            >
-                                <PiDownloadSimpleIcon className="w-5 h-5" />
-                                Download All
-                            </button>
-                            <button
-                                onClick={logic.handleClearGallery}
-                                disabled={logic.isLoading || logic.generationResults.length === 0}
-                                className="flex items-center gap-2 bg-[var(--color-destructive)] hover:bg-[var(--color-destructive-hover)] text-[var(--color-text-on-primary)] font-bold py-2 px-4 rounded-lg transition-colors text-sm disabled:bg-[var(--color-bg-muted)] disabled:text-[var(--color-text-dimmer)]"
-                                aria-label="Clear all images from the gallery"
-                            >
-                                <PiCloseIcon className="w-5 h-5" />
-                                Clear Gallery
-                            </button>
                         </div>
                     </div>
 
@@ -325,13 +309,31 @@ const ImageStudio: React.FC<ImageStudioProps> = ({ logic, onImageClick, onShowHe
                 onConfirm={logic.handleConfirmClearAndUpload}
             />
 
-            <CropChoiceModal 
+            <CropChoiceModal
                 isOpen={logic.showCropChoiceModal}
                 onCrop={logic.handleStartCropping}
                 onUseOriginals={logic.handleUseOriginals}
                 onCancel={logic.handleCancelCropChoice}
             />
         </div>
+
+        <GenerationToolbar
+            aspectRatio={'1:1' as AspectRatio}
+            onAspectRatioChange={() => {}}
+            showAspectRatio={false}
+            showImageCount={false}
+            imageCount={1}
+            onImageCountChange={() => {}}
+            generateButtonText="Generate"
+            onGenerate={logic.handleGenerate}
+            generateDisabled={logic.isGenerateDisabled}
+            pendingCount={logic.isLoading ? logic.progress.total - logic.progress.completed : 0}
+            startOverButtonText="Clear"
+            onStartOver={logic.handleClearGallery}
+            startOverDisabled={logic.isLoading || logic.generationResults.length === 0}
+            studioMode="image"
+        />
+        </>
     );
 };
 

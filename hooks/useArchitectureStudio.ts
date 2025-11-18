@@ -73,14 +73,14 @@ export const useArchitectureStudio = ({
         styles: [],
         customStyles: '',
         useCustomStyles: false,
-        styleSelectionMode: 'selected',
+        styleSelectionMode: 'random',
         colorScheme: 'none',
         tidy: 'tidy',
         generateUnstyledVersion: false,
         time: 'current',
         theme: 'none',
         cameraAngle: 'preserve',
-        imageCount: 1,
+        imageCount: 4,
         aspectRatio: 'auto',
     });
     const [generatedImages, setGeneratedImages] = useState<GeneratedArchitectureImage[]>([]);
@@ -92,7 +92,17 @@ export const useArchitectureStudio = ({
     const [isGeneratingDepthMaps, setIsGeneratingDepthMaps] = useState(false);
 
     const isBusy = isPreparing || isGeneratingVideos || isGeneratingDepthMaps || pendingImageCount > 0 || originalImage.isPreparing || originalImage.isGeneratingVideo || originalImage.isGeneratingDepthMap;
-    const isGenerateDisabled = !croppedImage;
+
+    // Compute if Generate button should be disabled
+    const isGenerateDisabled = !croppedImage || (
+        options.styleSelectionMode === 'selected' &&
+        !options.useCustomStyles &&
+        options.styles.length === 0
+    ) || (
+        options.styleSelectionMode === 'selected' &&
+        options.useCustomStyles &&
+        !options.customStyles.trim()
+    );
 
     const onCropConfirm = (croppedImageDataUrl: string, aspectRatio: number) => {
         const isNewUpload = !croppedImage;
@@ -290,10 +300,11 @@ export const useArchitectureStudio = ({
         // Calculate batch size based on style selection mode
         let batchSize = currentOptions.imageCount;
         if (currentOptions.styleSelectionMode === 'selected') {
+            // In selected mode, imageCount is always 1, so batchSize = number of styles
             const styleCount = currentOptions.useCustomStyles && currentOptions.customStyles.trim()
                 ? currentOptions.customStyles.split(',').filter(s => s.trim()).length
-                : currentOptions.styles.length || 1;
-            batchSize = styleCount * currentOptions.imageCount;
+                : currentOptions.styles.length;
+            batchSize = styleCount; // imageCount is always 1 in selected mode
         }
 
         setPendingImageCount(prev => prev + batchSize);
