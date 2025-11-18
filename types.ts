@@ -381,5 +381,48 @@ export class JsonParseError extends Error {
     }
 }
 
+// --- AD CREATIVE STUDIO TYPES ---
+export type PlainlyParameterType = 'image' | 'video' | 'music' | 'speech' | 'card' | 'text';
+
+export interface PlainlyParameter {
+  name: string; // e.g., "varImage01", "varMusic", etc.
+  type: PlainlyParameterType;
+  value: string | null; // URL or text value
+  file?: File | null; // For uploads
+  displayName?: string; // User-friendly name
+}
+
+export interface PlainlyTemplate {
+  id: string;
+  name: string; // e.g., "4x5", "16x9"
+  aspectRatio: string;
+}
+
+export interface PlainlyProject {
+  id: string;
+  name: string;
+  templateName: string; // For webhook passthrough
+  templates: PlainlyTemplate[];
+  parameters: PlainlyParameter[];
+}
+
+export interface WebhookPassthrough {
+  today: string; // YYYYMMDD format
+  appCode: string; // CFO, TCO, CHT, etc.
+  code: string; // User input
+  designer: string; // CA, AB, NA, MK, etc.
+  adName: string; // User input
+  templateName: string; // From selected project
+}
+
+export interface AdCreativeState {
+  selectedProject: PlainlyProject | null;
+  parameters: PlainlyParameter[];
+  passthroughFields: WebhookPassthrough;
+  isGenerating: boolean;
+  renderResults: any[];
+  error: string | null;
+}
+
 // --- SHARED DISPLAY TYPE ---
 export type DisplayImage = GeneratedImage | StudioImage | GeneratedBabyImage | ImageStudioResultImage;

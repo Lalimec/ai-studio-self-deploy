@@ -14,6 +14,7 @@ import { useTimelineStudio } from './hooks/useTimelineStudio';
 import { useImageStudioLogic } from './hooks/useImageStudioLogic';
 import { useAdCloner } from './hooks/useAdCloner';
 import { useVideoAnalyzerStudio } from './hooks/useVideoAnalyzerStudio';
+import { useAdCreativeStudio } from './hooks/useAdCreativeStudio';
 import { logUserAction } from './services/loggingService';
 
 import { 
@@ -40,10 +41,11 @@ import TimelineStudio from './components/timelineStudio/TimelineStudio';
 import ImageStudio from './components/ImageStudio';
 import AdClonerStudio from './components/adCloner/AdClonerStudio';
 import VideoAnalyzerStudio from './components/videoAnalyzer/VideoAnalyzerStudio';
-import { HairStudioIcon, BabyIcon, ImageStudioIcon, VideoStudioIcon, TimelineStudioIcon, PrepareMagicIcon, AdClonerIcon, VideoAnalyzerIcon, SettingsIcon } from './components/Icons';
+import AdCreativeStudio from './components/adCreative/AdCreativeStudio';
+import { HairStudioIcon, BabyIcon, ImageStudioIcon, VideoStudioIcon, TimelineStudioIcon, PrepareMagicIcon, AdClonerIcon, VideoAnalyzerIcon, AdCreativeIcon, SettingsIcon } from './components/Icons';
 import { ImageStudioConfirmationDialog } from './components/imageStudio/ImageStudioConfirmationDialog';
 
-type AppMode = 'hairStudio' | 'babyStudio' | 'imageStudio' | 'adCloner' | 'videoAnalyzer' | 'videoStudio' | 'timelineStudio';
+type AppMode = 'hairStudio' | 'babyStudio' | 'imageStudio' | 'adCloner' | 'videoAnalyzer' | 'videoStudio' | 'timelineStudio' | 'adCreative';
 
 export type ActiveCropper = {
     type: 'hair' | 'parent1' | 'parent2' | 'adCloner-ad' | 'adCloner-subject' | 'adCloner-refine';
@@ -144,7 +146,7 @@ function App() {
   };
 
   useEffect(() => {
-    if (!showBetaFeatures && (appMode === 'adCloner' || appMode === 'videoAnalyzer')) {
+    if (!showBetaFeatures && (appMode === 'adCloner' || appMode === 'videoAnalyzer' || appMode === 'adCreative')) {
         setAppMode('hairStudio');
     }
   }, [showBetaFeatures, appMode]);
@@ -182,6 +184,7 @@ function App() {
   const imageStudioLogic = useImageStudioLogic(addToast, setConfirmAction, setDownloadProgress, withMultiDownloadWarning, nanoBananaWebhookSettings.image, downloadSettings);
   const adClonerLogic = useAdCloner({ addToast, setConfirmAction, withMultiDownloadWarning, setDownloadProgress, useNanoBananaWebhook: nanoBananaWebhookSettings.adCloner });
   const videoAnalyzerLogic = useVideoAnalyzerStudio({ addToast, setConfirmAction, setDownloadProgress, withMultiDownloadWarning, useNanoBananaWebhook: nanoBananaWebhookSettings.videoAnalyzer, downloadSettings });
+  const adCreativeLogic = useAdCreativeStudio({ addToast, setConfirmAction, setDownloadProgress });
   
   useEffect(() => {
     const isModalOpen = isCropping || timelineStudioLogic.isCropping || lightboxIndex !== null || confirmAction || showHelpModal || downloadProgress.visible || timelineStudioLogic.showCropChoice || timelineStudioLogic.isLightboxOpen || !!imageStudioLogic.pendingFiles || imageStudioLogic.croppingFiles || adClonerLogic.settingsModalOpen || showGlobalSettings;
@@ -339,6 +342,8 @@ function App() {
               );
           case 'videoAnalyzer':
               return [];
+          case 'adCreative':
+              return [];
           default:
               return [];
       }
@@ -408,6 +413,7 @@ function App() {
             <NavButton mode="imageStudio" label="Image" icon={<ImageStudioIcon className="h-6 w-6" />} />
             {showBetaFeatures && <NavButton mode="adCloner" label="Ad Cloner" icon={<AdClonerIcon className="h-6 w-6" />} />}
             {showBetaFeatures && <NavButton mode="videoAnalyzer" label="Video Analyzer" icon={<VideoAnalyzerIcon className="h-6 w-6" />} />}
+            {showBetaFeatures && <NavButton mode="adCreative" label="Ad Creative" icon={<AdCreativeIcon className="h-6 w-6" />} />}
             <NavButton mode="videoStudio" label="Video" icon={<VideoStudioIcon className="h-6 w-6" />} />
             <NavButton mode="timelineStudio" label="Timeline" icon={<TimelineStudioIcon className="h-6 w-6" />} />
         </div>
@@ -419,6 +425,7 @@ function App() {
             {appMode === 'timelineStudio' && 'Create video transitions between a sequence of images.'}
             {appMode === 'adCloner' && showBetaFeatures && 'Deconstruct and generate creative variations of any ad.'}
             {appMode === 'videoAnalyzer' && showBetaFeatures && 'Analyze video ads and generate creative variations.'}
+            {appMode === 'adCreative' && showBetaFeatures && 'Trigger batch video renders using Plainly Videos API.'}
         </p>
       </header>
       
@@ -475,6 +482,15 @@ function App() {
                 logic={videoAnalyzerLogic}
                 onShowHelp={() => setShowHelpModal(true)}
                 onImageClick={handleImageClick}
+            />
+        ) : appMode === 'adCreative' && showBetaFeatures ? (
+            <AdCreativeStudio
+                logic={adCreativeLogic}
+                hairImages={hairStudioLogic.generatedImages}
+                babyImages={babyStudioLogic.generatedImages}
+                imageStudioImages={imageStudioLogic.generationResults.filter(r => r.status === 'success').map(r => ({ src: r.url!, filename: imageStudioLogic.getDownloadFilename(r), imageGenerationPrompt: r.prompt! }))}
+                onShowHelp={() => setShowHelpModal(true)}
+                showBetaFeatures={showBetaFeatures}
             />
         ) : (
             <ImageStudio

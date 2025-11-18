@@ -712,3 +712,64 @@ export const analysisModels: { id: AnalysisModel; name: string }[] = [
     { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro' },
     { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash' },
 ];
+
+// --- AD CREATIVE STUDIO CONSTANTS ---
+
+import { PlainlyProject, PlainlyParameter } from './types';
+
+export const AD_CREATIVE_APP_CODES = [
+  { id: 'CFO', name: 'CFO' },
+  { id: 'TCO', name: 'TCO' },
+  { id: 'CHT', name: 'CHT' },
+];
+
+export const AD_CREATIVE_DESIGNERS = [
+  { id: 'CA', name: 'CA' },
+  { id: 'AB', name: 'AB' },
+  { id: 'NA', name: 'NA' },
+  { id: 'MK', name: 'MK' },
+];
+
+// Define parameter templates for the 4grid-and-slideshow-v2 project
+const GRID_SLIDESHOW_PARAMETERS: PlainlyParameter[] = [
+  { name: 'varEndcard', type: 'image', value: null, displayName: 'Endcard' },
+  { name: 'varSpeach', type: 'speech', value: null, displayName: 'Speech' },
+  { name: 'varMusic', type: 'music', value: null, displayName: 'Music' },
+  { name: 'varCaptions', type: 'card', value: null, displayName: 'Captions' },
+  { name: 'varImage01', type: 'image', value: null, displayName: 'Image 01' },
+  { name: 'varImage02', type: 'image', value: null, displayName: 'Image 02' },
+  { name: 'varImage03', type: 'image', value: null, displayName: 'Image 03' },
+  { name: 'varImage04', type: 'image', value: null, displayName: 'Image 04' },
+  { name: 'varVideo1', type: 'video', value: null, displayName: 'Video 1' },
+  { name: 'varImage05', type: 'image', value: null, displayName: 'Image 05' },
+  { name: 'varImage06', type: 'image', value: null, displayName: 'Image 06' },
+  { name: 'varImage07', type: 'image', value: null, displayName: 'Image 07' },
+  { name: 'varImage08', type: 'image', value: null, displayName: 'Image 08' },
+  { name: 'varVideo2', type: 'video', value: null, displayName: 'Video 2' },
+  { name: 'varImage09', type: 'image', value: null, displayName: 'Image 09' },
+  { name: 'varImage10', type: 'image', value: null, displayName: 'Image 10' },
+  { name: 'varImage11', type: 'image', value: null, displayName: 'Image 11' },
+  { name: 'varImage12', type: 'image', value: null, displayName: 'Image 12' },
+  { name: 'varVideo3', type: 'video', value: null, displayName: 'Video 3' },
+  { name: 'varImage13', type: 'image', value: null, displayName: 'Image 13' },
+  { name: 'varImage14', type: 'image', value: null, displayName: 'Image 14' },
+  { name: 'varImage15', type: 'image', value: null, displayName: 'Image 15' },
+  { name: 'varImage16', type: 'image', value: null, displayName: 'Image 16' },
+  { name: 'varVideo4', type: 'video', value: null, displayName: 'Video 4' },
+  { name: 'varImageOriginal', type: 'image', value: null, displayName: 'Original Image' },
+];
+
+export const AD_CREATIVE_PROJECTS: PlainlyProject[] = [
+  {
+    id: '7f42a3cc-0e43-464a-a15b-a7b317ba09b6',
+    name: '4Grid & Slideshow V2',
+    templateName: '4grid-and-slideshow-v2',
+    templates: [
+      { id: '9380aa07-a654-4527-807f-78318bbce87f', name: '4x5', aspectRatio: '4:5' },
+      { id: '531785b9-d4e5-4d02-a72a-3510a3dddf65', name: '16x9', aspectRatio: '16:9' },
+      { id: '002ca988-3152-4fc8-ba6e-6b99b8be84cd', name: '9x16', aspectRatio: '9:16' },
+      { id: 'd1c06c0e-8b04-429c-bdba-32ac95d3e42c', name: '1x1', aspectRatio: '1:1' },
+    ],
+    parameters: GRID_SLIDESHOW_PARAMETERS,
+  },
+];
