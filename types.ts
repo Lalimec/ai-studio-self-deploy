@@ -303,6 +303,7 @@ export type NanoBananaWebhookSettings = {
     hair: boolean;
     baby: boolean;
     image: boolean;
+    architecture: boolean;
     adCloner: boolean;
     videoAnalyzer: boolean;
 };
@@ -381,5 +382,63 @@ export class JsonParseError extends Error {
     }
 }
 
+// --- ARCHITECTURE STUDIO TYPES ---
+export type ArchitectureScope = {
+  id: string;
+  name: string;
+};
+
+export type ArchitectureStyle = {
+  id: string;
+  name: string;
+  prompt: string;
+};
+
+export type ArchitectureTime = {
+  id: string;
+  name: string;
+  prompt: string;
+};
+
+export type ArchitectureTheme = {
+  id: string;
+  name: string;
+  prompt: string;
+};
+
+export type CameraAngleOption = {
+  id: string;
+  name: string;
+  prompt: string;
+};
+
+export type ArchitectureGenerationOptions = {
+  scope: string; // interior, exterior, facade, garden, landscape
+  styles: string[]; // Selected style IDs
+  customStyles: string;
+  useCustomStyles: boolean;
+  time: string; // Time of day
+  theme: string; // Holiday/seasonal theme
+  cameraAngle: string; // preserve, slight_variation, randomize
+  imageCount: number;
+  aspectRatio: AspectRatio;
+};
+
+export type GeneratedArchitectureImage = {
+  src: string;
+  style: string; // Style name or "Custom"
+  time: string; // Time name
+  theme: string; // Theme name
+  filename: string;
+  imageGenerationPrompt: string;
+  isRegenerating?: boolean;
+  videoPrompt?: string;
+  isPreparing?: boolean;
+  videoSrc?: string;
+  isGeneratingVideo?: boolean;
+  videoGenerationFailed?: boolean;
+  publicUrl?: string;
+};
+
 // --- SHARED DISPLAY TYPE ---
-export type DisplayImage = GeneratedImage | StudioImage | GeneratedBabyImage | ImageStudioResultImage;
+export type DisplayImage = GeneratedImage | StudioImage | GeneratedBabyImage | ImageStudioResultImage | GeneratedArchitectureImage;

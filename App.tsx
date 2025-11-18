@@ -9,6 +9,7 @@ import {
 
 import { useHairStudio } from './hooks/useHairStudio';
 import { useBabyStudio } from './hooks/useBabyStudio';
+import { useArchitectureStudio } from './hooks/useArchitectureStudio';
 import { useVideoStudio } from './hooks/useVideoStudio';
 import { useTimelineStudio } from './hooks/useTimelineStudio';
 import { useImageStudioLogic } from './hooks/useImageStudioLogic';
@@ -35,18 +36,19 @@ import GlobalSettingsModal from './components/GlobalSettingsModal';
 
 import HairStudio from './components/hairStudio/HairStudio';
 import BabyStudio from './components/babyStudio/BabyStudio';
+import ArchitectureStudio from './components/architectureStudio/ArchitectureStudio';
 import VideoStudio from './components/videoStudio/VideoStudio';
 import TimelineStudio from './components/timelineStudio/TimelineStudio';
 import ImageStudio from './components/ImageStudio';
 import AdClonerStudio from './components/adCloner/AdClonerStudio';
 import VideoAnalyzerStudio from './components/videoAnalyzer/VideoAnalyzerStudio';
-import { HairStudioIcon, BabyIcon, ImageStudioIcon, VideoStudioIcon, TimelineStudioIcon, PrepareMagicIcon, AdClonerIcon, VideoAnalyzerIcon, SettingsIcon } from './components/Icons';
+import { HairStudioIcon, BabyIcon, ArchitectureStudioIcon, ImageStudioIcon, VideoStudioIcon, TimelineStudioIcon, PrepareMagicIcon, AdClonerIcon, VideoAnalyzerIcon, SettingsIcon } from './components/Icons';
 import { ImageStudioConfirmationDialog } from './components/imageStudio/ImageStudioConfirmationDialog';
 
-type AppMode = 'hairStudio' | 'babyStudio' | 'imageStudio' | 'adCloner' | 'videoAnalyzer' | 'videoStudio' | 'timelineStudio';
+type AppMode = 'hairStudio' | 'babyStudio' | 'architectureStudio' | 'imageStudio' | 'adCloner' | 'videoAnalyzer' | 'videoStudio' | 'timelineStudio';
 
 export type ActiveCropper = {
-    type: 'hair' | 'parent1' | 'parent2' | 'adCloner-ad' | 'adCloner-subject' | 'adCloner-refine';
+    type: 'hair' | 'parent1' | 'parent2' | 'architecture' | 'adCloner-ad' | 'adCloner-subject' | 'adCloner-refine';
     id?: string;
 } | null;
 
@@ -81,6 +83,7 @@ function App() {
                 hair: parsed.hair !== undefined ? parsed.hair : true,
                 baby: parsed.baby !== undefined ? parsed.baby : true,
                 image: parsed.image !== undefined ? parsed.image : true,
+                architecture: parsed.architecture !== undefined ? parsed.architecture : true,
                 adCloner: parsed.adCloner !== undefined ? parsed.adCloner : true,
                 videoAnalyzer: parsed.videoAnalyzer !== undefined ? parsed.videoAnalyzer : true,
             };
@@ -93,6 +96,7 @@ function App() {
         hair: true,
         baby: true,
         image: true,
+        architecture: true,
         adCloner: true,
         videoAnalyzer: true,
     };
@@ -177,6 +181,7 @@ function App() {
   // --- Studio Hooks ---
   const hairStudioLogic = useHairStudio({ addToast, setConfirmAction, withMultiDownloadWarning, setDownloadProgress, useNanoBananaWebhook: nanoBananaWebhookSettings.hair, downloadSettings });
   const babyStudioLogic = useBabyStudio({ addToast, setConfirmAction, withMultiDownloadWarning, setDownloadProgress, useNanoBananaWebhook: nanoBananaWebhookSettings.baby, downloadSettings });
+  const architectureStudioLogic = useArchitectureStudio({ addToast, setConfirmAction, withMultiDownloadWarning, setDownloadProgress, useNanoBananaWebhook: nanoBananaWebhookSettings.architecture, downloadSettings });
   const videoStudioLogic = useVideoStudio({ addToast, setConfirmAction, setDownloadProgress, withMultiDownloadWarning });
   const timelineStudioLogic = useTimelineStudio({ addToast, setConfirmAction, setDownloadProgress, withMultiDownloadWarning });
   const imageStudioLogic = useImageStudioLogic(addToast, setConfirmAction, setDownloadProgress, withMultiDownloadWarning, nanoBananaWebhookSettings.image, downloadSettings);
@@ -208,6 +213,8 @@ function App() {
         babyStudioLogic.setParent1(p => ({ ...p, id: 'parent1', file, originalSrc: src, filename: file.name }));
       } else if (cropper?.type === 'parent2') {
         babyStudioLogic.setParent2(p => ({ ...p, id: 'parent2', file, originalSrc: src, filename: file.name }));
+      } else if (cropper?.type === 'architecture') {
+        architectureStudioLogic.setOriginalFile(file);
       } else if (cropper?.type === 'adCloner-ad') {
           adClonerLogic.setAdImage(p => ({ ...p, file, originalSrc: src }));
       } else if (cropper?.type === 'adCloner-subject' && cropper.id) {
@@ -224,6 +231,8 @@ function App() {
       hairStudioLogic.onCropConfirm(croppedImageDataUrl, aspectRatio);
     } else if (activeCropper?.type === 'parent1' || activeCropper?.type === 'parent2') {
       babyStudioLogic.onCropConfirm(croppedImageDataUrl, activeCropper.type);
+    } else if (activeCropper?.type === 'architecture') {
+      architectureStudioLogic.onCropConfirm(croppedImageDataUrl, aspectRatio);
     } else if (activeCropper?.type === 'adCloner-ad' || activeCropper?.type === 'adCloner-subject' || activeCropper?.type === 'adCloner-refine') {
         adClonerLogic.onCropConfirm(croppedImageDataUrl, activeCropper);
     }
@@ -239,6 +248,8 @@ function App() {
           babyStudioLogic.setParent1({...babyStudioLogic.initialParentState, id: 'parent1'});
       } else if (activeCropper?.type === 'parent2' && !babyStudioLogic.parent2.croppedSrc) {
           babyStudioLogic.setParent2({...babyStudioLogic.initialParentState, id: 'parent2'});
+      } else if (activeCropper?.type === 'architecture' && !architectureStudioLogic.croppedImage) {
+          architectureStudioLogic.setOriginalFile(null);
       } else if (activeCropper?.type === 'adCloner-ad' || activeCropper?.type === 'adCloner-subject' || activeCropper?.type === 'adCloner-refine') {
           adClonerLogic.onCropCancel(activeCropper);
       }
@@ -318,6 +329,8 @@ function App() {
               return hairStudioLogic.generatedImages;
           case 'babyStudio':
               return babyStudioLogic.generatedImages;
+          case 'architectureStudio':
+              return architectureStudioLogic.generatedImages;
           case 'videoStudio':
               return videoStudioLogic.studioImages;
           case 'timelineStudio':

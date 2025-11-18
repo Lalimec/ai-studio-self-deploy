@@ -15,6 +15,7 @@ import {
   LuScissors,
   LuClapperboard,
   LuBaby,
+  LuBuilding2,
   LuCircleCheck,
   LuCircleHelp,
   LuLanguages,
@@ -62,6 +63,7 @@ export const SwapIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <LuR
 export const DownloadVideoIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <LuFileVideo {...props} />;
 export const VideoStudioIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <LuClapperboard {...props} />;
 export const BabyIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <LuBaby {...props} />;
+export const ArchitectureStudioIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <LuBuilding2 {...props} />;
 export const AlertCircleIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <LuCircleAlert {...props} />;
 export const TranslateIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <LuLanguages {...props} />;
 export const ImageStudioIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <LuImage {...props} />;
