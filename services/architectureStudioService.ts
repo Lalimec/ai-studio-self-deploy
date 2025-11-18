@@ -521,6 +521,129 @@ export const generateDepthMap = async (
 };
 
 /**
+ * Generates a transformed version of an architectural image
+ * Preserves the original layout, furnishings, and lighting while changing tidiness/furnishing state
+ * @param sourceImageDataUrl - The source image data URL
+ * @param transformationType - Type of transformation (tidy, unfurnished, livedIn)
+ * @param aspectRatio - Aspect ratio for generation
+ * @param useNanoBananaWebhook - Whether to use webhook or native Gemini
+ * @param sessionId - Session ID for filename generation
+ * @param originalFilename - Original filename for the base image
+ * @returns Object with imageUrl and promptText
+ */
+export const generateImageTransformation = async (
+  sourceImageDataUrl: string,
+  transformationType: 'tidy' | 'unfurnished' | 'livedIn',
+  aspectRatio: AspectRatio,
+  useNanoBananaWebhook: boolean,
+  sessionId: string,
+  originalFilename: string = 'image'
+): Promise<{ imageUrl: string; promptText: string; filename: string }> => {
+  const imageSource = dataUrlToBlob(sourceImageDataUrl);
+
+  // Build transformation-specific prompt
+  let transformationPrompt = '';
+  let transformationLabel = '';
+
+  switch (transformationType) {
+    case 'tidy':
+      transformationLabel = 'tidy';
+      transformationPrompt = `Transform this architectural space to be completely clean, organized, and uncluttered.
+CRITICAL REQUIREMENTS:
+- REMOVE ALL scattered items from floors (shoes, bags, boxes, papers, toys, clothing, books, etc.)
+- REMOVE ALL clutter from surfaces (tables, counters, desks, shelves - clear them completely)
+- REMOVE ALL excessive decorations or random items from walls
+- REMOVE ALL visible mess, debris, trash, or disorganized objects
+- REMOVE ALL piles of items or stacks of objects that create visual clutter
+- Surfaces should be clear and clean
+- Floors should be completely empty and clean
+- Result must show pristine, magazine-quality cleanliness
+
+PRESERVE EXACTLY:
+- The exact spatial layout and room structure
+- All major furniture pieces (sofas, beds, tables, chairs, cabinets) in their exact positions
+- All architectural elements (doors, windows, columns, beams, fixtures) in exact locations
+- The lighting conditions and time of day
+- The overall design style and aesthetic
+- Wall colors, flooring, and finishes
+- Only intentional, well-placed decorative items may remain
+
+This is a tidying transformation, not a redesign. The space should look like the same room that has been professionally cleaned and organized.`;
+      break;
+
+    case 'unfurnished':
+      transformationLabel = 'unfurnished';
+      transformationPrompt = `Transform this architectural space to an unfinished, unfurnished, under-construction state.
+CRITICAL REQUIREMENTS:
+- Show bare walls without paint or wallpaper (exposed drywall or plaster)
+- Remove or minimize furniture (empty or near-empty space)
+- Show exposed subflooring or unfinished floor surfaces
+- Include construction elements: drop cloths, sawdust, construction materials
+- Show incomplete finishes and work-in-progress state
+- Provide a before-renovation or under-construction appearance
+- May show exposed wiring, unfinished trim, construction equipment
+
+PRESERVE EXACTLY:
+- The exact spatial layout and room dimensions
+- All structural elements (walls, doorways, window openings, ceiling height)
+- The architectural proportions and room shape
+- The camera angle and perspective
+- The overall building structure
+
+This is a before/during construction transformation showing the raw, unfinished state of the space.`;
+      break;
+
+    case 'livedIn':
+      transformationLabel = 'lived_in';
+      transformationPrompt = `Transform this architectural space to show everyday living with realistic daily clutter and use.
+CRITICAL REQUIREMENTS:
+- ADD personal items scattered naturally (books, magazines, remote controls, throw blankets)
+- ADD some clutter on surfaces (coffee table items, kitchen counter items, bathroom counter items)
+- ADD signs of daily life (shoes by door, bags on furniture, clothing draped casually)
+- ADD lived-in details (rumpled cushions, slightly disheveled bed, everyday items out)
+- Show realistic human occupation and daily use
+- The space should feel warm, lived-in, and currently inhabited
+- Balance between "messy" and "realistic everyday living"
+
+PRESERVE EXACTLY:
+- The exact spatial layout and room structure
+- All major furniture pieces in their exact positions
+- All architectural elements in exact locations
+- The lighting conditions and time of day
+- The overall design style and aesthetic
+- Wall colors, flooring, and finishes
+
+This is a lived-in transformation, not a redesign. The space should look like the same room where people actually live and use daily.`;
+      break;
+  }
+
+  const fullPrompt = `${transformationPrompt}
+
+Maintain photorealistic quality and architectural accuracy. Ensure all architectural elements are harmonious and professionally designed.`;
+
+  // Generate the transformed image using the existing pipeline
+  const imageUrl = await generateFigureImage(
+    Constance.models.image.nanoBanana,
+    fullPrompt,
+    [imageSource],
+    { aspectRatio: aspectRatio !== 'auto' ? aspectRatio : undefined },
+    useNanoBananaWebhook
+  );
+
+  // Generate filename
+  const timestamp = new Date().getTime().toString();
+  const baseFilename = originalFilename.split('.').slice(0, -1).join('.') || 'image';
+  const sanitizedFilename = baseFilename.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 40);
+  const filename = `${sessionId}_${sanitizedFilename}_${transformationLabel}_${timestamp}.jpg`;
+
+  return {
+    imageUrl,
+    promptText: fullPrompt,
+    filename
+  };
+};
+
+/**
  * Generates an architectural video prompt for a given image
  * Focuses on camera movements and architectural elements rather than people
  * @param imageBlob - The image blob with base64 and mimeType

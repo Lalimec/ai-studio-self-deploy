@@ -17,6 +17,9 @@ type ArchitectureStudioProps = {
 
 const OriginalImageCard: React.FC<{
     originalImage: OriginalImageState;
+    transformedVersions: any; // TransformedVersionsState
+    selectedVersion: any; // ActiveVersionType
+    onSelectVersion: (version: any) => void;
     onRecrop: () => void;
     onClear: () => void;
     isDataLocked: boolean;
@@ -24,28 +27,88 @@ const OriginalImageCard: React.FC<{
     onGenerateVideo: () => void;
     onGenerateDepthMap: () => void;
     onDownload: () => void;
+    onGenerateTransformation: (type: any) => void;
+    onRemoveTransformation: (type: any) => void;
     aspectRatio: number;
-}> = ({ originalImage, onRecrop, onClear, isDataLocked, onPrepare, onGenerateVideo, onGenerateDepthMap, onDownload, aspectRatio }) => {
-    const { croppedSrc, isPreparing, isGeneratingVideo, isGeneratingDepthMap, videoSrc, videoPrompt, videoGenerationFailed, depthMapSrc, depthMapGenerationFailed } = originalImage;
-    const isBusy = isPreparing || isGeneratingVideo || isGeneratingDepthMap;
+}> = ({
+    originalImage,
+    transformedVersions,
+    selectedVersion,
+    onSelectVersion,
+    onRecrop,
+    onClear,
+    isDataLocked,
+    onPrepare,
+    onGenerateVideo,
+    onGenerateDepthMap,
+    onDownload,
+    onGenerateTransformation,
+    onRemoveTransformation,
+    aspectRatio
+}) => {
     const [isHovering, setIsHovering] = useState(false);
     const [isVideoReady, setIsVideoReady] = useState(false);
+
+    // Get the currently displayed image based on selected version
+    const activeImage = selectedVersion === 'real' ? originalImage : (transformedVersions[selectedVersion] || null);
+
+    if (!activeImage || !activeImage.croppedSrc) return null;
+
+    const { croppedSrc, isPreparing, isGeneratingVideo, isGeneratingDepthMap, videoSrc, videoPrompt, videoGenerationFailed, depthMapSrc, depthMapGenerationFailed } = activeImage;
+    const isGenerating = transformedVersions[selectedVersion]?.isGenerating || false;
+    const isBusy = isPreparing || isGeneratingVideo || isGeneratingDepthMap || isGenerating;
 
     useEffect(() => {
         if (videoSrc) setIsVideoReady(false);
     }, [videoSrc]);
 
-    if (!croppedSrc) return null;
+    const transformationTypes = [
+        { id: 'tidy', label: 'Tidy', color: 'blue' },
+        { id: 'unfurnished', label: 'Unfurnished', color: 'orange' },
+        { id: 'livedIn', label: 'Lived-in', color: 'green' }
+    ];
 
     return (
         <div className="w-full flex flex-col items-center">
+            {/* Tabs for version selection */}
+            <div className="w-full flex gap-1 mb-3">
+                <button
+                    onClick={() => onSelectVersion('real')}
+                    disabled={isDataLocked}
+                    className={`flex-1 py-2 px-3 text-xs font-semibold rounded-md transition-colors ${
+                        selectedVersion === 'real'
+                            ? 'bg-[var(--color-primary)] text-[var(--color-text-on-primary)]'
+                            : 'bg-[var(--color-bg-muted)] text-[var(--color-text-main)] hover:bg-[var(--color-bg-muted-hover)]'
+                    } disabled:opacity-50 disabled:cursor-not-allowed`}
+                >
+                    Real
+                </button>
+                {transformationTypes.map(({ id, label }) => (
+                    <button
+                        key={id}
+                        onClick={() => transformedVersions[id] && onSelectVersion(id)}
+                        disabled={!transformedVersions[id] || isDataLocked}
+                        className={`flex-1 py-2 px-3 text-xs font-semibold rounded-md transition-colors ${
+                            selectedVersion === id
+                                ? 'bg-[var(--color-primary)] text-[var(--color-text-on-primary)]'
+                                : transformedVersions[id]
+                                ? 'bg-[var(--color-bg-muted)] text-[var(--color-text-main)] hover:bg-[var(--color-bg-muted-hover)]'
+                                : 'bg-[var(--color-bg-surface)] text-[var(--color-text-dimmer)] cursor-not-allowed opacity-50'
+                        }`}
+                    >
+                        {label}
+                        {transformedVersions[id] && ' ✓'}
+                    </button>
+                ))}
+            </div>
+
             <div
                 className="relative group w-full"
                 onMouseEnter={() => videoSrc && setIsHovering(true)}
                 onMouseLeave={() => videoSrc && setIsHovering(false)}
                 style={{ aspectRatio }}
             >
-                <img src={croppedSrc} alt="Original architectural photo" className="rounded-xl shadow-lg shadow-[var(--color-shadow-primary)]/20 object-cover w-full h-full" />
+                <img src={croppedSrc} alt="Architectural photo" className="rounded-xl shadow-lg shadow-[var(--color-shadow-primary)]/20 object-cover w-full h-full" />
 
                 {videoSrc && isHovering && (
                     <div className="absolute inset-0">
@@ -91,11 +154,39 @@ const OriginalImageCard: React.FC<{
                 {isBusy && (
                     <div className="absolute inset-0 bg-black bg-opacity-70 flex flex-col items-center justify-center text-[var(--color-text-main)] text-xs font-semibold z-30 rounded-xl">
                         <div className="w-8 h-8 border-4 border-dashed rounded-full animate-spin border-[var(--color-primary-accent)]"></div>
-                        <span className="mt-2">{isPreparing ? 'Preparing...' : isGeneratingVideo ? 'Making Video...' : 'Generating Depth Map...'}</span>
+                        <span className="mt-2">
+                            {isPreparing ? 'Preparing...' : isGeneratingVideo ? 'Making Video...' : isGeneratingDepthMap ? 'Generating Depth Map...' : 'Generating Transformation...'}
+                        </span>
                     </div>
                 )}
             </div>
-            <div className="mt-2 text-xs text-[var(--color-text-dim)] text-center">Original Image</div>
+
+            {/* Transformation Buttons */}
+            <div className="w-full flex gap-2 mt-3">
+                {transformationTypes.map(({ id, label }) => {
+                    const exists = transformedVersions[id];
+                    const isGenerating = transformedVersions[id]?.isGenerating;
+                    return (
+                        <button
+                            key={id}
+                            onClick={() => exists ? onRemoveTransformation(id) : onGenerateTransformation(id)}
+                            disabled={isBusy || isDataLocked}
+                            className={`flex-1 py-1.5 px-2 text-xs font-medium rounded-md transition-colors ${
+                                exists
+                                    ? 'bg-red-500/20 text-red-600 hover:bg-red-500/30 border border-red-500/50'
+                                    : 'bg-[var(--color-action-generate)] hover:bg-[var(--color-action-generate-hover)] text-[var(--color-text-on-primary)]'
+                            } disabled:opacity-50 disabled:cursor-not-allowed`}
+                            title={exists ? `Remove ${label} version` : `Generate ${label} version`}
+                        >
+                            {isGenerating ? '...' : exists ? `✗ ${label}` : `+ ${label}`}
+                        </button>
+                    );
+                })}
+            </div>
+
+            <div className="mt-2 text-xs text-[var(--color-text-dim)] text-center">
+                {selectedVersion === 'real' ? 'Original Image' : `${transformationTypes.find(t => t.id === selectedVersion)?.label || ''} Version`}
+            </div>
         </div>
     );
 };
@@ -107,6 +198,9 @@ const ArchitectureStudio: React.FC<ArchitectureStudioProps> = ({
         croppedImage,
         croppedImageAspectRatio,
         originalImage,
+        transformedVersions,
+        selectedVersion,
+        setSelectedVersion,
         options, setOptions,
         isGenerateDisabled,
         pendingImageCount,
@@ -134,6 +228,8 @@ const ArchitectureStudio: React.FC<ArchitectureStudioProps> = ({
         handleDownloadOriginal,
         handleDownloadAll,
         handleDownloadSingle,
+        handleGenerateTransformation,
+        handleRemoveTransformation,
     } = logic;
 
     const areGlobalActionsDisabled = isPreparing || isGeneratingVideos || pendingImageCount > 0 || generatedImages.length === 0;
@@ -148,6 +244,9 @@ const ArchitectureStudio: React.FC<ArchitectureStudioProps> = ({
                     ) : (
                         <OriginalImageCard
                             originalImage={originalImage}
+                            transformedVersions={transformedVersions}
+                            selectedVersion={selectedVersion}
+                            onSelectVersion={setSelectedVersion}
                             onRecrop={onRecrop}
                             onClear={handleClearImageAndResults}
                             isDataLocked={pendingImageCount > 0}
@@ -155,6 +254,8 @@ const ArchitectureStudio: React.FC<ArchitectureStudioProps> = ({
                             onGenerateVideo={handleGenerateOriginalVideo}
                             onGenerateDepthMap={handleGenerateOriginalDepthMap}
                             onDownload={handleDownloadOriginal}
+                            onGenerateTransformation={handleGenerateTransformation}
+                            onRemoveTransformation={handleRemoveTransformation}
                             aspectRatio={croppedImageAspectRatio}
                         />
                     )}

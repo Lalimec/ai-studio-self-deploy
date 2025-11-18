@@ -191,6 +191,22 @@ export type OriginalImageState = {
     depthMapGenerationFailed?: boolean;
 };
 
+// Architecture Studio - Image Transformation Types
+export type TransformationType = 'tidy' | 'unfurnished' | 'livedIn';
+export type ActiveVersionType = 'real' | TransformationType;
+
+export type TransformedVersionState = OriginalImageState & {
+    transformationType: TransformationType;
+    sourceVersion: ActiveVersionType; // Which version this was created from
+    isGenerating?: boolean; // Currently generating this transformation
+};
+
+export type TransformedVersionsState = {
+    tidy?: TransformedVersionState;
+    unfurnished?: TransformedVersionState;
+    livedIn?: TransformedVersionState;
+};
+
 
 // --- IMAGE STUDIO TYPES ---
 export interface AppFile {

@@ -4,13 +4,17 @@ import {
     GeneratedArchitectureImage,
     Toast as ToastType,
     DownloadSettings,
-    OriginalImageState
+    OriginalImageState,
+    TransformedVersionsState,
+    ActiveVersionType,
+    TransformationType
 } from '../types';
 import {
     generateArchitecturalStyles,
     regenerateSingleArchitecturalStyle,
     generateDepthMap,
-    generateArchitecturalVideoPrompt
+    generateArchitecturalVideoPrompt,
+    generateImageTransformation
 } from '../services/architectureStudioService';
 import {
     enhanceVideoPromptForImage,
@@ -60,6 +64,8 @@ export const useArchitectureStudio = ({
         isGeneratingDepthMap: false,
         depthMapGenerationFailed: false,
     });
+    const [transformedVersions, setTransformedVersions] = useState<TransformedVersionsState>({});
+    const [selectedVersion, setSelectedVersion] = useState<ActiveVersionType>('real');
     const [options, setOptions] = useState<ArchitectureGenerationOptions>({
         scope: 'interior',
         roomType: 'none',
@@ -168,15 +174,119 @@ export const useArchitectureStudio = ({
                     isGeneratingDepthMap: false,
                     depthMapGenerationFailed: false,
                 });
+                setTransformedVersions({});
+                setSelectedVersion('real');
+            }
+        });
+    };
+
+    // Helper to get the currently active image based on selected version
+    const getActiveImage = (): OriginalImageState | null => {
+        if (selectedVersion === 'real') {
+            return originalImage.croppedSrc ? originalImage : null;
+        }
+        return transformedVersions[selectedVersion] || null;
+    };
+
+    // Generate a transformed version
+    const handleGenerateTransformation = async (transformationType: TransformationType) => {
+        const sourceImage = getActiveImage();
+        if (!sourceImage?.croppedSrc || !sessionId) {
+            addToast("No source image available for transformation.", "error");
+            return;
+        }
+
+        logUserAction('GENERATE_TRANSFORMATION', { transformationType, sourceVersion: selectedVersion, sessionId });
+
+        // Mark as generating
+        setTransformedVersions(prev => ({
+            ...prev,
+            [transformationType]: {
+                ...prev[transformationType],
+                file: null,
+                croppedSrc: null,
+                isGenerating: true,
+                transformationType,
+                sourceVersion: selectedVersion,
+            } as any
+        }));
+
+        addToast(`Generating ${transformationType} version...`, 'info');
+
+        try {
+            const result = await generateImageTransformation(
+                sourceImage.croppedSrc,
+                transformationType,
+                options.aspectRatio,
+                useNanoBananaWebhook,
+                sessionId,
+                originalFile?.name || 'image'
+            );
+
+            setTransformedVersions(prev => ({
+                ...prev,
+                [transformationType]: {
+                    file: null,
+                    croppedSrc: result.imageUrl,
+                    publicUrl: undefined,
+                    isPreparing: false,
+                    videoPrompt: undefined,
+                    isGeneratingVideo: false,
+                    videoSrc: undefined,
+                    filename: result.filename,
+                    videoGenerationFailed: false,
+                    depthMapSrc: undefined,
+                    isGeneratingDepthMap: false,
+                    depthMapGenerationFailed: false,
+                    transformationType,
+                    sourceVersion: selectedVersion,
+                    isGenerating: false,
+                }
+            }));
+
+            addToast(`${transformationType} version generated successfully!`, 'success');
+
+            // Automatically switch to the newly generated version
+            setSelectedVersion(transformationType);
+        } catch (err) {
+            addToast(err instanceof Error ? err.message : `Error generating ${transformationType} version.`, 'error');
+            setTransformedVersions(prev => {
+                const updated = { ...prev };
+                delete updated[transformationType];
+                return updated;
+            });
+        }
+    };
+
+    // Remove a transformed version
+    const handleRemoveTransformation = (transformationType: TransformationType) => {
+        setConfirmAction({
+            title: `Remove ${transformationType} version?`,
+            message: 'This will delete this transformed version. This action cannot be undone.',
+            onConfirm: () => {
+                logUserAction('REMOVE_TRANSFORMATION', { transformationType, sessionId });
+                setTransformedVersions(prev => {
+                    const updated = { ...prev };
+                    delete updated[transformationType];
+                    return updated;
+                });
+
+                // If we're currently viewing the deleted version, switch to real
+                if (selectedVersion === transformationType) {
+                    setSelectedVersion('real');
+                }
+
+                addToast(`${transformationType} version removed.`, 'success');
             }
         });
     };
 
     const handleGenerate = () => {
-        if (!croppedImage || !originalFile || !sessionId) return;
+        const activeImage = getActiveImage();
+        if (!activeImage?.croppedSrc || !originalFile || !sessionId) return;
 
         const currentOptions = { ...options };
-        logUserAction('GENERATE_ARCHITECTURAL_STYLES', { options: currentOptions, sessionId });
+        logUserAction('GENERATE_ARCHITECTURAL_STYLES', { options: currentOptions, sessionId, sourceVersion: selectedVersion });
 
         // Calculate batch size based on style selection mode
         let batchSize = currentOptions.imageCount;
@@ -192,7 +302,7 @@ export const useArchitectureStudio = ({
         setGenerationTimestamp(timestamp);
 
         generateArchitecturalStyles(
-            croppedImage,
+            activeImage.croppedSrc,
             currentOptions,
             originalFile.name,
             timestamp,
@@ -220,7 +330,8 @@ export const useArchitectureStudio = ({
     };
 
     const handleGenerateUnstyled = () => {
-        if (!croppedImage || !originalFile || !sessionId) return;
+        const activeImage = getActiveImage();
+        if (!activeImage?.croppedSrc || !originalFile || !sessionId) return;
 
         // Create unstyled options: no style, no time, no theme, no color scheme
         const unstyledOptions: ArchitectureGenerationOptions = {
@@ -236,13 +347,13 @@ export const useArchitectureStudio = ({
             imageCount: 1, // Always generate just 1 unstyled version
         };
 
-        logUserAction('GENERATE_UNSTYLED_ARCHITECTURAL_VERSION', { sessionId });
+        logUserAction('GENERATE_UNSTYLED_ARCHITECTURAL_VERSION', { sessionId, sourceVersion: selectedVersion });
         setPendingImageCount(prev => prev + 1);
         const timestamp = getTimestamp();
         setGenerationTimestamp(timestamp);
 
         generateArchitecturalStyles(
-            croppedImage,
+            activeImage.croppedSrc,
             unstyledOptions,
             originalFile.name,
             timestamp,
@@ -296,6 +407,8 @@ export const useArchitectureStudio = ({
                     isGeneratingDepthMap: false,
                     depthMapGenerationFailed: false,
                 });
+                setTransformedVersions({});
+                setSelectedVersion('real');
             },
         });
     };
@@ -408,7 +521,17 @@ export const useArchitectureStudio = ({
     const handlePrepareAll = async () => {
         const unpreparedImages = generatedImages.filter(img => !img.videoPrompt && !img.isPreparing);
         const needsOriginalPrep = originalImage.croppedSrc && !originalImage.videoPrompt && !originalImage.isPreparing;
-        const totalCount = unpreparedImages.length + (needsOriginalPrep ? 1 : 0);
+
+        // Check transformed versions
+        const unpreparedTransformed: TransformationType[] = [];
+        (['tidy', 'unfurnished', 'livedIn'] as TransformationType[]).forEach(type => {
+            const version = transformedVersions[type];
+            if (version?.croppedSrc && !version.videoPrompt && !version.isPreparing) {
+                unpreparedTransformed.push(type);
+            }
+        });
+
+        const totalCount = unpreparedImages.length + (needsOriginalPrep ? 1 : 0) + unpreparedTransformed.length;
 
         if (totalCount === 0) {
             addToast("All images are already prepared or being prepared.", "info");
@@ -420,6 +543,14 @@ export const useArchitectureStudio = ({
         if (needsOriginalPrep) {
             setOriginalImage(prev => ({ ...prev, isPreparing: true }));
         }
+        // Mark transformed versions as preparing
+        unpreparedTransformed.forEach(type => {
+            setTransformedVersions(prev => ({
+                ...prev,
+                [type]: prev[type] ? { ...prev[type], isPreparing: true } : prev[type]
+            }));
+        });
+
         addToast(`Preparing ${totalCount} video prompts...`, "info");
         try {
             // Use architectural video prompt generation instead of the generic people-focused one
@@ -448,6 +579,28 @@ export const useArchitectureStudio = ({
                 }
             }
 
+            // Prepare transformed versions
+            for (const type of unpreparedTransformed) {
+                const version = transformedVersions[type];
+                if (version?.croppedSrc) {
+                    try {
+                        const imageBlob = dataUrlToBlob(version.croppedSrc);
+                        const videoPrompt = await generateArchitecturalVideoPrompt(imageBlob);
+                        setTransformedVersions(prev => ({
+                            ...prev,
+                            [type]: prev[type] ? { ...prev[type], videoPrompt, isPreparing: false } : prev[type]
+                        }));
+                    } catch (error) {
+                        console.error(`Failed to generate video prompt for ${type} version:`, error);
+                        addToast(`Failed on ${type} version: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
+                        setTransformedVersions(prev => ({
+                            ...prev,
+                            [type]: prev[type] ? { ...prev[type], isPreparing: false } : prev[type]
+                        }));
+                    }
+                }
+            }
+
             await processWithConcurrency(unpreparedImages, processSingleTask, 6);
             addToast("Video prompt preparation complete!", "success");
         } catch (err) {
@@ -456,6 +609,16 @@ export const useArchitectureStudio = ({
             setIsPreparing(false);
             setGeneratedImages(prev => prev.map(img => img.isPreparing ? { ...img, isPreparing: false } : img));
             setOriginalImage(prev => ({ ...prev, isPreparing: false }));
+            // Clear isPreparing for all transformed versions
+            setTransformedVersions(prev => {
+                const updated = { ...prev };
+                (['tidy', 'unfurnished', 'livedIn'] as TransformationType[]).forEach(type => {
+                    if (updated[type]) {
+                        updated[type] = { ...updated[type]!, isPreparing: false };
+                    }
+                });
+                return updated;
+            });
         }
     };
 
@@ -469,15 +632,28 @@ export const useArchitectureStudio = ({
         const originalNeedsVideo = originalImage.croppedSrc && originalImage.videoPrompt && !originalImage.isGeneratingVideo;
         const originalHasVideo = originalImage.videoSrc;
 
-        const totalCount = imagesWithPrompts.length + (originalNeedsVideo ? 1 : 0);
+        // Check transformed versions
+        const transformedNeedingVideo: TransformationType[] = [];
+        const transformedWithExistingVideo: TransformationType[] = [];
+        (['tidy', 'unfurnished', 'livedIn'] as TransformationType[]).forEach(type => {
+            const version = transformedVersions[type];
+            if (version?.croppedSrc && version.videoPrompt && !version.isGeneratingVideo) {
+                transformedNeedingVideo.push(type);
+                if (version.videoSrc) {
+                    transformedWithExistingVideo.push(type);
+                }
+            }
+        });
+
+        const totalCount = imagesWithPrompts.length + (originalNeedsVideo ? 1 : 0) + transformedNeedingVideo.length;
 
         if (totalCount === 0) {
             addToast("All prepared images already have videos or are currently generating.", "info");
             return;
         }
 
-        // If there are images with existing videos (including original), warn the user
-        const totalExisting = imagesWithExistingVideos.length + (originalNeedsVideo && originalHasVideo ? 1 : 0);
+        // If there are images with existing videos (including original and transformed), warn the user
+        const totalExisting = imagesWithExistingVideos.length + (originalNeedsVideo && originalHasVideo ? 1 : 0) + transformedWithExistingVideo.length;
         if (totalExisting > 0) {
             setConfirmAction({
                 title: "Regenerate Videos?",
@@ -485,24 +661,33 @@ export const useArchitectureStudio = ({
                 confirmText: "Regenerate All",
                 confirmVariant: 'primary',
                 onConfirm: () => {
-                    executeGenerateAllVideos(imagesWithPrompts, originalNeedsVideo as boolean);
+                    executeGenerateAllVideos(imagesWithPrompts, originalNeedsVideo as boolean, transformedNeedingVideo);
                 },
             });
             return;
         }
 
         // No existing videos, proceed directly
-        executeGenerateAllVideos(imagesWithoutVideos, originalNeedsVideo && !originalHasVideo);
+        const transformedWithoutVideos = transformedNeedingVideo.filter(type => !transformedVersions[type]?.videoSrc);
+        executeGenerateAllVideos(imagesWithoutVideos, originalNeedsVideo && !originalHasVideo, transformedWithoutVideos);
     };
 
-    const executeGenerateAllVideos = async (imagesToProcess: typeof generatedImages, includeOriginal: boolean = false) => {
-        const totalCount = imagesToProcess.length + (includeOriginal ? 1 : 0);
+    const executeGenerateAllVideos = async (imagesToProcess: typeof generatedImages, includeOriginal: boolean = false, includeTransformed: TransformationType[] = []) => {
+        const totalCount = imagesToProcess.length + (includeOriginal ? 1 : 0) + includeTransformed.length;
         logUserAction('GENERATE_ARCHITECTURE_VIDEO_ALL', { count: totalCount, sessionId });
         setIsGeneratingVideos(true);
         setGeneratedImages(prev => prev.map(img => imagesToProcess.some(p => p.filename === img.filename) ? { ...img, isGeneratingVideo: true, videoGenerationFailed: false } : img));
         if (includeOriginal) {
             setOriginalImage(prev => ({ ...prev, isGeneratingVideo: true, videoGenerationFailed: false }));
         }
+        // Mark transformed versions as generating video
+        includeTransformed.forEach(type => {
+            setTransformedVersions(prev => ({
+                ...prev,
+                [type]: prev[type] ? { ...prev[type], isGeneratingVideo: true, videoGenerationFailed: false } : prev[type]
+            }));
+        });
+
         addToast(`Generating ${totalCount} videos... This may take some time.`, "info");
         try {
             const videoTasks: VideoTask[] = [];
@@ -522,6 +707,30 @@ export const useArchitectureStudio = ({
                     });
                 } catch (error) {
                     addToast(`Failed to upload original image`, 'error');
+                }
+            }
+
+            // Add transformed version tasks
+            for (const type of includeTransformed) {
+                const version = transformedVersions[type];
+                if (version?.croppedSrc && version.videoPrompt) {
+                    try {
+                        let publicUrl = version.publicUrl;
+                        if (!publicUrl) {
+                            publicUrl = await uploadImageFromDataUrl(version.croppedSrc);
+                            setTransformedVersions(prev => ({
+                                ...prev,
+                                [type]: prev[type] ? { ...prev[type], publicUrl } : prev[type]
+                            }));
+                        }
+                        videoTasks.push({
+                            startImageUrl: publicUrl,
+                            videoPrompt: version.videoPrompt,
+                            filename: version.filename || `${type}_version`,
+                        });
+                    } catch (error) {
+                        addToast(`Failed to upload ${type} version`, 'error');
+                    }
                 }
             }
 
@@ -547,7 +756,23 @@ export const useArchitectureStudio = ({
                         if (includeOriginal && filename === (originalImage.filename || 'original')) {
                             setOriginalImage(prev => ({ ...prev, videoSrc, isGeneratingVideo: false, videoGenerationFailed: false }));
                         } else {
-                            setGeneratedImages(prev => prev.map(img => img.filename === filename ? { ...img, videoSrc, isGeneratingVideo: false, videoGenerationFailed: false } : img));
+                            // Check if this is a transformed version
+                            let isTransformed = false;
+                            for (const type of includeTransformed) {
+                                const version = transformedVersions[type];
+                                if (version && filename === version.filename) {
+                                    setTransformedVersions(prev => ({
+                                        ...prev,
+                                        [type]: prev[type] ? { ...prev[type], videoSrc, isGeneratingVideo: false, videoGenerationFailed: false } : prev[type]
+                                    }));
+                                    isTransformed = true;
+                                    break;
+                                }
+                            }
+                            // Otherwise it's a generated image
+                            if (!isTransformed) {
+                                setGeneratedImages(prev => prev.map(img => img.filename === filename ? { ...img, videoSrc, isGeneratingVideo: false, videoGenerationFailed: false } : img));
+                            }
                         }
                     },
                     (errorMessage) => {
@@ -557,7 +782,22 @@ export const useArchitectureStudio = ({
                             if (includeOriginal && failedFilename === (originalImage.filename || 'original')) {
                                 setOriginalImage(prev => ({ ...prev, isGeneratingVideo: false, videoGenerationFailed: true }));
                             } else {
-                                setGeneratedImages(prev => prev.map(img => img.filename === failedFilename ? { ...img, isGeneratingVideo: false, videoGenerationFailed: true } : img));
+                                // Check if this is a transformed version
+                                let isTransformed = false;
+                                for (const type of includeTransformed) {
+                                    const version = transformedVersions[type];
+                                    if (version && failedFilename === version.filename) {
+                                        setTransformedVersions(prev => ({
+                                            ...prev,
+                                            [type]: prev[type] ? { ...prev[type], isGeneratingVideo: false, videoGenerationFailed: true } : prev[type]
+                                        }));
+                                        isTransformed = true;
+                                        break;
+                                    }
+                                }
+                                if (!isTransformed) {
+                                    setGeneratedImages(prev => prev.map(img => img.filename === failedFilename ? { ...img, isGeneratingVideo: false, videoGenerationFailed: true } : img));
+                                }
                             }
                         }
                         addToast(errorMessage, 'error');
@@ -573,6 +813,13 @@ export const useArchitectureStudio = ({
             if (includeOriginal) {
                 setOriginalImage(prev => ({ ...prev, isGeneratingVideo: false }));
             }
+            // Clear isGeneratingVideo for transformed versions
+            includeTransformed.forEach(type => {
+                setTransformedVersions(prev => ({
+                    ...prev,
+                    [type]: prev[type] ? { ...prev[type], isGeneratingVideo: false } : prev[type]
+                }));
+            });
         }
     };
 
@@ -604,20 +851,33 @@ export const useArchitectureStudio = ({
         const originalNeedsDepthMap = originalImage.croppedSrc && !originalImage.isGeneratingDepthMap;
         const originalHasDepthMap = originalImage.depthMapSrc;
 
-        const totalCount = (imagesWithoutDepthMaps.length + imagesWithExistingDepthMaps.length) + (originalNeedsDepthMap ? 1 : 0);
+        // Check transformed versions
+        const transformedNeedingDepthMap: TransformationType[] = [];
+        const transformedWithExistingDepthMap: TransformationType[] = [];
+        (['tidy', 'unfurnished', 'livedIn'] as TransformationType[]).forEach(type => {
+            const version = transformedVersions[type];
+            if (version?.croppedSrc && !version.isGeneratingDepthMap) {
+                transformedNeedingDepthMap.push(type);
+                if (version.depthMapSrc) {
+                    transformedWithExistingDepthMap.push(type);
+                }
+            }
+        });
+
+        const totalCount = (imagesWithoutDepthMaps.length + imagesWithExistingDepthMaps.length) + (originalNeedsDepthMap ? 1 : 0) + transformedNeedingDepthMap.length;
 
         if (totalCount === 0) {
             addToast("No images available for depth map generation.", "info");
             return;
         }
 
-        if (imagesWithoutDepthMaps.length === 0 && !originalNeedsDepthMap || originalHasDepthMap) {
+        if (imagesWithoutDepthMaps.length === 0 && !originalNeedsDepthMap && transformedNeedingDepthMap.length === 0) {
             addToast("All images already have depth maps.", "info");
             return;
         }
 
-        // If there are images with existing depth maps (including original), warn the user
-        const totalExisting = imagesWithExistingDepthMaps.length + (originalNeedsDepthMap && originalHasDepthMap ? 1 : 0);
+        // If there are images with existing depth maps (including original and transformed), warn the user
+        const totalExisting = imagesWithExistingDepthMaps.length + (originalNeedsDepthMap && originalHasDepthMap ? 1 : 0) + transformedWithExistingDepthMap.length;
         if (totalExisting > 0) {
             setConfirmAction({
                 title: "Regenerate Depth Maps?",
@@ -625,24 +885,33 @@ export const useArchitectureStudio = ({
                 confirmText: "Regenerate All",
                 confirmVariant: 'primary',
                 onConfirm: () => {
-                    executeGenerateAllDepthMaps(generatedImages, originalNeedsDepthMap as boolean);
+                    executeGenerateAllDepthMaps(generatedImages, originalNeedsDepthMap as boolean, transformedNeedingDepthMap);
                 },
             });
             return;
         }
 
         // No existing depth maps, proceed directly
-        executeGenerateAllDepthMaps(imagesWithoutDepthMaps, originalNeedsDepthMap && !originalHasDepthMap);
+        const transformedWithoutDepthMaps = transformedNeedingDepthMap.filter(type => !transformedVersions[type]?.depthMapSrc);
+        executeGenerateAllDepthMaps(imagesWithoutDepthMaps, originalNeedsDepthMap && !originalHasDepthMap, transformedWithoutDepthMaps);
     };
 
-    const executeGenerateAllDepthMaps = async (imagesToProcess: typeof generatedImages, includeOriginal: boolean = false) => {
-        const totalCount = imagesToProcess.length + (includeOriginal ? 1 : 0);
+    const executeGenerateAllDepthMaps = async (imagesToProcess: typeof generatedImages, includeOriginal: boolean = false, includeTransformed: TransformationType[] = []) => {
+        const totalCount = imagesToProcess.length + (includeOriginal ? 1 : 0) + includeTransformed.length;
         logUserAction('GENERATE_ARCHITECTURE_DEPTH_MAP_ALL', { count: totalCount, sessionId });
         setIsGeneratingDepthMaps(true);
         setGeneratedImages(prev => prev.map(img => imagesToProcess.some(p => p.filename === img.filename) ? { ...img, isGeneratingDepthMap: true, depthMapGenerationFailed: false } : img));
         if (includeOriginal) {
             setOriginalImage(prev => ({ ...prev, isGeneratingDepthMap: true, depthMapGenerationFailed: false }));
         }
+        // Mark transformed versions as generating depth map
+        includeTransformed.forEach(type => {
+            setTransformedVersions(prev => ({
+                ...prev,
+                [type]: prev[type] ? { ...prev[type], isGeneratingDepthMap: true, depthMapGenerationFailed: false } : prev[type]
+            }));
+        });
+
         addToast(`Generating ${totalCount} depth maps...`, "info");
 
         let successCount = 0;
@@ -664,6 +933,36 @@ export const useArchitectureStudio = ({
                     console.error('Failed to generate depth map for original image:', err);
                     setOriginalImage(prev => ({ ...prev, isGeneratingDepthMap: false, depthMapGenerationFailed: true }));
                     failureCount++;
+                }
+            }
+
+            // Process transformed versions
+            for (const type of includeTransformed) {
+                const version = transformedVersions[type];
+                if (version?.croppedSrc) {
+                    try {
+                        let publicUrl = version.publicUrl;
+                        if (!publicUrl) {
+                            publicUrl = await uploadImageFromDataUrl(version.croppedSrc);
+                            setTransformedVersions(prev => ({
+                                ...prev,
+                                [type]: prev[type] ? { ...prev[type], publicUrl } : prev[type]
+                            }));
+                        }
+                        const depthMapSrc = await generateDepthMap(version.croppedSrc, publicUrl);
+                        setTransformedVersions(prev => ({
+                            ...prev,
+                            [type]: prev[type] ? { ...prev[type], depthMapSrc, isGeneratingDepthMap: false, depthMapGenerationFailed: false, publicUrl } : prev[type]
+                        }));
+                        successCount++;
+                    } catch (err) {
+                        console.error(`Failed to generate depth map for ${type} version:`, err);
+                        setTransformedVersions(prev => ({
+                            ...prev,
+                            [type]: prev[type] ? { ...prev[type], isGeneratingDepthMap: false, depthMapGenerationFailed: true } : prev[type]
+                        }));
+                        failureCount++;
+                    }
                 }
             }
 
@@ -700,6 +999,13 @@ export const useArchitectureStudio = ({
             if (includeOriginal) {
                 setOriginalImage(prev => ({ ...prev, isGeneratingDepthMap: false }));
             }
+            // Clear isGeneratingDepthMap for transformed versions
+            includeTransformed.forEach(type => {
+                setTransformedVersions(prev => ({
+                    ...prev,
+                    [type]: prev[type] ? { ...prev[type], isGeneratingDepthMap: false } : prev[type]
+                }));
+            });
         }
     };
 
@@ -925,6 +1231,9 @@ export const useArchitectureStudio = ({
         croppedImageAspectRatio,
         setCroppedImageAspectRatio,
         originalImage,
+        transformedVersions,
+        selectedVersion,
+        setSelectedVersion,
         options,
         setOptions,
         generatedImages,
@@ -954,5 +1263,7 @@ export const useArchitectureStudio = ({
         handleDownloadOriginal,
         handleDownloadSingle,
         handleDownloadAll,
+        handleGenerateTransformation,
+        handleRemoveTransformation,
     };
 };
