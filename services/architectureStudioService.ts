@@ -313,7 +313,14 @@ const generateSingleImage = async (
   if (components.length > 0) {
     promptText = `Transform this architectural scene to have ${components.join(', ')}. `;
     promptText += 'Maintain photorealistic quality and architectural accuracy. ';
+    promptText += 'CRITICAL: Preserve the exact locations, positions, and placements of all structural elements including doors, windows, columns, archways, and other architectural fixtures from the original image. Do not move, relocate, or reposition these elements. ';
     promptText += 'Preserve the overall spatial layout and structural proportions. ';
+
+    // Add strong tidiness emphasis if specified
+    if (tidyPrompt) {
+      promptText += 'IMPORTANT: Pay special attention to the tidiness requirement specified above. Ensure the space is organized, clean, and uncluttered as requested, removing or organizing any scattered items, clutter, or mess. ';
+    }
+
     promptText += 'Ensure all architectural elements are harmonious and professionally designed. ';
 
     // Add camera angle preservation note if not randomizing
@@ -499,4 +506,50 @@ export const generateDepthMap = async (
     console.error('Depth map generation error:', error);
     throw error;
   }
+};
+
+/**
+ * Generates an architectural video prompt for a given image
+ * Focuses on camera movements and architectural elements rather than people
+ * @param imageBlob - The image blob with base64 and mimeType
+ * @param guidance - Optional high-level instruction to guide the prompt generation
+ * @returns A descriptive video prompt for architectural animation
+ */
+export const generateArchitecturalVideoPrompt = async (
+  imageBlob: { base64: string; mimeType: string },
+  guidance?: string
+): Promise<string> => {
+  const { ai } = await import('./geminiClient');
+  const { GenerateContentResponse } = await import('@google/genai');
+
+  let prompt = `Analyze this architectural scene and create a short, descriptive video prompt (around 25-35 words) for an AI video generator that will animate this static image. Focus on slow, cinematic camera movements that reveal architectural details. The camera should use subtle movements like:
+- Slow horizontal pan (left to right or right to left)
+- Gentle vertical tilt (up or down)
+- Subtle dolly movement (slowly moving forward or backward)
+- Slight tracking shot along architectural features
+
+Also consider subtle environmental elements like:
+- Changing natural light and shadows moving across surfaces
+- Gentle movement of curtains, plants, or water features if present
+- Soft atmospheric effects like mist or light rays
+
+Do NOT mention people, facial expressions, or human movements. This is purely an architectural visualization. The camera movement should be slow, smooth, and professional, like an architectural demo or real estate showcase.`;
+
+  if (guidance && guidance.trim()) {
+    prompt += ` IMPORTANT: The prompt must also adhere to this high-level instruction: "${guidance}".`;
+  }
+
+  prompt += ` Example: 'A modern living room with natural light streaming through large windows, camera slowly pans right revealing the full space, soft shadows move across the hardwood floor.'`;
+
+  const response = await ai.models.generateContent({
+    model: Constance.models.text.flash,
+    contents: {
+      parts: [
+        { inlineData: { data: imageBlob.base64, mimeType: imageBlob.mimeType } },
+        { text: prompt },
+      ]
+    },
+  });
+
+  return response.text;
 };

@@ -8,11 +8,10 @@ import {
 import {
     generateArchitecturalStyles,
     regenerateSingleArchitecturalStyle,
-    generateDepthMap
+    generateDepthMap,
+    generateArchitecturalVideoPrompt
 } from '../services/architectureStudioService';
 import {
-    prepareVideoPrompts,
-    generateVideoPromptForImage,
     enhanceVideoPromptForImage,
     VideoTask
 } from '../services/videoService';
@@ -303,7 +302,7 @@ export const useArchitectureStudio = ({
         addToast(`Preparing video prompt...`, 'info');
         try {
             const imageBlob = dataUrlToBlob(image.src);
-            const prompt = await generateVideoPromptForImage(imageBlob);
+            const prompt = await generateArchitecturalVideoPrompt(imageBlob);
             setGeneratedImages(prev => prev.map(img => img.filename === filename ? { ...img, videoPrompt: prompt, isPreparing: false } : img));
             addToast("Video prompt ready!", "success");
         } catch (err) {
@@ -355,10 +354,20 @@ export const useArchitectureStudio = ({
         setGeneratedImages(prev => prev.map(img => unpreparedImages.some(unprepared => unprepared.filename === img.filename) ? { ...img, isPreparing: true } : img));
         addToast(`Preparing ${unpreparedImages.length} video prompts...`, "info");
         try {
-            await prepareVideoPrompts(unpreparedImages,
-                (filename, prompt) => setGeneratedImages(prev => prev.map(img => img.filename === filename ? { ...img, videoPrompt: prompt, isPreparing: false } : img)),
-                (errorMessage) => addToast(errorMessage, 'error')
-            );
+            // Use architectural video prompt generation instead of the generic people-focused one
+            const processSingleTask = async (image: GeneratedArchitectureImage) => {
+                try {
+                    const imageBlob = dataUrlToBlob(image.src);
+                    const videoPrompt = await generateArchitecturalVideoPrompt(imageBlob);
+                    setGeneratedImages(prev => prev.map(img => img.filename === image.filename ? { ...img, videoPrompt, isPreparing: false } : img));
+                } catch (error) {
+                    console.error(`Failed to generate video prompt for "${image.filename}":`, error);
+                    addToast(`Failed on ${image.filename}: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
+                    setGeneratedImages(prev => prev.map(img => img.filename === image.filename ? { ...img, isPreparing: false } : img));
+                }
+            };
+
+            await processWithConcurrency(unpreparedImages, processSingleTask, 6);
             addToast("Video prompt preparation complete!", "success");
         } catch (err) {
             addToast(err instanceof Error ? err.message : 'An unknown error occurred during preparation.', 'error');
