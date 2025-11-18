@@ -516,18 +516,23 @@ export const generateImageTransformation = async (
 
 CRITICAL REQUIREMENTS - REMOVE EVERYTHING LISTED:
 ✗ FLOORS: Remove ALL items from floors - shoes, bags, boxes, papers, toys, clothing, books, cables, packaging, debris, dirt, stains
-✗ SURFACES: Clear ALL surfaces completely - tables, counters, desks, shelves, nightstands must be EMPTY or have only 1-2 minimal decorative items
+✗ SURFACES: Clear surfaces of clutter - remove piles, stacks, scattered items. Single intentional objects (one coffee mug, one book, one vase) can stay if neatly placed, but remove all excessive items and clutter
 ✗ BEDS: Make beds perfectly - smooth sheets, arranged pillows, tucked blankets, hotel-quality presentation
-✗ WALLS: Remove ALL posters, papers, excessive decorations, hooks with items, calendars, notes, tape marks
-✗ CEILINGS: Remove ANY hanging items, posters, decorations, or clutter
-✗ CLUTTER: Remove ALL piles, stacks, random objects, packaging materials, scattered items
-✗ TRASH: Remove ALL waste baskets contents, debris, packaging, wrappers
-✗ PERSONAL ITEMS: Remove scattered personal belongings - leave only intentional decor
+✗ WALLS & CEILINGS: Remove ALL posters, stickers, sticky notes, papers, tape marks, temporary decorations, hanging items, string lights, flags, banners. Only permanent art, framed pictures, or architectural features should remain
+✗ CLUTTER: Remove ALL piles, stacks, random objects, packaging materials, scattered items anywhere in the space
+✗ TRASH: Remove ALL waste baskets contents, debris, packaging, wrappers, recyclables
+✗ PERSONAL ITEMS: Remove scattered personal belongings - clothing on furniture, bags on floor, shoes everywhere. Leave only intentional decor
+
+WHAT CAN STAY (if neat and intentional):
+✓ Single decorative objects on surfaces (one vase, one lamp, one book)
+✓ Permanent wall-mounted art or framed pictures
+✓ Built-in shelving with minimal organized items
+✓ Essential functional items if neatly placed (alarm clock on nightstand, soap dispenser in bathroom)
 
 CLEAN STATE REQUIREMENTS:
 ✓ Floors: Completely empty, clean, spotless
-✓ Surfaces: Clear or minimally decorated (1-2 items max per surface)
-✓ Walls: Clean with only permanent fixtures or intentional art
+✓ Surfaces: Clear or very minimally decorated (maximum 1-2 intentional items per surface)
+✓ Walls & Ceilings: Clean, no temporary decorations or stickers, only permanent fixtures or framed art
 ✓ Furniture: In place, clean, organized
 ✓ Beds: Perfectly made with smooth linens
 ✓ Overall: Magazine-quality, professionally staged appearance
@@ -547,6 +552,7 @@ This is a TIDYING transformation, not a redesign. Show the SAME room after profe
     case 'unfurnished':
       transformationLabel = 'unfurnished';
       transformationPrompt = `Transform this architectural space to an unfinished, unfurnished, under-construction state.
+
 CRITICAL REQUIREMENTS:
 - Show bare walls without paint or wallpaper (exposed drywall or plaster)
 - Remove or minimize furniture (empty or near-empty space)
@@ -556,14 +562,20 @@ CRITICAL REQUIREMENTS:
 - Provide a before-renovation or under-construction appearance
 - May show exposed wiring, unfinished trim, construction equipment
 
-PRESERVE EXACTLY:
+PRESERVE EXACTLY - THESE MUST REMAIN IN EXACT SAME POSITIONS:
 - The exact spatial layout and room dimensions
-- All structural elements (walls, doorways, window openings, ceiling height)
+- ALL doors in their exact locations (just unfinished/unpainted, but structurally complete)
+- ALL windows in their exact locations and sizes (just without trim or finished frames)
+- ALL doorways, door frames, and window openings in exact positions
+- The ceiling height and structure
 - The architectural proportions and room shape
 - The camera angle and perspective
-- The overall building structure
+- The overall building structure and all wall positions
+- Any built-in architectural features (alcoves, columns, beams)
 
-This is a before/during construction transformation showing the raw, unfinished state of the space.`;
+IMPORTANT: Doors and windows should be present in the same locations as the original image, just appearing unfinished (no paint, trim, or final finishes). Do not remove or relocate any structural openings.
+
+This is a before/during construction transformation showing the raw, unfinished state of the space while maintaining all structural openings and architectural elements.`;
       break;
 
     case 'livedIn':

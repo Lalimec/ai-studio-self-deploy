@@ -269,25 +269,17 @@ export const useArchitectureStudio = ({
 
     // Remove a transformed version
     const handleRemoveTransformation = (transformationType: TransformationType) => {
-        setConfirmAction({
-            title: `Remove ${transformationType} version?`,
-            message: 'This will delete this transformed version. This action cannot be undone.',
-            onConfirm: () => {
-                logUserAction('REMOVE_TRANSFORMATION', { transformationType, sessionId });
-                setTransformedVersions(prev => {
-                    const updated = { ...prev };
-                    delete updated[transformationType];
-                    return updated;
-                });
-
-                // If we're currently viewing the deleted version, switch to real
-                if (selectedVersion === transformationType) {
-                    setSelectedVersion('real');
-                }
-
-                addToast(`${transformationType} version removed.`, 'success');
-            }
+        logUserAction('REMOVE_TRANSFORMATION', { transformationType, sessionId });
+        setTransformedVersions(prev => {
+            const updated = { ...prev };
+            delete updated[transformationType];
+            return updated;
         });
+
+        // Stay on the current tab (don't switch to real)
+        // This allows user to immediately regenerate if desired
+
+        addToast(`${transformationType} version removed.`, 'success');
     };
 
     const handleGenerate = () => {
