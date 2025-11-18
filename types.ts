@@ -330,6 +330,7 @@ export type NanoBananaWebhookSettings = {
     hair: boolean;
     baby: boolean;
     image: boolean;
+    architecture: boolean;
     adCloner: boolean;
     videoAnalyzer: boolean;
 };
@@ -408,5 +409,95 @@ export class JsonParseError extends Error {
     }
 }
 
+// --- ARCHITECTURE STUDIO TYPES ---
+export type ArchitectureScope = {
+  id: string;
+  name: string;
+};
+
+export type ArchitectureStyle = {
+  id: string;
+  name: string;
+  prompt: string;
+};
+
+export type ArchitectureTime = {
+  id: string;
+  name: string;
+  prompt: string;
+};
+
+export type ArchitectureTheme = {
+  id: string;
+  name: string;
+  prompt: string;
+};
+
+export type CameraAngleOption = {
+  id: string;
+  name: string;
+  prompt: string;
+};
+
+export type RoomType = {
+  id: string;
+  name: string;
+  prompt: string;
+};
+
+export type BuildingType = {
+  id: string;
+  name: string;
+  prompt: string;
+};
+
+export type ColorScheme = {
+  id: string;
+  name: string;
+  prompt: string;
+};
+
+export type TidyOption = {
+  id: string;
+  name: string;
+  prompt: string;
+};
+
+export type ArchitectureGenerationOptions = {
+  scope: string; // interior, exterior, facade, garden, landscape
+  roomType: string; // Room type for interior (living room, kitchen, etc.)
+  buildingType: string; // Building type for exterior/facade/garden
+  styles: string[]; // Selected style IDs
+  customStyles: string;
+  useCustomStyles: boolean;
+  colorScheme: string; // Color scheme (optional)
+  tidy: string; // tidy or untidy
+  showUnfinished: boolean; // Whether to show unfinished/before version
+  time: string; // Time of day
+  theme: string; // Holiday/seasonal theme
+  cameraAngle: string; // preserve, slight_variation, randomize
+  imageCount: number;
+  aspectRatio: AspectRatio;
+};
+
+export type GeneratedArchitectureImage = {
+  src: string;
+  style: string; // Style name or "Custom"
+  time: string; // Time name
+  theme: string; // Theme name
+  filename: string;
+  imageGenerationPrompt: string;
+  isRegenerating?: boolean;
+  videoPrompt?: string;
+  isPreparing?: boolean;
+  videoSrc?: string;
+  isGeneratingVideo?: boolean;
+  videoGenerationFailed?: boolean;
+  publicUrl?: string;
+  depthMapSrc?: string;
+  isGeneratingDepthMap?: boolean;
+  depthMapGenerationFailed?: boolean;
+};
+
 // --- SHARED DISPLAY TYPE ---
-export type DisplayImage = GeneratedImage | StudioImage | GeneratedBabyImage | ImageStudioResultImage;
+export type DisplayImage = GeneratedImage | StudioImage | GeneratedBabyImage | ImageStudioResultImage | GeneratedArchitectureImage;

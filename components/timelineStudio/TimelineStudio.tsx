@@ -1,9 +1,9 @@
 /// <reference lib="dom" />
 import React, { useRef, useState, useCallback, useEffect } from 'react';
-import { StudioImage, TimelinePair, GeneratedImage, GeneratedBabyImage, ImageStudioResultImage } from '../../types';
+import { StudioImage, TimelinePair, GeneratedImage, GeneratedBabyImage, GeneratedArchitectureImage, ImageStudioResultImage } from '../../types';
 import TimelinePairCard from './TimelinePairCard';
 import TimelinePairLightbox from './TimelinePairLightbox';
-import { TrashIcon, HairStudioIcon, BabyIcon, ImageStudioIcon, AdClonerIcon, UploadIcon, SendToEndIcon, SendToStartIcon, PrepareMagicIcon, VideoIcon, DownloadIcon, TranslateIcon, CloseIcon, EyeOffIcon } from '../Icons';
+import { TrashIcon, HairStudioIcon, BabyIcon, ArchitectureStudioIcon, ImageStudioIcon, AdClonerIcon, UploadIcon, SendToEndIcon, SendToStartIcon, PrepareMagicIcon, VideoIcon, DownloadIcon, TranslateIcon, CloseIcon, EyeOffIcon } from '../Icons';
 import { useTimelineStudio } from '../../hooks/useTimelineStudio';
 import { VideoSettingsPanel } from '../VideoSettingsPanel';
 
@@ -11,10 +11,11 @@ interface TimelineStudioProps {
     logic: ReturnType<typeof useTimelineStudio>;
     hairImages: GeneratedImage[];
     babyImages: GeneratedBabyImage[];
+    architectureImages: GeneratedArchitectureImage[];
     imageStudioImages: ImageStudioResultImage[];
     adClonerImageCount: number;
     showBetaFeatures: boolean;
-    onImport: (source: 'hair' | 'baby' | 'imageStudio' | 'adCloner') => void;
+    onImport: (source: 'hair' | 'baby' | 'architecture' | 'imageStudio' | 'adCloner') => void;
 }
 
 const FinalVideoPlayerModal: React.FC<{
@@ -84,7 +85,7 @@ const SourceButton: React.FC<{
 
 
 const TimelineStudio: React.FC<TimelineStudioProps> = (props) => {
-    const { logic, hairImages, babyImages, imageStudioImages, adClonerImageCount, showBetaFeatures, onImport } = props;
+    const { logic, hairImages, babyImages, architectureImages, imageStudioImages, adClonerImageCount, showBetaFeatures, onImport } = props;
     const {
         timelineImages,
         timelinePairs,
@@ -271,6 +272,14 @@ const TimelineStudio: React.FC<TimelineStudioProps> = (props) => {
                             disabled={babyImages.length === 0 || isBusy}
                         />
                         <SourceButton
+                            icon={<ArchitectureStudioIcon className="w-12 h-12 text-[var(--color-primary-accent)]" />}
+                            title="Import from Architecture Studio"
+                            description="Use your generated architectural designs."
+                            count={architectureImages.length}
+                            onClick={() => onImport('architecture')}
+                            disabled={architectureImages.length === 0 || isBusy}
+                        />
+                        <SourceButton
                             icon={<ImageStudioIcon className="w-12 h-12 text-[var(--color-primary-accent)]" />}
                             title="Import from Image Studio"
                             description="Use your batch generated images."
@@ -327,6 +336,9 @@ const TimelineStudio: React.FC<TimelineStudioProps> = (props) => {
                     </button>
                      <button onClick={() => onImport('baby')} disabled={isBusy || babyImages.length === 0} className="flex items-center gap-2 bg-[var(--color-bg-muted-hover)] hover:bg-[var(--color-border-default)] text-[var(--color-text-main)] font-bold py-2 px-4 rounded-lg transition-colors disabled:bg-[var(--color-bg-surface-light)] disabled:text-[var(--color-text-dimmer)] text-sm" title="Import images from Baby Studio">
                         <BabyIcon className="w-4 h-4" /> Import from Baby
+                    </button>
+                     <button onClick={() => onImport('architecture')} disabled={isBusy || architectureImages.length === 0} className="flex items-center gap-2 bg-[var(--color-bg-muted-hover)] hover:bg-[var(--color-border-default)] text-[var(--color-text-main)] font-bold py-2 px-4 rounded-lg transition-colors disabled:bg-[var(--color-bg-surface-light)] disabled:text-[var(--color-text-dimmer)] text-sm" title="Import images from Architecture Studio">
+                        <ArchitectureStudioIcon className="w-4 h-4" /> Import from Architecture
                     </button>
                      <button onClick={() => onImport('imageStudio')} disabled={isBusy || imageStudioImages.length === 0} className="flex items-center gap-2 bg-[var(--color-bg-muted-hover)] hover:bg-[var(--color-border-default)] text-[var(--color-text-main)] font-bold py-2 px-4 rounded-lg transition-colors disabled:bg-[var(--color-bg-surface-light)] disabled:text-[var(--color-text-dimmer)] text-sm" title="Import images from Image Studio">
                         <ImageStudioIcon className="w-4 h-4" /> Import from Image

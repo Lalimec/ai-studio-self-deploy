@@ -1,10 +1,10 @@
 /// <reference lib="dom" />
 import React, { useRef, useCallback, useState } from 'react';
-import { StudioImage, GeneratedImage, GeneratedBabyImage, ImageStudioResultImage } from '../../types';
+import { StudioImage, GeneratedImage, GeneratedBabyImage, GeneratedArchitectureImage, ImageStudioResultImage } from '../../types';
 import MultiImageUploader from '../MultiImageUploader';
 import {
     PrepareMagicIcon, VideoIcon, TrashIcon, DownloadIcon,
-    HairStudioIcon, BabyIcon, UploadIcon, TranslateIcon,
+    HairStudioIcon, BabyIcon, ArchitectureStudioIcon, UploadIcon, TranslateIcon,
     CheckCircleIcon,
     ImageStudioIcon,
     AdClonerIcon,
@@ -17,10 +17,11 @@ interface VideoStudioProps {
   logic: ReturnType<typeof useVideoStudio>;
   hairImages: GeneratedImage[];
   babyImages: GeneratedBabyImage[];
+  architectureImages: GeneratedArchitectureImage[];
   imageStudioImages: ImageStudioResultImage[];
   adClonerImageCount: number;
   showBetaFeatures: boolean;
-  onImport: (source: 'hair' | 'baby' | 'imageStudio' | 'adCloner') => void;
+  onImport: (source: 'hair' | 'baby' | 'architecture' | 'imageStudio' | 'adCloner') => void;
   onImageClick: (id: string) => void;
 }
 
@@ -126,8 +127,8 @@ const SourceButton: React.FC<{
 );
 
 const VideoStudio: React.FC<VideoStudioProps> = (props) => {
-    const { 
-        logic, hairImages, babyImages, imageStudioImages, adClonerImageCount, showBetaFeatures, onImport, 
+    const {
+        logic, hairImages, babyImages, architectureImages, imageStudioImages, adClonerImageCount, showBetaFeatures, onImport, 
         onImageClick
     } = props;
     
@@ -197,6 +198,14 @@ const VideoStudio: React.FC<VideoStudioProps> = (props) => {
                             disabled={babyImages.length === 0 || isBusy}
                         />
                         <SourceButton
+                            icon={<ArchitectureStudioIcon className="w-12 h-12 text-[var(--color-primary-accent)]" />}
+                            title="Import from Architecture Studio"
+                            description="Use your generated architectural designs."
+                            count={architectureImages.length}
+                            onClick={() => onImport('architecture')}
+                            disabled={architectureImages.length === 0 || isBusy}
+                        />
+                        <SourceButton
                             icon={<ImageStudioIcon className="w-12 h-12 text-[var(--color-primary-accent)]" />}
                             title="Import from Image Studio"
                             description="Use your batch generated images."
@@ -256,6 +265,9 @@ const VideoStudio: React.FC<VideoStudioProps> = (props) => {
                     </button>
                      <button onClick={() => onImport('baby')} disabled={isBusy || babyImages.length === 0} className="flex items-center gap-2 bg-[var(--color-bg-muted-hover)] hover:bg-[var(--color-border-default)] text-[var(--color-text-main)] font-bold py-2 px-4 rounded-lg transition-colors disabled:bg-[var(--color-bg-surface-light)] disabled:text-[var(--color-text-dimmer)] text-sm" title="Import images from Baby Studio">
                         <BabyIcon className="w-4 h-4" /> Import from Baby
+                    </button>
+                     <button onClick={() => onImport('architecture')} disabled={isBusy || architectureImages.length === 0} className="flex items-center gap-2 bg-[var(--color-bg-muted-hover)] hover:bg-[var(--color-border-default)] text-[var(--color-text-main)] font-bold py-2 px-4 rounded-lg transition-colors disabled:bg-[var(--color-bg-surface-light)] disabled:text-[var(--color-text-dimmer)] text-sm" title="Import images from Architecture Studio">
+                        <ArchitectureStudioIcon className="w-4 h-4" /> Import from Architecture
                     </button>
                      <button onClick={() => onImport('imageStudio')} disabled={isBusy || imageStudioImages.length === 0} className="flex items-center gap-2 bg-[var(--color-bg-muted-hover)] hover:bg-[var(--color-border-default)] text-[var(--color-text-main)] font-bold py-2 px-4 rounded-lg transition-colors disabled:bg-[var(--color-bg-surface-light)] disabled:text-[var(--color-text-dimmer)] text-sm" title="Import images from Image Studio">
                         <ImageStudioIcon className="w-4 h-4" /> Import from Image
