@@ -61,12 +61,30 @@ export const useHairStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
 
     const onCropConfirm = (croppedImageDataUrl: string, aspectRatio: number) => {
         const isNewUpload = !croppedImage;
+
+        const addOriginalImage = (sessionIdToUse: string) => {
+            if (!originalFile) return;
+            const timestamp = getTimestamp();
+            const baseFilename = originalFile.name.split('.').slice(0, -1).join('.') || 'image';
+            const sanitizedFilename = baseFilename.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 40);
+            const filename = `${sessionIdToUse}_${sanitizedFilename}_original_${timestamp}.jpg`;
+
+            setGeneratedImages((prev) => [{
+                src: croppedImageDataUrl,
+                hairstyle: { id: 'original', name: 'Original (Before)' },
+                color: 'Original',
+                filename: filename,
+                imageGenerationPrompt: 'Original uploaded image before any transformations'
+            }, ...prev]);
+        };
+
         const applyCrop = () => {
             setCroppedImage(croppedImageDataUrl);
             setCroppedImageAspectRatio(aspectRatio);
             if (isNewUpload) {
                 const newSessionId = generateSetId();
                 setSessionId(newSessionId);
+                addOriginalImage(newSessionId);
                 logUserAction('UPLOAD_HAIR_IMAGE', { sessionId: newSessionId });
             }
         };
@@ -80,6 +98,7 @@ export const useHairStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
                     const newSessionId = generateSetId();
                     applyCrop();
                     setGeneratedImages([]);
+                    addOriginalImage(newSessionId);
                     setSessionId(newSessionId);
                     logUserAction('RECROP_HAIR_IMAGE', { action: 'clear_and_continue', newSessionId });
                 },
