@@ -5,6 +5,7 @@ import TimelinePairCard from './TimelinePairCard';
 import TimelinePairLightbox from './TimelinePairLightbox';
 import { TrashIcon, HairStudioIcon, BabyIcon, ArchitectureStudioIcon, ImageStudioIcon, AdClonerIcon, UploadIcon, SendToEndIcon, SendToStartIcon, PrepareMagicIcon, VideoIcon, DownloadIcon, TranslateIcon, CloseIcon, EyeOffIcon } from '../Icons';
 import { useTimelineStudio } from '../../hooks/useTimelineStudio';
+import { VideoSettingsPanel } from '../VideoSettingsPanel';
 
 interface TimelineStudioProps {
     logic: ReturnType<typeof useTimelineStudio>;
@@ -100,6 +101,7 @@ const TimelineStudio: React.FC<TimelineStudioProps> = (props) => {
         handleSendToStart,
         handleSendToEnd,
         generalPrompt, setGeneralPrompt,
+        videoSettings, setVideoSettings,
         handleEnhanceGeneralPrompt,
         handleTranslateGeneralPrompt,
         handlePrepareAll,
@@ -360,7 +362,13 @@ const TimelineStudio: React.FC<TimelineStudioProps> = (props) => {
                     </button>
                 </div>
             </header>
-            
+
+            <VideoSettingsPanel
+                settings={videoSettings}
+                onSettingsChange={setVideoSettings}
+                disabled={isBusy}
+            />
+
             <div 
                 className={`relative bg-[var(--color-bg-surface-light)] p-4 rounded-xl border border-[var(--color-border-default)] transition-all ${isDraggingOver ? 'border-dashed border-2 border-[var(--color-primary-accent)] scale-105 bg-[var(--color-bg-muted-hover)]' : ''}`}
                 onDragEnter={handleFileDragEnter}

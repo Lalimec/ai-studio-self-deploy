@@ -4,6 +4,7 @@ import { ArchitectureGenerationOptions, OriginalImageState } from '../../types';
 import ImageUploader from '../ImageUploader';
 import ArchitectureOptionsPanel from './ArchitectureOptionsPanel';
 import ImageGrid from '../ImageGrid';
+import { VideoSettingsPanel } from '../VideoSettingsPanel';
 import { TrashIcon, HelpIcon, DownloadIcon, PrepareMagicIcon, VideoIcon, DepthMapIcon, AlertCircleIcon, CheckCircleIcon } from '../Icons';
 import { useArchitectureStudio } from '../../hooks/useArchitectureStudio';
 
@@ -116,6 +117,7 @@ const ArchitectureStudio: React.FC<ArchitectureStudioProps> = ({
         handleStartOver,
         handleClearImageAndResults,
         sessionId,
+        videoSettings, setVideoSettings,
         handlePrepareAll,
         isPreparing,
         handleGenerateAllVideos,
@@ -184,6 +186,13 @@ const ArchitectureStudio: React.FC<ArchitectureStudioProps> = ({
                         <button onClick={handleDownloadAll} disabled={isBusy || generatedImages.length === 0} className="flex items-center gap-2 bg-[var(--color-secondary)] hover:bg-[var(--color-secondary-hover)] text-[var(--color-text-on-primary)] font-bold py-2 px-4 rounded-lg transition-colors disabled:bg-[var(--color-bg-muted)] disabled:text-[var(--color-text-dimmer)] text-sm"><DownloadIcon className="w-4 h-4" />Download All</button>
                     </div>
                 </div>
+
+                <VideoSettingsPanel
+                    settings={videoSettings}
+                    onSettingsChange={setVideoSettings}
+                    disabled={isBusy}
+                />
+
                 {pendingImageCount > 0 && (
                     <div className="mb-4 flex items-center justify-center gap-3 p-3 bg-[var(--color-bg-surface-light)] rounded-lg text-sm text-[var(--color-text-light)]">
                         <div className="w-5 h-5 border-2 border-dashed rounded-full animate-spin border-[var(--color-primary-accent)]"></div>

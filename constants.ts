@@ -712,3 +712,30 @@ export const analysisModels: { id: AnalysisModel; name: string }[] = [
     { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro' },
     { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash' },
 ];
+
+// --- VIDEO GENERATION CONSTANTS ---
+
+import { VideoModel, VideoResolution, VideoDuration } from './types';
+
+export const videoModels: {
+    id: VideoModel;
+    name: string;
+    supportedResolutions: VideoResolution[];
+    supportedDurations: VideoDuration[];
+    supportedAspectRatios: string[];
+    defaultResolution: VideoResolution;
+    defaultDuration: VideoDuration;
+    defaultAspectRatio: string;
+}[] = [
+    {
+        id: 'seedance-v1-pro',
+        name: 'Seedance V1 Pro',
+        supportedResolutions: ['480p', '720p', '1080p'],
+        supportedDurations: [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+        supportedAspectRatios: ['auto', '1:1', '9:16', '16:9', '21:9'],
+        defaultResolution: '720p',
+        defaultDuration: 5,
+        defaultAspectRatio: 'auto',
+    },
+    // Future models can be added here with their own configurations
+];

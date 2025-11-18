@@ -78,6 +78,9 @@ type VideoGenerationParams = {
     startImageUrl: string;
     endImageUrl?: string;
     videoPrompt: string;
+    resolution?: string;
+    duration?: number;
+    aspectRatio?: string;
 };
 
 const generateSingleVideo = async (params: VideoGenerationParams): Promise<string> => {
@@ -88,9 +91,9 @@ const generateSingleVideo = async (params: VideoGenerationParams): Promise<strin
     const payload: { [key: string]: any } = {
         prompt: params.videoPrompt,
         image_url: params.startImageUrl,
-        aspect_ratio: 'auto',
-        resolution: '720p',
-        duration: '5'
+        aspect_ratio: params.aspectRatio || 'auto',
+        resolution: params.resolution || '720p',
+        duration: params.duration ? params.duration.toString() : '5'
     };
 
     if (params.endImageUrl) {
