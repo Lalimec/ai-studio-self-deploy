@@ -108,6 +108,12 @@ const GlobalSettingsModal: React.FC<GlobalSettingsModalProps> = ({
                                 onChange={(e) => onToggleNanoBananaWebhookSetting('baby', e.target.checked)}
                             />
                             <Toggle
+                                id="architecture-webhook-toggle"
+                                label="Architecture Studio"
+                                checked={nanoBananaWebhookSettings.architecture}
+                                onChange={(e) => onToggleNanoBananaWebhookSetting('architecture', e.target.checked)}
+                            />
+                            <Toggle
                                 id="image-webhook-toggle"
                                 label="Image Studio"
                                 checked={nanoBananaWebhookSettings.image}

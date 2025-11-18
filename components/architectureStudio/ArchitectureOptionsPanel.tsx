@@ -9,9 +9,9 @@ import {
     LANDSCAPE_STYLES,
     ARCHITECTURE_TIMES,
     ARCHITECTURE_THEMES,
-    CAMERA_ANGLE_OPTIONS,
-    ASPECT_RATIO_OPTIONS
+    CAMERA_ANGLE_OPTIONS
 } from '../../architectureConstants';
+import { ASPECT_RATIO_OPTIONS } from '../../constants';
 
 interface OptionsPanelProps {
     options: ArchitectureGenerationOptions;

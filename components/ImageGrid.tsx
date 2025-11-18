@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { DownloadIcon, RegenerateIcon, TrashIcon, PrepareMagicIcon, CheckCircleIcon, VideoIcon, HairStudioIcon, BabyIcon, AlertCircleIcon } from './Icons';
+import { DownloadIcon, RegenerateIcon, TrashIcon, PrepareMagicIcon, CheckCircleIcon, VideoIcon, HairStudioIcon, BabyIcon, ArchitectureStudioIcon, AlertCircleIcon } from './Icons';
 import { DisplayImage } from '../types';
 
 interface ImageGridProps {
@@ -12,7 +12,7 @@ interface ImageGridProps {
   onReprepare: (id: string) => void;
   onDownloadSingle: (id: string) => void;
   onGenerateSingleVideo: (id: string) => void;
-  mode?: 'hairStudio' | 'videoStudio' | 'babyStudio';
+  mode?: 'hairStudio' | 'videoStudio' | 'babyStudio' | 'architectureStudio';
 }
 
 const ImageCard: React.FC<Omit<ImageGridProps, 'images' | 'pendingCount' | 'placeholderAspectRatio'> & { image: DisplayImage }> = ({
@@ -33,7 +33,13 @@ const ImageCard: React.FC<Omit<ImageGridProps, 'images' | 'pendingCount' | 'plac
   const videoGenerationFailed = 'videoGenerationFailed' in image && image.videoGenerationFailed;
   const isBusy = isRegenerating || isPreparing || isGeneratingVideo;
   
-  const title = 'hairstyle' in image ? image.hairstyle.name : ('description' in image ? image.description : image.filename);
+  const title = 'hairstyle' in image
+    ? image.hairstyle.name
+    : ('description' in image
+      ? image.description
+      : ('style' in image
+        ? image.style
+        : image.filename));
   const color = 'color' in image ? image.color : 'N/A';
   
   const uniqueId = 'id' in image ? image.id : image.filename;
@@ -192,6 +198,10 @@ const ImageGrid: React.FC<ImageGridProps> = ({
               icon = <BabyIcon className="mx-auto h-24 w-24 text-[var(--color-border-default)] opacity-75"/>;
               title = "Family Album is Empty";
               description = "Upload photos for both parents and click Generate!";
+          } else if (mode === 'architectureStudio') {
+              icon = <ArchitectureStudioIcon className="mx-auto h-24 w-24 text-[var(--color-border-default)] opacity-75"/>;
+              title = "Design Gallery Empty";
+              description = "Upload an architectural photo and select styles to begin!";
           } else {
               // Fallback for video studio or other modes.
               icon = <VideoIcon className="mx-auto h-24 w-24 text-[var(--color-border-default)] opacity-75"/>;
