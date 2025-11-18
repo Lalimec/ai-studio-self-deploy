@@ -69,6 +69,8 @@ const ArchitectureStudioHelp: React.FC = () => (
                 <li>Start with "Generate Selected Styles" mode with 1-2 styles to see specific transformations</li>
                 <li>Use the "Unstyled Version" button to see a clean render without stylistic changes</li>
                 <li>Room/Building Type auto-detection works well, but manual override can help with unusual spaces</li>
+                <li><strong>Age-Specific Rooms:</strong> Choose specific age ranges for children's rooms (Nursery 0-2, Toddler 2-5, Child 6-12, Teen 13-18) for age-appropriate design</li>
+                <li><strong>Bathroom Types:</strong> Select specific bathroom types (Standard, Master, Powder Room, Children's) for better tailored results</li>
                 <li>Combine time-of-day and seasonal themes for dramatic effects</li>
                 <li>The "Styled Unfinished State" option shows before/during renovation states with your selected style applied</li>
                 <li>Depth maps are useful for 3D visualization and understanding spatial relationships</li>
