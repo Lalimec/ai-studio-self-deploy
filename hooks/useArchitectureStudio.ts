@@ -53,13 +53,15 @@ export const useArchitectureStudio = ({
         styles: [],
         customStyles: '',
         useCustomStyles: false,
+        styleSelectionMode: 'selected',
         colorScheme: 'none',
         tidy: 'tidy',
         showUnfinished: false,
+        generateUnstyledVersion: false,
         time: 'current',
         theme: 'none',
         cameraAngle: 'preserve',
-        imageCount: 12,
+        imageCount: 1,
         aspectRatio: 'auto',
     });
     const [generatedImages, setGeneratedImages] = useState<GeneratedArchitectureImage[]>([]);
@@ -128,7 +130,16 @@ export const useArchitectureStudio = ({
 
         const currentOptions = { ...options };
         logUserAction('GENERATE_ARCHITECTURAL_STYLES', { options: currentOptions, sessionId });
-        const batchSize = currentOptions.imageCount;
+
+        // Calculate batch size based on style selection mode
+        let batchSize = currentOptions.imageCount;
+        if (currentOptions.styleSelectionMode === 'selected') {
+            const styleCount = currentOptions.useCustomStyles && currentOptions.customStyles.trim()
+                ? currentOptions.customStyles.split(',').filter(s => s.trim()).length
+                : currentOptions.styles.length || 1;
+            batchSize = styleCount * currentOptions.imageCount;
+        }
+
         setPendingImageCount(prev => prev + batchSize);
         const timestamp = getTimestamp();
         setGenerationTimestamp(timestamp);
@@ -158,6 +169,55 @@ export const useArchitectureStudio = ({
         ).catch(err => {
             addToast(err instanceof Error ? err.message : 'A top-level generation error occurred.', 'error');
             setPendingImageCount(prev => Math.max(0, prev - batchSize));
+        });
+    };
+
+    const handleGenerateUnstyled = () => {
+        if (!croppedImage || !originalFile || !sessionId) return;
+
+        // Create unstyled options: no style, no time, no theme, no color scheme
+        const unstyledOptions: ArchitectureGenerationOptions = {
+            ...options,
+            styles: [],
+            customStyles: '',
+            useCustomStyles: false,
+            styleSelectionMode: 'random',
+            colorScheme: 'none',
+            time: 'current',
+            theme: 'none',
+            showUnfinished: false,
+            imageCount: 1, // Always generate just 1 unstyled version
+        };
+
+        logUserAction('GENERATE_UNSTYLED_ARCHITECTURAL_VERSION', { sessionId });
+        setPendingImageCount(prev => prev + 1);
+        const timestamp = getTimestamp();
+        setGenerationTimestamp(timestamp);
+
+        generateArchitecturalStyles(
+            croppedImage,
+            unstyledOptions,
+            originalFile.name,
+            timestamp,
+            sessionId,
+            useNanoBananaWebhook,
+            (newImage) => {
+                setGeneratedImages((prev) => [{
+                    src: newImage.imageUrl,
+                    style: 'Unstyled Original',
+                    time: newImage.time,
+                    theme: newImage.theme,
+                    filename: newImage.filename,
+                    imageGenerationPrompt: newImage.imageGenerationPrompt
+                }, ...prev]);
+            },
+            (errorMessage) => addToast(errorMessage, 'error'),
+            () => {
+                setPendingImageCount(prev => Math.max(0, prev - 1));
+            }
+        ).catch(err => {
+            addToast(err instanceof Error ? err.message : 'An error occurred during unstyled generation.', 'error');
+            setPendingImageCount(prev => Math.max(0, prev - 1));
         });
     };
 
@@ -579,6 +639,7 @@ export const useArchitectureStudio = ({
         onCropConfirm,
         handleClearImageAndResults,
         handleGenerate,
+        handleGenerateUnstyled,
         handleStartOver,
         handleRegenerateSingle,
         handlePrepareSingleImage,

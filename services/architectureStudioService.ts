@@ -20,8 +20,6 @@ import { Constance } from './endpoints';
 import { generateFigureImage } from './geminiService';
 import { uploadImageFromDataUrl } from './imageUploadService';
 
-const imageModel = Constance.models.image.nanoBanana;
-
 type GenerationTask = {
   styleName: string;
   stylePrompt: string;
@@ -98,7 +96,7 @@ const createGenerationTasks = (
     sessionId: string,
     timestamp: string
 ): GenerationTask[] => {
-  const { scope, styles, customStyles, useCustomStyles, time, theme, cameraAngle, imageCount } = options;
+  const { scope, styles, customStyles, useCustomStyles, time, theme, cameraAngle, imageCount, styleSelectionMode } = options;
 
   // 1. Style Pool (scope-specific)
   let stylePool: { name: string; prompt: string }[];
@@ -106,11 +104,11 @@ const createGenerationTasks = (
       stylePool = customStyles.split(',').map(s => s.trim()).filter(Boolean).map((s, i) => ({ name: s, prompt: s }));
   } else {
       const availableStyles = getStylesForScope(scope);
-      if (styles.length === 0) {
-        // If no styles selected, use all styles for this scope
+      if (styleSelectionMode === 'random' || styles.length === 0) {
+        // Random mode: use all styles for this scope
         stylePool = availableStyles.map(s => ({ name: s.name, prompt: s.prompt }));
       } else {
-        // Use selected styles
+        // Selected mode: use only selected styles
         stylePool = availableStyles
           .filter(s => styles.includes(s.id))
           .map(s => ({ name: s.name, prompt: s.prompt }));
@@ -176,33 +174,69 @@ const createGenerationTasks = (
   const getRandomElement = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
 
   const tasks: GenerationTask[] = [];
-  for (let i = 0; i < imageCount; i++) {
-    const style = getRandomElement(stylePool);
 
-    const uniqueTimestamp = `${timestamp}_${i.toString().padStart(2, '0')}`;
-    const filename = generateFilename(
-      originalFilename,
-      scope,
-      style.name,
-      timeName,
-      themeName,
-      sessionId,
-      uniqueTimestamp
-    );
+  if (styleSelectionMode === 'selected') {
+    // Selected mode: generate imageCount images for each selected style
+    let taskIndex = 0;
+    for (const style of stylePool) {
+      for (let i = 0; i < imageCount; i++) {
+        const uniqueTimestamp = `${timestamp}_${taskIndex.toString().padStart(2, '0')}`;
+        const filename = generateFilename(
+          originalFilename,
+          scope,
+          style.name,
+          timeName,
+          themeName,
+          sessionId,
+          uniqueTimestamp
+        );
 
-    tasks.push({
-      styleName: style.name,
-      stylePrompt: style.prompt,
-      roomTypePrompt,
-      buildingTypePrompt,
-      colorSchemePrompt,
-      tidyPrompt,
-      unfinishedPrompt,
-      timePrompt,
-      themePrompt,
-      cameraAnglePrompt,
-      filename
-    });
+        tasks.push({
+          styleName: style.name,
+          stylePrompt: style.prompt,
+          roomTypePrompt,
+          buildingTypePrompt,
+          colorSchemePrompt,
+          tidyPrompt,
+          unfinishedPrompt,
+          timePrompt,
+          themePrompt,
+          cameraAnglePrompt,
+          filename
+        });
+        taskIndex++;
+      }
+    }
+  } else {
+    // Random mode: generate imageCount total images, randomly selecting styles
+    for (let i = 0; i < imageCount; i++) {
+      const style = getRandomElement(stylePool);
+
+      const uniqueTimestamp = `${timestamp}_${i.toString().padStart(2, '0')}`;
+      const filename = generateFilename(
+        originalFilename,
+        scope,
+        style.name,
+        timeName,
+        themeName,
+        sessionId,
+        uniqueTimestamp
+      );
+
+      tasks.push({
+        styleName: style.name,
+        stylePrompt: style.prompt,
+        roomTypePrompt,
+        buildingTypePrompt,
+        colorSchemePrompt,
+        tidyPrompt,
+        unfinishedPrompt,
+        timePrompt,
+        themePrompt,
+        cameraAnglePrompt,
+        filename
+      });
+    }
   }
 
   return tasks;

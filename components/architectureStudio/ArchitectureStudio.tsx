@@ -26,6 +26,7 @@ const ArchitectureStudio: React.FC<ArchitectureStudioProps> = ({
         pendingImageCount,
         isBusy,
         handleGenerate,
+        handleGenerateUnstyled,
         handleStartOver,
         handleClearImageAndResults,
         sessionId,
@@ -68,7 +69,10 @@ const ArchitectureStudio: React.FC<ArchitectureStudioProps> = ({
                     <button onClick={handleGenerate} disabled={isGenerateDisabled} className="w-full mt-6 bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] disabled:bg-[var(--color-bg-muted)] disabled:cursor-not-allowed text-[var(--color-text-on-primary)] font-bold py-3 px-4 rounded-lg transition-colors text-lg shadow-md shadow-[var(--color-shadow-primary)]/30">
                         {pendingImageCount > 0 ? `Generating... (${pendingImageCount} left)` : 'Generate Architectural Styles'}
                     </button>
-                    <button onClick={handleStartOver} disabled={isBusy} className="w-full mt-3 bg-[var(--color-bg-muted)] hover:bg-[var(--color-bg-muted-hover)] text-[var(--color-text-main)] font-bold py-2 px-4 rounded-lg transition-colors disabled:bg-[var(--color-bg-surface)] disabled:text-[var(--color-text-dimmer)] disabled:cursor-not-allowed text-sm">Start Over</button>
+                    <button onClick={handleGenerateUnstyled} disabled={isGenerateDisabled} className="w-full mt-3 bg-[var(--color-action-generate)] hover:bg-[var(--color-action-generate-hover)] disabled:bg-[var(--color-bg-muted)] disabled:cursor-not-allowed text-[var(--color-text-on-primary)] font-semibold py-2 px-4 rounded-lg transition-colors text-sm">
+                        Generate Unstyled Version
+                    </button>
+                    <button onClick={handleStartOver} disabled={isBusy} className="w-full mt-2 bg-[var(--color-bg-muted)] hover:bg-[var(--color-bg-muted-hover)] text-[var(--color-text-main)] font-bold py-2 px-4 rounded-lg transition-colors disabled:bg-[var(--color-bg-surface)] disabled:text-[var(--color-text-dimmer)] disabled:cursor-not-allowed text-sm">Start Over</button>
                 </div>
             </div>
 
