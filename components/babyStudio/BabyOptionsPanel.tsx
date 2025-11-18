@@ -1,13 +1,12 @@
 import React from 'react';
-import { BabyGenerationOptions, BabyAge, BabyGender, AspectRatio } from '../../types';
+import { BabyGenerationOptions, BabyAge, BabyGender } from '../../types';
 import {
     BABY_COMPOSITIONS,
     BABY_BACKGROUNDS,
     BABY_CLOTHING_STYLES_UNISEX,
     BABY_CLOTHING_STYLES_BOY,
     BABY_CLOTHING_STYLES_GIRL,
-    BABY_ACTIONS,
-    ASPECT_RATIO_OPTIONS
+    BABY_ACTIONS
 } from '../../constants';
 
 interface BabyOptionsPanelProps {
@@ -34,26 +33,6 @@ const FilterButton: React.FC<{
     {label}
   </button>
 );
-
-const AspectRatioButton: React.FC<{
-  label: string;
-  isActive: boolean;
-  onClick: () => void;
-  title?: string;
-  disabled: boolean;
-}> = ({ label, isActive, onClick, title, disabled }) => (
-  <button
-    onClick={onClick}
-    disabled={disabled}
-    title={title}
-    className={`py-1 px-2 rounded-md font-semibold transition-colors text-xs disabled:opacity-50 disabled:cursor-not-allowed ${
-      isActive ? 'bg-[var(--color-secondary)] text-[var(--color-text-on-primary)]' : 'bg-[var(--color-bg-muted)] hover:bg-[var(--color-bg-muted-hover)]'
-    }`}
-  >
-    {label}
-  </button>
-);
-
 
 const BabyOptionsPanel: React.FC<BabyOptionsPanelProps> = ({ options, setOptions, disabled }) => {
   
@@ -152,10 +131,6 @@ const BabyOptionsPanel: React.FC<BabyOptionsPanelProps> = ({ options, setOptions
         setOptions(prev => ({ ...prev, age }));
     };
 
-    const handleImageCountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setOptions(prev => ({ ...prev, imageCount: parseInt(e.target.value, 10) }));
-    };
-
     let clothingCategoriesToShow: { name: string }[] = [];
     if (options.gender === BabyGender.Boy) {
         clothingCategoriesToShow = [...BABY_CLOTHING_STYLES_UNISEX, ...BABY_CLOTHING_STYLES_BOY];
@@ -222,47 +197,12 @@ const BabyOptionsPanel: React.FC<BabyOptionsPanelProps> = ({ options, setOptions
         placeholder="e.g., tiny tuxedo, little astronaut suit"
       />
       
-      <CustomizableSection 
+      <CustomizableSection
         title="6. Action / Expression"
         optionKey="action"
         categories={BABY_ACTIONS}
         placeholder="e.g., riding a tricycle, conducting an orchestra"
       />
-      
-      <div>
-        <label className="block text-sm font-medium text-[var(--color-text-light)] mb-2">7. Generation Aspect Ratio</label>
-        <div className="flex flex-wrap gap-2">
-            {ASPECT_RATIO_OPTIONS.map(({ label, value }) => (
-                <AspectRatioButton
-                    key={value}
-                    label={label}
-                    isActive={options.aspectRatio === value}
-                    onClick={() => setOptions(prev => ({ ...prev, aspectRatio: value }))}
-                    title={`Set aspect ratio to ${label}`}
-                    disabled={disabled}
-                />
-            ))}
-        </div>
-      </div>
-
-      <div>
-        <label htmlFor="image-count-slider-baby" className="block text-sm font-medium text-[var(--color-text-light)] mb-2">8. Number of Images</label>
-        <div className="flex items-center gap-4">
-          <input
-            id="image-count-slider-baby"
-            type="range"
-            min="1"
-            max="12"
-            step="1"
-            value={options.imageCount}
-            onChange={handleImageCountChange}
-            disabled={disabled}
-            className="w-full h-2 bg-[var(--color-border-default)] rounded-lg appearance-none cursor-pointer accent-[var(--color-primary)] disabled:opacity-50"
-            title="Select the number of images to generate (1-12)"
-          />
-          <span className="font-semibold text-[var(--color-primary-accent)] w-8 text-center">{options.imageCount}</span>
-        </div>
-      </div>
     </div>
   );
 };

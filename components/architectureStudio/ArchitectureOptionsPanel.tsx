@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArchitectureGenerationOptions, AspectRatio } from '../../types';
+import { ArchitectureGenerationOptions } from '../../types';
 import {
     ARCHITECTURE_SCOPES,
     INTERIOR_STYLES,
@@ -15,7 +15,6 @@ import {
     COLOR_SCHEMES,
     TIDY_OPTIONS
 } from '../../architectureConstants';
-import { ASPECT_RATIO_OPTIONS } from '../../constants';
 
 interface OptionsPanelProps {
     options: ArchitectureGenerationOptions;
@@ -38,25 +37,6 @@ const FilterButton: React.FC<{
         className={`py-2 px-3 rounded-md font-semibold transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed ${
             isActive ? 'bg-[var(--color-secondary)] text-[var(--color-text-on-primary)]' : 'bg-[var(--color-bg-muted)] hover:bg-[var(--color-bg-muted-hover)]'
         } ${className}`}
-    >
-        {label}
-    </button>
-);
-
-const AspectRatioButton: React.FC<{
-    label: string;
-    isActive: boolean;
-    onClick: () => void;
-    title?: string;
-    disabled: boolean;
-}> = ({ label, isActive, onClick, title, disabled }) => (
-    <button
-        onClick={onClick}
-        disabled={disabled}
-        title={title}
-        className={`py-1 px-2 rounded-md font-semibold transition-colors text-xs disabled:opacity-50 disabled:cursor-not-allowed ${
-            isActive ? 'bg-[var(--color-secondary)] text-[var(--color-text-on-primary)]' : 'bg-[var(--color-bg-muted)] hover:bg-[var(--color-bg-muted-hover)]'
-        }`}
     >
         {label}
     </button>
@@ -126,10 +106,6 @@ const ArchitectureOptionsPanel: React.FC<OptionsPanelProps> = ({ options, setOpt
         setOptions(prev => ({ ...prev, cameraAngle: angleId }));
     };
 
-    const handleImageCountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setOptions(prev => ({ ...prev, imageCount: parseInt(e.target.value, 10) }));
-    };
-
     const handleRoomTypeChange = (roomTypeId: string) => {
         setOptions(prev => ({ ...prev, roomType: roomTypeId }));
     };
@@ -173,77 +149,11 @@ const ArchitectureOptionsPanel: React.FC<OptionsPanelProps> = ({ options, setOpt
                 </div>
             </div>
 
-            {/* 2. Aspect Ratio */}
-            <div>
-                <label className="block text-sm font-medium text-[var(--color-text-light)] mb-2">2. Generation Aspect Ratio</label>
-                <div className="flex flex-wrap gap-2">
-                    {ASPECT_RATIO_OPTIONS.map(({ label, value }) => (
-                        <AspectRatioButton
-                            key={value}
-                            label={label}
-                            isActive={options.aspectRatio === value}
-                            onClick={() => setOptions(prev => ({ ...prev, aspectRatio: value }))}
-                            title={`Set aspect ratio to ${label}`}
-                            disabled={disabled}
-                        />
-                    ))}
-                </div>
-            </div>
-
-            {/* 3. Style Selection Mode */}
-            <div>
-                <label className="block text-sm font-medium text-[var(--color-text-light)] mb-2">3. Style Selection Mode</label>
-                <p className="text-xs text-[var(--color-text-dimmer)] mb-2">Choose how styles are selected for generation.</p>
-                <div className="flex flex-wrap gap-2">
-                    <FilterButton
-                        label="Generate Selected Styles"
-                        isActive={options.styleSelectionMode === 'selected'}
-                        onClick={() => setOptions(prev => ({ ...prev, styleSelectionMode: 'selected' }))}
-                        title="Generate images for each selected style (imageCount × styles)"
-                        buttonDisabled={disabled}
-                    />
-                    <FilterButton
-                        label="Randomize Styles"
-                        isActive={options.styleSelectionMode === 'random'}
-                        onClick={() => setOptions(prev => ({ ...prev, styleSelectionMode: 'random' }))}
-                        title="Randomly pick styles from selected or all styles"
-                        buttonDisabled={disabled}
-                    />
-                </div>
-            </div>
-
-            {/* 4. Number of Images Per Style */}
-            <div>
-                <label htmlFor="image-count-slider" className="block text-sm font-medium text-[var(--color-text-light)] mb-2">
-                    4. Images {options.styleSelectionMode === 'selected' ? 'Per Style' : 'Total'}
-                </label>
-                <p className="text-xs text-[var(--color-text-dimmer)] mb-2">
-                    {options.styleSelectionMode === 'selected'
-                        ? 'Number of variations to generate for each selected style.'
-                        : 'Total number of images to generate with random styles.'}
-                </p>
-                <div className="flex items-center gap-4">
-                    <input
-                        id="image-count-slider"
-                        type="range"
-                        min="1"
-                        max="4"
-                        step="1"
-                        value={options.imageCount}
-                        onChange={handleImageCountChange}
-                        disabled={disabled}
-                        className="w-full h-2 bg-[var(--color-border-default)] rounded-lg appearance-none cursor-pointer accent-[var(--color-primary)] disabled:opacity-50"
-                        title="Select the number of images to generate (1-4)"
-                    />
-                    <span className="font-semibold text-[var(--color-primary-accent)] w-8 text-center">{options.imageCount}</span>
-                </div>
-            </div>
-
-            {/* 5. Room/Building Type (Optional - Collapsible) */}
+            {/* 2. Room/Building Type (Optional - Collapsible) */}
             {options.scope === 'interior' && (
                 <details className="group">
                     <summary className="block text-sm font-medium text-[var(--color-text-light)] mb-2 cursor-pointer hover:text-[var(--color-primary)]">
-                        5. Room Type (Optional - Auto-Detect Available) ▼
+                        2. Room Type (Optional - Auto-Detect Available) ▼
                     </summary>
                     <p className="text-xs text-[var(--color-text-dimmer)] mb-2 mt-2">Override automatic detection by specifying room type.</p>
                     <div className="flex flex-wrap gap-2 mt-2">
@@ -264,7 +174,7 @@ const ArchitectureOptionsPanel: React.FC<OptionsPanelProps> = ({ options, setOpt
             {(options.scope === 'exterior' || options.scope === 'facade' || options.scope === 'garden' || options.scope === 'landscape') && (
                 <details className="group">
                     <summary className="block text-sm font-medium text-[var(--color-text-light)] mb-2 cursor-pointer hover:text-[var(--color-primary)]">
-                        5. Building / Space Type (Optional - Auto-Detect Available) ▼
+                        2. Building / Space Type (Optional - Auto-Detect Available) ▼
                     </summary>
                     <p className="text-xs text-[var(--color-text-dimmer)] mb-2 mt-2">Override automatic detection by specifying building type.</p>
                     <div className="flex flex-wrap gap-2 mt-2">
@@ -282,9 +192,9 @@ const ArchitectureOptionsPanel: React.FC<OptionsPanelProps> = ({ options, setOpt
                 </details>
             )}
 
-            {/* 6. Styles */}
+            {/* 3. Styles */}
             <div>
-                <label className="block text-sm font-medium text-[var(--color-text-light)] mb-2">6. Styles</label>
+                <label className="block text-sm font-medium text-[var(--color-text-light)] mb-2">3. Styles</label>
                 <p className="text-xs text-[var(--color-text-dimmer)] mb-2">
                     {options.styleSelectionMode === 'selected'
                         ? 'Select specific styles to generate. Each style will generate the number of images specified above.'
@@ -323,9 +233,9 @@ const ArchitectureOptionsPanel: React.FC<OptionsPanelProps> = ({ options, setOpt
                 )}
             </div>
 
-            {/* 7. Show Unfinished/Before Version */}
+            {/* 4. Show Unfinished/Before Version */}
             <div>
-                <label className="block text-sm font-medium text-[var(--color-text-light)] mb-2">7. Before/After View</label>
+                <label className="block text-sm font-medium text-[var(--color-text-light)] mb-2">4. Before/After View</label>
                 <p className="text-xs text-[var(--color-text-dimmer)] mb-2">Generate styled unfinished/before-renovation versions.</p>
                 <div className="flex items-center gap-3">
                     <label className="flex items-center cursor-pointer">
@@ -341,9 +251,9 @@ const ArchitectureOptionsPanel: React.FC<OptionsPanelProps> = ({ options, setOpt
                 </div>
             </div>
 
-            {/* 8. Tidiness Level */}
+            {/* 5. Tidiness Level */}
             <div>
-                <label className="block text-sm font-medium text-[var(--color-text-light)] mb-2">8. Tidiness Level</label>
+                <label className="block text-sm font-medium text-[var(--color-text-light)] mb-2">5. Tidiness Level</label>
                 <p className="text-xs text-[var(--color-text-dimmer)] mb-2">Choose between neat and organized or lived-in appearance.</p>
                 <div className="flex flex-wrap gap-2">
                     {TIDY_OPTIONS.map(tidyOption => (
@@ -359,9 +269,9 @@ const ArchitectureOptionsPanel: React.FC<OptionsPanelProps> = ({ options, setOpt
                 </div>
             </div>
 
-            {/* 9. Color Scheme */}
+            {/* 6. Color Scheme */}
             <div>
-                <label className="block text-sm font-medium text-[var(--color-text-light)] mb-2">9. Color Scheme (Optional)</label>
+                <label className="block text-sm font-medium text-[var(--color-text-light)] mb-2">6. Color Scheme (Optional)</label>
                 <div className="flex flex-wrap gap-2">
                     {COLOR_SCHEMES.map(colorScheme => (
                         <FilterButton
@@ -376,9 +286,9 @@ const ArchitectureOptionsPanel: React.FC<OptionsPanelProps> = ({ options, setOpt
                 </div>
             </div>
 
-            {/* 10. Time of Day */}
+            {/* 7. Time of Day */}
             <div>
-                <label className="block text-sm font-medium text-[var(--color-text-light)] mb-2">10. Time of Day / Lighting</label>
+                <label className="block text-sm font-medium text-[var(--color-text-light)] mb-2">7. Time of Day / Lighting</label>
                 <div className="flex flex-wrap gap-2">
                     {ARCHITECTURE_TIMES.map(time => (
                         <FilterButton
@@ -393,9 +303,9 @@ const ArchitectureOptionsPanel: React.FC<OptionsPanelProps> = ({ options, setOpt
                 </div>
             </div>
 
-            {/* 11. Theme / Season */}
+            {/* 8. Theme / Season */}
             <div>
-                <label className="block text-sm font-medium text-[var(--color-text-light)] mb-2">11. Theme / Season</label>
+                <label className="block text-sm font-medium text-[var(--color-text-light)] mb-2">8. Theme / Season</label>
                 <div className="flex flex-wrap gap-2">
                     {ARCHITECTURE_THEMES.map(theme => (
                         <FilterButton
@@ -410,9 +320,9 @@ const ArchitectureOptionsPanel: React.FC<OptionsPanelProps> = ({ options, setOpt
                 </div>
             </div>
 
-            {/* 12. Camera Angle */}
+            {/* 9. Camera Angle */}
             <div>
-                <label className="block text-sm font-medium text-[var(--color-text-light)] mb-2">12. Camera Angle</label>
+                <label className="block text-sm font-medium text-[var(--color-text-light)] mb-2">9. Camera Angle</label>
                 <p className="text-xs text-[var(--color-text-dimmer)] mb-2">Control how the camera perspective is handled.</p>
                 <div className="flex flex-wrap gap-2">
                     {CAMERA_ANGLE_OPTIONS.map(angle => (
