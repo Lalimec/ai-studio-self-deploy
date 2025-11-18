@@ -301,15 +301,34 @@ export const useHairStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
 
     const handlePrepareAll = async () => {
         const unpreparedImages = generatedImages.filter(img => !img.videoPrompt && !img.isPreparing);
-        if (unpreparedImages.length === 0) {
+        const needsOriginalPrep = originalImage.croppedSrc && !originalImage.videoPrompt && !originalImage.isPreparing;
+        const totalCount = unpreparedImages.length + (needsOriginalPrep ? 1 : 0);
+
+        if (totalCount === 0) {
             addToast("All images are already prepared or being prepared.", "info");
             return;
         }
-        logUserAction('PREPARE_HAIR_VIDEO_ALL', { count: unpreparedImages.length, sessionId });
+        logUserAction('PREPARE_HAIR_VIDEO_ALL', { count: totalCount, sessionId });
         setIsPreparing(true);
         setGeneratedImages(prev => prev.map(img => unpreparedImages.some(unprepared => unprepared.filename === img.filename) ? { ...img, isPreparing: true } : img));
-        addToast(`Preparing ${unpreparedImages.length} video prompts...`, "info");
+        if (needsOriginalPrep) {
+            setOriginalImage(prev => ({ ...prev, isPreparing: true }));
+        }
+        addToast(`Preparing ${totalCount} video prompts...`, "info");
         try {
+            // Prepare original image if needed
+            if (needsOriginalPrep) {
+                try {
+                    const imageBlob = dataUrlToBlob(originalImage.croppedSrc!);
+                    const prompt = await generateVideoPromptForImage(imageBlob);
+                    setOriginalImage(prev => ({ ...prev, videoPrompt: prompt, isPreparing: false }));
+                } catch (error) {
+                    console.error('Failed to generate video prompt for original image:', error);
+                    addToast(`Failed on original image: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
+                    setOriginalImage(prev => ({ ...prev, isPreparing: false }));
+                }
+            }
+
             await prepareVideoPrompts(unpreparedImages,
                 (filename, prompt) => setGeneratedImages(prev => prev.map(img => img.filename === filename ? { ...img, videoPrompt: prompt, isPreparing: false } : img)),
                 (errorMessage) => addToast(errorMessage, 'error')
@@ -320,6 +339,7 @@ export const useHairStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
         } finally {
             setIsPreparing(false);
             setGeneratedImages(prev => prev.map(img => img.isPreparing ? { ...img, isPreparing: false } : img));
+            setOriginalImage(prev => ({ ...prev, isPreparing: false }));
         }
     };
 
@@ -329,36 +349,67 @@ export const useHairStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
         const imagesWithoutVideos = imagesWithPrompts.filter(img => !img.videoSrc);
         const imagesWithExistingVideos = imagesWithPrompts.filter(img => img.videoSrc);
 
-        if (imagesWithPrompts.length === 0) {
+        // Check original image
+        const originalNeedsVideo = originalImage.croppedSrc && originalImage.videoPrompt && !originalImage.isGeneratingVideo;
+        const originalHasVideo = originalImage.videoSrc;
+
+        const totalCount = imagesWithPrompts.length + (originalNeedsVideo ? 1 : 0);
+
+        if (totalCount === 0) {
             addToast("All prepared images already have videos or are currently generating.", "info");
             return;
         }
 
-        // If there are images with existing videos, warn the user
-        if (imagesWithExistingVideos.length > 0) {
+        // If there are images with existing videos (including original), warn the user
+        const totalExisting = imagesWithExistingVideos.length + (originalNeedsVideo && originalHasVideo ? 1 : 0);
+        if (totalExisting > 0) {
             setConfirmAction({
                 title: "Regenerate Videos?",
-                message: `${imagesWithExistingVideos.length} image(s) already have generated videos. Regenerating will replace the existing videos. Do you want to continue?`,
+                message: `${totalExisting} image(s) already have generated videos. Regenerating will replace the existing videos. Do you want to continue?`,
                 confirmText: "Regenerate All",
                 confirmVariant: 'primary',
                 onConfirm: () => {
-                    executeGenerateAllVideos(imagesWithPrompts);
+                    executeGenerateAllVideos(imagesWithPrompts, originalNeedsVideo as boolean);
                 },
             });
             return;
         }
 
         // No existing videos, proceed directly
-        executeGenerateAllVideos(imagesWithoutVideos);
+        executeGenerateAllVideos(imagesWithoutVideos, originalNeedsVideo && !originalHasVideo);
     };
 
-    const executeGenerateAllVideos = async (imagesToProcess: typeof generatedImages) => {
-        logUserAction('GENERATE_HAIR_VIDEO_ALL', { count: imagesToProcess.length, sessionId });
+    const executeGenerateAllVideos = async (imagesToProcess: typeof generatedImages, includeOriginal: boolean = false) => {
+        const totalCount = imagesToProcess.length + (includeOriginal ? 1 : 0);
+        logUserAction('GENERATE_HAIR_VIDEO_ALL', { count: totalCount, sessionId });
         setIsGeneratingVideos(true);
         setGeneratedImages(prev => prev.map(img => imagesToProcess.some(p => p.filename === img.filename) ? { ...img, isGeneratingVideo: true, videoGenerationFailed: false } : img));
-        addToast(`Generating ${imagesToProcess.length} videos... This may take some time.`, "info");
+        if (includeOriginal) {
+            setOriginalImage(prev => ({ ...prev, isGeneratingVideo: true, videoGenerationFailed: false }));
+        }
+        addToast(`Generating ${totalCount} videos... This may take some time.`, "info");
         try {
             const videoTasks: VideoTask[] = [];
+
+            // Add original image task if needed
+            if (includeOriginal && originalImage.croppedSrc && originalImage.videoPrompt) {
+                try {
+                    let publicUrl = originalImage.publicUrl;
+                    if (!publicUrl) {
+                        publicUrl = await uploadImageFromDataUrl(originalImage.croppedSrc);
+                        setOriginalImage(prev => ({ ...prev, publicUrl }));
+                    }
+                    videoTasks.push({
+                        startImageUrl: publicUrl,
+                        videoPrompt: originalImage.videoPrompt,
+                        filename: originalImage.filename || 'original',
+                    });
+                } catch (error) {
+                    addToast(`Failed to upload original image`, 'error');
+                }
+            }
+
+            // Add generated image tasks
             for (const image of imagesToProcess) {
                 const publicUrl = await ensurePublicUrl(image.filename);
                 if (publicUrl && image.videoPrompt) {
@@ -369,18 +420,29 @@ export const useHairStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
                     });
                 }
             }
-            if (videoTasks.length !== imagesToProcess.length) {
+            if (videoTasks.length !== totalCount) {
                 addToast("Some images failed to upload and were skipped.", "warning");
             }
 
             if (videoTasks.length > 0) {
                 await generateAllVideos(videoTasks,
-                    (filename, videoSrc) => setGeneratedImages(prev => prev.map(img => img.filename === filename ? { ...img, videoSrc, isGeneratingVideo: false, videoGenerationFailed: false } : img)),
+                    (filename, videoSrc) => {
+                        // Check if this is the original image
+                        if (includeOriginal && filename === (originalImage.filename || 'original')) {
+                            setOriginalImage(prev => ({ ...prev, videoSrc, isGeneratingVideo: false, videoGenerationFailed: false }));
+                        } else {
+                            setGeneratedImages(prev => prev.map(img => img.filename === filename ? { ...img, videoSrc, isGeneratingVideo: false, videoGenerationFailed: false } : img));
+                        }
+                    },
                     (errorMessage) => {
                         const filenameMatch = errorMessage.match(/Failed on (.*?):/);
                         if (filenameMatch && filenameMatch[1]) {
                             const failedFilename = filenameMatch[1];
-                            setGeneratedImages(prev => prev.map(img => img.filename === failedFilename ? { ...img, isGeneratingVideo: false, videoGenerationFailed: true } : img));
+                            if (includeOriginal && failedFilename === (originalImage.filename || 'original')) {
+                                setOriginalImage(prev => ({ ...prev, isGeneratingVideo: false, videoGenerationFailed: true }));
+                            } else {
+                                setGeneratedImages(prev => prev.map(img => img.filename === failedFilename ? { ...img, isGeneratingVideo: false, videoGenerationFailed: true } : img));
+                            }
                         }
                         addToast(errorMessage, 'error');
                     }
@@ -392,6 +454,9 @@ export const useHairStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
         } finally {
             setIsGeneratingVideos(false);
             setGeneratedImages(prev => prev.map(img => ({ ...img, isGeneratingVideo: false })));
+            if (includeOriginal) {
+                setOriginalImage(prev => ({ ...prev, isGeneratingVideo: false }));
+            }
         }
     };
 

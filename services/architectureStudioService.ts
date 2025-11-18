@@ -316,9 +316,18 @@ const generateSingleImage = async (
     promptText += 'CRITICAL: Preserve the exact locations, positions, and placements of all structural elements including doors, windows, columns, archways, and other architectural fixtures from the original image. Do not move, relocate, or reposition these elements. ';
     promptText += 'Preserve the overall spatial layout and structural proportions. ';
 
-    // Add strong tidiness emphasis if specified
+    // Add EXTREMELY strong tidiness emphasis if specified - MUST be aggressive
     if (tidyPrompt) {
-      promptText += 'IMPORTANT: Pay special attention to the tidiness requirement specified above. Ensure the space is organized, clean, and uncluttered as requested, removing or organizing any scattered items, clutter, or mess. ';
+      promptText += 'MANDATORY TIDINESS REQUIREMENT: The space MUST be completely clean, organized, and uncluttered. ';
+      promptText += 'REMOVE ALL of the following: ';
+      promptText += '- ALL items scattered on floors (shoes, bags, boxes, papers, toys, clothing, books, etc.) ';
+      promptText += '- ALL items scattered on surfaces (tables, counters, desks, shelves - clear them completely) ';
+      promptText += '- ALL clutter on walls (remove excess decorations, posters, random items) ';
+      promptText += '- ALL visible mess, debris, trash, or disorganized objects ';
+      promptText += '- ALL piles of items or stacks of objects that create visual clutter ';
+      promptText += 'The result must show pristine, magazine-quality cleanliness with only intentional, well-placed decorative items remaining. ';
+      promptText += 'Surfaces should be clear and clean. Floors should be completely empty and clean. ';
+      promptText += 'This tidiness requirement overrides aesthetic preferences - cleanliness is MANDATORY. ';
     }
 
     promptText += 'Ensure all architectural elements are harmonious and professionally designed. ';
