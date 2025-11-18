@@ -1,9 +1,10 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
     ArchitectureGenerationOptions,
     GeneratedArchitectureImage,
     Toast as ToastType,
-    DownloadSettings
+    DownloadSettings,
+    VideoGenerationSettings
 } from '../types';
 import {
     generateArchitecturalStyles,
@@ -23,6 +24,7 @@ import { logUserAction } from '../services/loggingService';
 import { uploadImageFromDataUrl } from '../services/imageUploadService';
 import { downloadBulkImages, downloadImageWithMetadata } from '../services/downloadService';
 import { processWithConcurrency } from '../services/apiUtils';
+import { videoModels } from '../constants';
 
 declare const JSZip: any;
 
@@ -35,6 +37,8 @@ type ArchitectureStudioHookProps = {
     downloadSettings: DownloadSettings;
 };
 
+const STORAGE_KEY_VIDEO_SETTINGS = 'videoGenerationSettings';
+
 export const useArchitectureStudio = ({
     addToast,
     setConfirmAction,
@@ -46,6 +50,31 @@ export const useArchitectureStudio = ({
     const [originalFile, setOriginalFile] = useState<File | null>(null);
     const [croppedImage, setCroppedImage] = useState<string | null>(null);
     const [croppedImageAspectRatio, setCroppedImageAspectRatio] = useState<number>(16 / 9);
+
+    // Video generation settings with defaults from first model
+    const defaultModel = videoModels[0];
+    const [videoSettings, setVideoSettings] = useState<VideoGenerationSettings>(() => {
+        const stored = localStorage.getItem(STORAGE_KEY_VIDEO_SETTINGS);
+        if (stored) {
+            try {
+                return JSON.parse(stored);
+            } catch {
+                // Fall through to default
+            }
+        }
+        return {
+            model: defaultModel.id,
+            resolution: defaultModel.defaultResolution,
+            duration: defaultModel.defaultDuration,
+            aspectRatio: defaultModel.defaultAspectRatio,
+        };
+    });
+
+    // Persist video settings to localStorage
+    useEffect(() => {
+        localStorage.setItem(STORAGE_KEY_VIDEO_SETTINGS, JSON.stringify(videoSettings));
+    }, [videoSettings]);
+
     const [options, setOptions] = useState<ArchitectureGenerationOptions>({
         scope: 'interior',
         roomType: 'none',
@@ -270,6 +299,9 @@ export const useArchitectureStudio = ({
                 startImageUrl: publicUrl,
                 videoPrompt: image.videoPrompt,
                 filename: image.filename,
+                resolution: videoSettings.resolution,
+                duration: videoSettings.duration,
+                aspectRatio: videoSettings.aspectRatio,
             });
             setGeneratedImages(prev => prev.map(img => img.filename === filename ? { ...img, videoSrc, isGeneratingVideo: false, videoGenerationFailed: false } : img));
             addToast("Video generated!", "success");
@@ -351,6 +383,9 @@ export const useArchitectureStudio = ({
                         startImageUrl: publicUrl,
                         videoPrompt: image.videoPrompt,
                         filename: image.filename,
+                        resolution: videoSettings.resolution,
+                        duration: videoSettings.duration,
+                        aspectRatio: videoSettings.aspectRatio,
                     });
                 }
             }
@@ -571,6 +606,8 @@ export const useArchitectureStudio = ({
         generatedImages,
         pendingImageCount,
         sessionId,
+        videoSettings,
+        setVideoSettings,
         isPreparing,
         isGeneratingVideos,
         isGeneratingDepthMaps,
