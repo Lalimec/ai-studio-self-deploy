@@ -1,8 +1,9 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { BabyGenerationOptions, GeneratedBabyImage, Toast as ToastType, ParentImageState } from '../../types';
-import { UploadIcon, TrashIcon, PrepareMagicIcon, VideoIcon, DownloadIcon, HelpIcon, AlertCircleIcon } from '../Icons';
+import { UploadIcon, TrashIcon, PrepareMagicIcon, VideoIcon, DownloadIcon, HelpIcon, AlertCircleIcon, CheckCircleIcon } from '../Icons';
 import BabyOptionsPanel from './BabyOptionsPanel';
 import ImageGrid from '../ImageGrid';
+import GenerationToolbar from '../GenerationToolbar';
 import { useBabyStudio } from '../../hooks/useBabyStudio';
 
 interface BabyStudioProps {
@@ -84,7 +85,18 @@ const CroppedParentImage: React.FC<{
                         <AlertCircleIcon className="w-8 h-8 text-white/80" />
                     </div>
                 )}
-                
+
+                {videoSrc && !isThisParentBusy && (
+                    <div className="absolute top-2 left-2 p-1 bg-black bg-opacity-60 rounded-full text-[var(--color-primary-accent)] pointer-events-none" title="Video is ready">
+                        <VideoIcon className="w-5 h-5" />
+                    </div>
+                )}
+                {!videoSrc && videoPrompt && !isThisParentBusy && (
+                    <div className="absolute top-2 left-2 p-1 bg-black bg-opacity-60 rounded-full text-[var(--color-success-accent)] pointer-events-none" title="Video prompt is ready">
+                        <CheckCircleIcon className="w-5 h-5" />
+                    </div>
+                )}
+
                 <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl">
                     <button onClick={onRecrop} className="bg-[var(--color-bg-surface)]/80 text-[var(--color-text-main)] py-2 px-4 rounded-md text-sm font-semibold hover:bg-black/80" disabled={isParentDataLocked || isThisParentBusy}>Recrop</button>
                 </div>
@@ -123,7 +135,8 @@ const BabyStudio: React.FC<BabyStudioProps> = ({
   const isParentDataLocked = pendingImageCount > 0;
 
   return (
-    <div className="w-full max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-12">
+    <>
+    <div className="w-full max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-12 pb-28">
         <div className="bg-[var(--color-bg-surface)] p-6 rounded-2xl shadow-lg border border-[var(--color-border-muted)] flex flex-col gap-6">
             <div className="grid grid-cols-2 gap-4">
                 {!parent1.croppedSrc ? (
@@ -154,17 +167,6 @@ const BabyStudio: React.FC<BabyStudioProps> = ({
                 )}
             </div>
             <BabyOptionsPanel options={options} setOptions={setOptions} disabled={logic.isBusy} />
-            <div className="w-full">
-              <button
-                onClick={handleGenerate}
-                disabled={isGenerateDisabled}
-                title={isGenerateDisabled ? 'Upload photos for both parents first' : 'Generate baby images'}
-                className="w-full bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] disabled:bg-[var(--color-bg-muted)] disabled:cursor-not-allowed text-[var(--color-text-on-primary)] font-bold py-3 px-4 rounded-lg transition-colors text-lg shadow-md shadow-color-[var(--color-shadow-primary)]/30"
-              >
-                {pendingImageCount > 0 ? `Generating... (${pendingImageCount} left)` : 'Generate Baby Photos'}
-              </button>
-               <button onClick={handleStartOver} disabled={pendingImageCount > 0 || isPreparing || isGeneratingVideos} className="w-full mt-3 bg-[var(--color-bg-muted)] hover:bg-[var(--color-bg-muted-hover)] text-[var(--color-text-main)] font-bold py-2 px-4 rounded-lg transition-colors disabled:bg-[var(--color-bg-surface)] disabled:text-[var(--color-text-dimmer)] disabled:cursor-not-allowed text-sm">Start Over</button>
-            </div>
         </div>
         <div>
            <div className="flex justify-between items-center mb-4 gap-4 flex-wrap">
@@ -186,8 +188,8 @@ const BabyStudio: React.FC<BabyStudioProps> = ({
                  <span>Generating {pendingImageCount} new image(s)... Your other actions are unlocked.</span>
               </div>
             )}
-            <ImageGrid 
-              images={generatedImages} 
+            <ImageGrid
+              images={generatedImages}
               pendingCount={pendingImageCount}
               placeholderAspectRatio={4/5}
               onImageClick={onImageClick}
@@ -199,6 +201,26 @@ const BabyStudio: React.FC<BabyStudioProps> = ({
             />
         </div>
     </div>
+
+    <GenerationToolbar
+        aspectRatio={options.aspectRatio}
+        onAspectRatioChange={(ratio) => setOptions(prev => ({ ...prev, aspectRatio: ratio }))}
+        aspectRatioDisabled={logic.isBusy}
+        imageCount={options.imageCount}
+        onImageCountChange={(count) => setOptions(prev => ({ ...prev, imageCount: count }))}
+        imageCountMin={1}
+        imageCountMax={12}
+        imageCountDisabled={logic.isBusy}
+        generateButtonText="Generate"
+        onGenerate={handleGenerate}
+        generateDisabled={isGenerateDisabled}
+        pendingCount={pendingImageCount}
+        startOverButtonText="Clear"
+        onStartOver={handleStartOver}
+        startOverDisabled={pendingImageCount > 0 || isPreparing || isGeneratingVideos}
+        studioMode="baby"
+    />
+    </>
   );
 };
 

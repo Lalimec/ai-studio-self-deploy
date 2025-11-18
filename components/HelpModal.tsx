@@ -4,7 +4,7 @@ import {
     BABY_AGES, BABY_COMPOSITIONS, BABY_BACKGROUNDS, BABY_CLOTHING_STYLES_UNISEX, 
     BABY_CLOTHING_STYLES_BOY, BABY_CLOTHING_STYLES_GIRL, BABY_ACTIONS 
 } from '../constants';
-import { CloseIcon, HairStudioIcon, BabyIcon, ImageStudioIcon, VideoStudioIcon, HelpIcon, TimelineStudioIcon, AdClonerIcon } from './Icons';
+import { CloseIcon, HairStudioIcon, BabyIcon, ImageStudioIcon, VideoStudioIcon, HelpIcon, TimelineStudioIcon, AdClonerIcon, ArchitectureStudioIcon } from './Icons';
 
 import GeneralHelp from './help/GeneralHelp';
 import HairStudioHelp from './help/HairStudioHelp';
@@ -13,6 +13,7 @@ import ImageStudioHelp from './help/ImageStudioHelp';
 import VideoStudioHelp from './help/VideoStudioHelp';
 import TimelineStudioHelp from './help/TimelineStudioHelp';
 import AdClonerHelp from './help/AdClonerHelp';
+import ArchitectureStudioHelp from './help/ArchitectureStudioHelp';
 
 interface HelpModalProps {
   onClose: () => void;
@@ -36,7 +37,7 @@ interface HelpModalProps {
   babyActions: typeof BABY_ACTIONS;
 }
 
-type HelpTab = 'general' | 'hair' | 'baby' | 'image' | 'adCloner' | 'video' | 'timeline';
+type HelpTab = 'general' | 'hair' | 'baby' | 'architecture' | 'image' | 'adCloner' | 'video' | 'timeline';
 
 const TabButton: React.FC<{
     name: HelpTab;
@@ -94,6 +95,7 @@ const HelpModal: React.FC<HelpModalProps> = (props) => {
             <TabButton name="general" label="General" icon={<HelpIcon className="w-5 h-5" />} activeTab={activeTab} setActiveTab={setActiveTab} />
             <TabButton name="hair" label="Hair Studio" icon={<HairStudioIcon className="w-5 h-5" />} activeTab={activeTab} setActiveTab={setActiveTab} />
             <TabButton name="baby" label="Baby Studio" icon={<BabyIcon className="w-5 h-5" />} activeTab={activeTab} setActiveTab={setActiveTab} />
+            <TabButton name="architecture" label="Architecture" icon={<ArchitectureStudioIcon className="w-5 h-5" />} activeTab={activeTab} setActiveTab={setActiveTab} />
             <TabButton name="image" label="Image Studio" icon={<ImageStudioIcon className="w-5 h-5" />} activeTab={activeTab} setActiveTab={setActiveTab} />
             <TabButton name="adCloner" label="Ad Cloner" icon={<AdClonerIcon className="w-5 h-5" />} activeTab={activeTab} setActiveTab={setActiveTab} />
             <TabButton name="video" label="Video Studio" icon={<VideoStudioIcon className="w-5 h-5" />} activeTab={activeTab} setActiveTab={setActiveTab} />
@@ -103,7 +105,7 @@ const HelpModal: React.FC<HelpModalProps> = (props) => {
         <div className="p-6 overflow-y-auto custom-scrollbar">
             {activeTab === 'general' && <GeneralHelp />}
             {activeTab === 'hair' && <HairStudioHelp {...helpProps} />}
-            {activeTab === 'baby' && <BabyStudioHelp 
+            {activeTab === 'baby' && <BabyStudioHelp
                 ages={helpProps.babyAges}
                 compositions={helpProps.babyCompositions}
                 backgrounds={helpProps.babyBackgrounds}
@@ -112,6 +114,7 @@ const HelpModal: React.FC<HelpModalProps> = (props) => {
                 clothingGirl={helpProps.babyClothingGirl}
                 actions={helpProps.babyActions}
             />}
+            {activeTab === 'architecture' && <ArchitectureStudioHelp />}
             {activeTab === 'image' && <ImageStudioHelp />}
             {activeTab === 'adCloner' && <AdClonerHelp />}
             {activeTab === 'video' && <VideoStudioHelp />}

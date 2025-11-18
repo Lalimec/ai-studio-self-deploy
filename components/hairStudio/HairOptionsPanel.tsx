@@ -1,6 +1,6 @@
 import React from 'react';
-import { GenerationOptions, Gender, PoseStyle, ColorOption, AdornmentOption, AspectRatio } from '../../types';
-import { MALE_HAIRSTYLES, FEMALE_HAIRSTYLES, AVANT_GARDE_HAIRSTYLES, ASPECT_RATIO_OPTIONS } from '../../constants';
+import { GenerationOptions, Gender, PoseStyle, ColorOption, AdornmentOption } from '../../types';
+import { MALE_HAIRSTYLES, FEMALE_HAIRSTYLES, AVANT_GARDE_HAIRSTYLES } from '../../constants';
 
 interface OptionsPanelProps {
   options: GenerationOptions;
@@ -23,25 +23,6 @@ const FilterButton: React.FC<{
     className={`py-2 px-3 rounded-md font-semibold transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed ${
       isActive ? 'bg-[var(--color-secondary)] text-[var(--color-text-on-primary)]' : 'bg-[var(--color-bg-muted)] hover:bg-[var(--color-bg-muted-hover)]'
     } ${className}`}
-  >
-    {label}
-  </button>
-);
-  
-const AspectRatioButton: React.FC<{
-  label: string;
-  isActive: boolean;
-  onClick: () => void;
-  title?: string;
-  disabled: boolean;
-}> = ({ label, isActive, onClick, title, disabled }) => (
-  <button
-    onClick={onClick}
-    disabled={disabled}
-    title={title}
-    className={`py-1 px-2 rounded-md font-semibold transition-colors text-xs disabled:opacity-50 disabled:cursor-not-allowed ${
-      isActive ? 'bg-[var(--color-secondary)] text-[var(--color-text-on-primary)]' : 'bg-[var(--color-bg-muted)] hover:bg-[var(--color-bg-muted-hover)]'
-    }`}
   >
     {label}
   </button>
@@ -178,10 +159,6 @@ const HairOptionsPanel: React.FC<OptionsPanelProps> = ({ options, setOptions, di
     });
   };
 
-  const handleImageCountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setOptions(prev => ({ ...prev, imageCount: parseInt(e.target.value, 10) }));
-  };
-  
   const genderSpecificCategories = options.gender === Gender.Male ? MALE_HAIRSTYLES : FEMALE_HAIRSTYLES;
   const allHairstyleCategories = [...genderSpecificCategories, AVANT_GARDE_HAIRSTYLES];
   const adornmentTitle = options.gender === Gender.Male ? "4. Facial Hair" : "4. Accessories";
@@ -245,7 +222,7 @@ const HairOptionsPanel: React.FC<OptionsPanelProps> = ({ options, setOptions, di
         setOptions={setOptions}
         disabled={disabled}
       />
-      
+
        <CustomizableSection
         title="5. Pose Preference"
         optionKey="poseOptions"
@@ -255,41 +232,6 @@ const HairOptionsPanel: React.FC<OptionsPanelProps> = ({ options, setOptions, di
         setOptions={setOptions}
         disabled={disabled}
       />
-
-      <div>
-        <label className="block text-sm font-medium text-[var(--color-text-light)] mb-2">6. Generation Aspect Ratio</label>
-        <div className="flex flex-wrap gap-2">
-            {ASPECT_RATIO_OPTIONS.map(({ label, value }) => (
-                <AspectRatioButton
-                    key={value}
-                    label={label}
-                    isActive={options.aspectRatio === value}
-                    onClick={() => setOptions(prev => ({ ...prev, aspectRatio: value }))}
-                    title={`Set aspect ratio to ${label}`}
-                    disabled={disabled}
-                />
-            ))}
-        </div>
-      </div>
-
-      <div>
-        <label htmlFor="image-count-slider" className="block text-sm font-medium text-[var(--color-text-light)] mb-2">7. Number of Images</label>
-        <div className="flex items-center gap-4">
-          <input
-            id="image-count-slider"
-            type="range"
-            min="1"
-            max="20"
-            step="1"
-            value={options.imageCount}
-            onChange={handleImageCountChange}
-            disabled={disabled}
-            className="w-full h-2 bg-[var(--color-border-default)] rounded-lg appearance-none cursor-pointer accent-[var(--color-primary)] disabled:opacity-50"
-            title="Select the number of images to generate (1-20)"
-          />
-          <span className="font-semibold text-[var(--color-primary-accent)] w-8 text-center">{options.imageCount}</span>
-        </div>
-      </div>
     </div>
   );
 };
