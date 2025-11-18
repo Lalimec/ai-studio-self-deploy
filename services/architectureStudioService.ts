@@ -8,7 +8,11 @@ import {
     LANDSCAPE_STYLES,
     ARCHITECTURE_TIMES,
     ARCHITECTURE_THEMES,
-    CAMERA_ANGLE_OPTIONS
+    CAMERA_ANGLE_OPTIONS,
+    ROOM_TYPES,
+    BUILDING_TYPES,
+    COLOR_SCHEMES,
+    TIDY_OPTIONS
 } from '../architectureConstants';
 import { processWithConcurrency } from './apiUtils';
 import { dataUrlToBlob } from './geminiClient';
@@ -21,6 +25,11 @@ const imageModel = Constance.models.image.nanoBanana;
 type GenerationTask = {
   styleName: string;
   stylePrompt: string;
+  roomTypePrompt: string;
+  buildingTypePrompt: string;
+  colorSchemePrompt: string;
+  tidyPrompt: string;
+  unfinishedPrompt: string;
   timePrompt: string;
   themePrompt: string;
   cameraAnglePrompt: string;
@@ -123,7 +132,47 @@ const createGenerationTasks = (
   const cameraData = CAMERA_ANGLE_OPTIONS.find(c => c.id === cameraAngle);
   const cameraAnglePrompt = cameraData?.prompt || '';
 
-  // 5. Create Combinations
+  // 5. Room type prompt (for interior)
+  const roomTypeData = ROOM_TYPES.find(r => r.id === options.roomType);
+  const roomTypePrompt = roomTypeData?.prompt || '';
+
+  // 6. Building type prompt (for exterior/facade/garden/landscape)
+  const buildingTypeData = BUILDING_TYPES.find(b => b.id === options.buildingType);
+  const buildingTypePrompt = buildingTypeData?.prompt || '';
+
+  // 7. Color scheme prompt
+  const colorSchemeData = COLOR_SCHEMES.find(c => c.id === options.colorScheme);
+  const colorSchemePrompt = colorSchemeData?.prompt || '';
+
+  // 8. Tidy prompt
+  const tidyData = TIDY_OPTIONS.find(t => t.id === options.tidy);
+  const tidyPrompt = tidyData?.prompt || '';
+
+  // 9. Unfinished prompt (if showUnfinished is true)
+  let unfinishedPrompt = '';
+  if (options.showUnfinished) {
+    switch (scope) {
+      case 'interior':
+        unfinishedPrompt = 'unfinished, uncompleted, unfurnished version with bare walls, incomplete construction, minimal or no furniture, exposed subflooring or unfinished surfaces, providing a before-renovation appearance';
+        break;
+      case 'exterior':
+        unfinishedPrompt = 'under construction with exposed framing, incomplete exterior, construction materials visible, scaffolding, and unfinished building state';
+        break;
+      case 'facade':
+        unfinishedPrompt = 'unfinished facade with exposed structure, incomplete cladding, visible construction materials, and raw building state';
+        break;
+      case 'garden':
+        unfinishedPrompt = 'undeveloped garden space with bare soil, no landscaping, minimal or no plants, showing the initial state before garden installation';
+        break;
+      case 'landscape':
+        unfinishedPrompt = 'raw undeveloped landscape with natural terrain, no landscaping improvements, showing the original state before development';
+        break;
+      default:
+        unfinishedPrompt = 'unfinished state showing the before condition';
+    }
+  }
+
+  // 10. Create Combinations
   const getRandomElement = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
 
   const tasks: GenerationTask[] = [];
@@ -144,6 +193,11 @@ const createGenerationTasks = (
     tasks.push({
       styleName: style.name,
       stylePrompt: style.prompt,
+      roomTypePrompt,
+      buildingTypePrompt,
+      colorSchemePrompt,
+      tidyPrompt,
+      unfinishedPrompt,
       timePrompt,
       themePrompt,
       cameraAnglePrompt,
@@ -160,12 +214,30 @@ const generateSingleImage = async (
   options: { aspectRatio: AspectRatio },
   useNanoBananaWebhook: boolean
 ): Promise<{ imageUrl: string, promptText: string }> => {
-  const { styleName, stylePrompt, timePrompt, themePrompt, cameraAnglePrompt } = task;
+  const {
+    styleName,
+    stylePrompt,
+    roomTypePrompt,
+    buildingTypePrompt,
+    colorSchemePrompt,
+    tidyPrompt,
+    unfinishedPrompt,
+    timePrompt,
+    themePrompt,
+    cameraAnglePrompt
+  } = task;
 
   let promptText = '';
   const components: string[] = [];
 
-  // Build the transformation prompt
+  // 1. Room/Building type (what is the space)
+  if (roomTypePrompt) {
+    components.push(roomTypePrompt);
+  } else if (buildingTypePrompt) {
+    components.push(buildingTypePrompt);
+  }
+
+  // 2. Style transformation
   if (stylePrompt) {
     components.push(stylePrompt);
   } else {
@@ -173,17 +245,32 @@ const generateSingleImage = async (
     components.push('Maintain the current architectural style and design elements exactly as shown');
   }
 
-  // Add time of day if specified
+  // 3. Unfinished state (if specified)
+  if (unfinishedPrompt) {
+    components.push(unfinishedPrompt);
+  }
+
+  // 4. Tidy/untidy state
+  if (tidyPrompt) {
+    components.push(tidyPrompt);
+  }
+
+  // 5. Color scheme (only if specified)
+  if (colorSchemePrompt) {
+    components.push(colorSchemePrompt);
+  }
+
+  // 6. Time of day (if specified)
   if (timePrompt) {
     components.push(timePrompt);
   }
 
-  // Add theme if specified
+  // 7. Theme (if specified)
   if (themePrompt) {
     components.push(themePrompt);
   }
 
-  // Add camera angle instruction if specified
+  // 8. Camera angle instruction (if specified)
   if (cameraAnglePrompt) {
     components.push(cameraAnglePrompt);
   }

@@ -22,6 +22,7 @@ import { getTimestamp, generateSetId } from '../services/imageUtils';
 import { logUserAction } from '../services/loggingService';
 import { uploadImageFromDataUrl } from '../services/imageUploadService';
 import { downloadBulkImages, downloadImageWithMetadata } from '../services/downloadService';
+import { processWithConcurrency } from '../services/apiUtils';
 
 declare const JSZip: any;
 
@@ -47,9 +48,14 @@ export const useArchitectureStudio = ({
     const [croppedImageAspectRatio, setCroppedImageAspectRatio] = useState<number>(16 / 9);
     const [options, setOptions] = useState<ArchitectureGenerationOptions>({
         scope: 'interior',
+        roomType: 'none',
+        buildingType: 'none',
         styles: [],
         customStyles: '',
         useCustomStyles: false,
+        colorScheme: 'none',
+        tidy: 'tidy',
+        showUnfinished: false,
         time: 'current',
         theme: 'none',
         cameraAngle: 'preserve',
@@ -436,7 +442,8 @@ export const useArchitectureStudio = ({
         let failureCount = 0;
 
         try {
-            for (const image of imagesToProcess) {
+            // Define task processor for concurrent processing
+            const processDepthMapTask = async (image: GeneratedArchitectureImage) => {
                 try {
                     // Ensure we have a public URL
                     const publicUrl = await ensurePublicUrl(image.filename);
@@ -448,7 +455,10 @@ export const useArchitectureStudio = ({
                     setGeneratedImages(prev => prev.map(img => img.filename === image.filename ? { ...img, isGeneratingDepthMap: false, depthMapGenerationFailed: true } : img));
                     failureCount++;
                 }
-            }
+            };
+
+            // Process all depth map tasks concurrently (8 at a time, same as video generation)
+            await processWithConcurrency(imagesToProcess, processDepthMapTask, 8);
 
             if (successCount > 0 && failureCount === 0) {
                 addToast("All depth maps generated successfully!", "success");

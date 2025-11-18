@@ -412,11 +412,40 @@ export type CameraAngleOption = {
   prompt: string;
 };
 
+export type RoomType = {
+  id: string;
+  name: string;
+  prompt: string;
+};
+
+export type BuildingType = {
+  id: string;
+  name: string;
+  prompt: string;
+};
+
+export type ColorScheme = {
+  id: string;
+  name: string;
+  prompt: string;
+};
+
+export type TidyOption = {
+  id: string;
+  name: string;
+  prompt: string;
+};
+
 export type ArchitectureGenerationOptions = {
   scope: string; // interior, exterior, facade, garden, landscape
+  roomType: string; // Room type for interior (living room, kitchen, etc.)
+  buildingType: string; // Building type for exterior/facade/garden
   styles: string[]; // Selected style IDs
   customStyles: string;
   useCustomStyles: boolean;
+  colorScheme: string; // Color scheme (optional)
+  tidy: string; // tidy or untidy
+  showUnfinished: boolean; // Whether to show unfinished/before version
   time: string; // Time of day
   theme: string; // Holiday/seasonal theme
   cameraAngle: string; // preserve, slight_variation, randomize

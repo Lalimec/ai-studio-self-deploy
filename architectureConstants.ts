@@ -1,4 +1,4 @@
-import { ArchitectureScope, ArchitectureStyle, ArchitectureTime, ArchitectureTheme, CameraAngleOption } from './types';
+import { ArchitectureScope, ArchitectureStyle, ArchitectureTime, ArchitectureTheme, CameraAngleOption, RoomType, BuildingType, ColorScheme, TidyOption } from './types';
 
 // Architectural Scopes
 export const ARCHITECTURE_SCOPES: ArchitectureScope[] = [
@@ -63,9 +63,6 @@ export const INTERIOR_STYLES: ArchitectureStyle[] = [
   { id: 'zen', name: 'Zen / Japanese', prompt: 'zen Japanese design with tatami mats, shoji screens, natural materials, minimal furniture, and peaceful simplicity' },
   { id: 'chinese', name: 'Chinese Traditional', prompt: 'traditional Chinese design with lacquered furniture, silk fabrics, ornate carvings, and symbolic decorative elements' },
   { id: 'balinese', name: 'Balinese', prompt: 'Balinese design with teak wood, natural stone, tropical elements, and spa-like serenity' },
-
-  // Special Finishes
-  { id: 'unfinished', name: 'Unfinished / Before', prompt: 'unfinished, uncompleted, unfurnished version with bare walls, incomplete construction, minimal or no furniture, exposed subflooring or unfinished surfaces, providing a before-renovation appearance' },
 ];
 
 // Exterior Architecture Styles
@@ -105,9 +102,6 @@ export const EXTERIOR_STYLES: ArchitectureStyle[] = [
   { id: 'industrial', name: 'Industrial', prompt: 'industrial architecture with exposed steel, brick, large windows, warehouse aesthetic, and utilitarian design' },
   { id: 'eco', name: 'Eco / Sustainable', prompt: 'eco-sustainable architecture with green roofs, solar panels, natural materials, and environmentally conscious design' },
   { id: 'futuristic', name: 'Futuristic', prompt: 'futuristic architecture with innovative forms, cutting-edge materials, curved surfaces, and sci-fi inspired design' },
-
-  // Special
-  { id: 'unfinished', name: 'Under Construction', prompt: 'under construction with exposed framing, incomplete exterior, construction materials visible, scaffolding, and unfinished building state' },
 ];
 
 // Facade Styles (focused on facade details)
@@ -122,7 +116,6 @@ export const FACADE_STYLES: ArchitectureStyle[] = [
   { id: 'green_wall', name: 'Living Green Wall', prompt: 'living green wall facade with vertical gardens, lush vegetation, and sustainable bio-architecture' },
   { id: 'parametric', name: 'Parametric Design', prompt: 'parametric facade with complex geometric patterns, algorithmic design, and computational architecture' },
   { id: 'traditional_ornate', name: 'Ornate Classical', prompt: 'ornate classical facade with columns, cornices, decorative moldings, and historical architectural details' },
-  { id: 'unfinished', name: 'Exposed Structure', prompt: 'exposed structural facade with visible framing, unfinished exterior walls, construction materials, and incomplete cladding' },
 ];
 
 // Garden / Courtyard Styles
@@ -157,9 +150,6 @@ export const GARDEN_STYLES: ArchitectureStyle[] = [
   { id: 'herb_kitchen', name: 'Herb / Kitchen Garden', prompt: 'herb and kitchen garden with raised beds, culinary plants, organized rows, and functional vegetable garden design' },
   { id: 'permaculture', name: 'Permaculture', prompt: 'permaculture garden with companion planting, edible landscaping, composting areas, and sustainable ecosystem design' },
   { id: 'butterfly', name: 'Butterfly / Pollinator Garden', prompt: 'butterfly and pollinator garden with native flowers, host plants, nectar sources, and wildlife-friendly design' },
-
-  // Special
-  { id: 'unfinished', name: 'Unlandscaped / Raw', prompt: 'unlandscaped raw outdoor space with bare soil, no vegetation, unfinished hardscaping, and undeveloped grounds' },
 ];
 
 // Landscape / Outside Styles
@@ -173,7 +163,6 @@ export const LANDSCAPE_STYLES: ArchitectureStyle[] = [
   { id: 'forest_edge', name: 'Forest Edge', prompt: 'forest edge landscape with transitional woodland, mature trees, understory plants, and natural forest setting' },
   { id: 'suburban', name: 'Suburban Neighborhood', prompt: 'suburban neighborhood landscape with lawn, foundation plantings, street trees, and residential setting' },
   { id: 'urban', name: 'Urban Landscape', prompt: 'urban landscape with street trees, planters, hardscape, and city environment integration' },
-  { id: 'unfinished', name: 'Undeveloped / Raw Land', prompt: 'undeveloped raw land with natural or cleared terrain, no landscaping, construction site, or pre-development state' },
 ];
 
 // Time of Day Options
@@ -223,4 +212,66 @@ export const CAMERA_ANGLE_OPTIONS: CameraAngleOption[] = [
   { id: 'preserve', name: 'Preserve Original Angle', prompt: '' },
   { id: 'slight_variation', name: 'Slight Variation', prompt: 'with subtle camera angle variation, maintaining overall composition but with minor perspective shift' },
   { id: 'randomize', name: 'Randomize Angle', prompt: 'from a different camera angle and perspective, providing fresh viewpoint while maintaining the essence of the space' },
+];
+
+// Room Types (for Interior)
+export const ROOM_TYPES: RoomType[] = [
+  { id: 'none', name: 'Auto-Detect Room', prompt: '' },
+  { id: 'living_room', name: 'Living Room', prompt: 'a living room' },
+  { id: 'bedroom', name: 'Bedroom', prompt: 'a bedroom' },
+  { id: 'kitchen', name: 'Kitchen', prompt: 'a kitchen' },
+  { id: 'bathroom', name: 'Bathroom', prompt: 'a bathroom' },
+  { id: 'dining_room', name: 'Dining Room', prompt: 'a dining room' },
+  { id: 'home_office', name: 'Home Office', prompt: 'a home office' },
+  { id: 'nursery', name: 'Nursery / Kids Room', prompt: 'a nursery or children\'s room' },
+  { id: 'closet', name: 'Walk-In Closet', prompt: 'a walk-in closet' },
+  { id: 'laundry', name: 'Laundry Room', prompt: 'a laundry room' },
+  { id: 'entryway', name: 'Entryway / Foyer', prompt: 'an entryway or foyer' },
+  { id: 'hallway', name: 'Hallway / Corridor', prompt: 'a hallway or corridor' },
+  { id: 'basement', name: 'Basement / Recreation Room', prompt: 'a basement or recreation room' },
+  { id: 'attic', name: 'Attic / Loft', prompt: 'an attic or loft space' },
+  { id: 'sunroom', name: 'Sunroom / Conservatory', prompt: 'a sunroom or conservatory' },
+  { id: 'garage', name: 'Garage', prompt: 'a garage' },
+];
+
+// Building Types (for Exterior, Facade, Garden, Landscape)
+export const BUILDING_TYPES: BuildingType[] = [
+  { id: 'none', name: 'Auto-Detect Type', prompt: '' },
+  { id: 'house', name: 'Single-Family House', prompt: 'a single-family residential house' },
+  { id: 'townhouse', name: 'Townhouse', prompt: 'a townhouse' },
+  { id: 'apartment', name: 'Apartment Building', prompt: 'an apartment building' },
+  { id: 'condo', name: 'Condominium', prompt: 'a condominium building' },
+  { id: 'villa', name: 'Villa / Mansion', prompt: 'a villa or mansion' },
+  { id: 'cottage', name: 'Cottage / Cabin', prompt: 'a cottage or cabin' },
+  { id: 'office', name: 'Office Building', prompt: 'an office building' },
+  { id: 'retail', name: 'Retail / Commercial', prompt: 'a retail or commercial building' },
+  { id: 'restaurant', name: 'Restaurant / Cafe', prompt: 'a restaurant or cafe' },
+  { id: 'hotel', name: 'Hotel / Resort', prompt: 'a hotel or resort' },
+  { id: 'museum', name: 'Museum / Gallery', prompt: 'a museum or art gallery' },
+  { id: 'school', name: 'School / University', prompt: 'a school or university building' },
+  { id: 'church', name: 'Church / Religious Building', prompt: 'a church or religious building' },
+  { id: 'hospital', name: 'Hospital / Medical', prompt: 'a hospital or medical facility' },
+  { id: 'warehouse', name: 'Warehouse / Industrial', prompt: 'a warehouse or industrial building' },
+];
+
+// Color Schemes (optional)
+export const COLOR_SCHEMES: ColorScheme[] = [
+  { id: 'none', name: 'Keep Current Colors', prompt: '' },
+  { id: 'neutral', name: 'Neutral (Whites, Grays, Beiges)', prompt: 'with a neutral color palette featuring whites, soft grays, warm beiges, and natural tones' },
+  { id: 'monochrome', name: 'Monochromatic', prompt: 'with a monochromatic color scheme using varying shades of a single color' },
+  { id: 'earth_tones', name: 'Earth Tones', prompt: 'with earth tone colors including terracotta, ochre, warm browns, and sage greens' },
+  { id: 'warm', name: 'Warm Palette', prompt: 'with a warm color palette featuring reds, oranges, yellows, and warm browns' },
+  { id: 'cool', name: 'Cool Palette', prompt: 'with a cool color palette featuring blues, greens, purples, and cool grays' },
+  { id: 'pastel', name: 'Pastel Colors', prompt: 'with soft pastel colors including light pinks, baby blues, mint greens, and lavenders' },
+  { id: 'bold', name: 'Bold & Vibrant', prompt: 'with bold vibrant colors including rich jewel tones and saturated hues' },
+  { id: 'black_white', name: 'Black & White', prompt: 'with a black and white color scheme with high contrast' },
+  { id: 'navy_gold', name: 'Navy & Gold', prompt: 'with a navy blue and gold color scheme' },
+  { id: 'emerald_brass', name: 'Emerald & Brass', prompt: 'with emerald green and brass metallic accents' },
+  { id: 'blush_gray', name: 'Blush & Gray', prompt: 'with blush pink and gray color scheme' },
+];
+
+// Tidy Options
+export const TIDY_OPTIONS: TidyOption[] = [
+  { id: 'tidy', name: 'Tidy & Organized', prompt: 'neat, tidy, and well-organized' },
+  { id: 'untidy', name: 'Lived-In / Untidy', prompt: 'with a lived-in, slightly untidy appearance showing everyday use' },
 ];

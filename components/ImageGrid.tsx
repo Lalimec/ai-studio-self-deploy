@@ -144,6 +144,17 @@ const ImageCard: React.FC<Omit<ImageGridProps, 'images' | 'pendingCount' | 'plac
               <RegenerateIcon className={`w-5 h-5 ${isRegenerating ? 'animate-spin' : ''}`} />
             </button>
         )}
+        {mode === 'architectureStudio' && onRegenerate && (
+            <button
+              onClick={(e) => { handleActionClick(e); onRegenerate(uniqueId); }}
+              className="p-2 bg-black bg-opacity-60 rounded-full text-[var(--color-text-main)] hover:bg-opacity-80 transition-all disabled:opacity-50"
+              aria-label="Generate a new variation using the current filters"
+              title="Generate a new variation"
+              disabled={isBusy}
+            >
+              <RegenerateIcon className={`w-5 h-5 ${isRegenerating ? 'animate-spin' : ''}`} />
+            </button>
+        )}
         <button
           onClick={(e) => { handleActionClick(e); onReprepare(uniqueId); }}
           className="p-2 bg-black bg-opacity-60 rounded-full text-[var(--color-text-main)] hover:bg-opacity-80 transition-all disabled:opacity-50"
