@@ -15,6 +15,7 @@ import {
   LuScissors,
   LuClapperboard,
   LuBaby,
+  LuBuilding2,
   LuCircleCheck,
   LuCircleHelp,
   LuLanguages,
@@ -37,6 +38,7 @@ import {
   LuZap,
   LuFlower,
   LuLayers,
+  LuMonitor,
 } from 'react-icons/lu';
 import {
     PiCaretDown, PiSparkle, PiSpinner, PiTranslate, PiCheck,
@@ -63,6 +65,7 @@ export const SwapIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <LuR
 export const DownloadVideoIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <LuFileVideo {...props} />;
 export const VideoStudioIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <LuClapperboard {...props} />;
 export const BabyIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <LuBaby {...props} />;
+export const ArchitectureStudioIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <LuBuilding2 {...props} />;
 export const AlertCircleIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <LuCircleAlert {...props} />;
 export const TranslateIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <LuLanguages {...props} />;
 export const ImageStudioIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <LuImage {...props} />;
@@ -105,4 +108,5 @@ export const BananaIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <L
 export const WavesIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <LuWaves {...props} />;
 export const ZapIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <LuZap {...props} />;
 export const FlowerIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <LuFlower {...props} />;
-export const AdCreativeIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <LuLayers {...props} />;
+export const AdCreativeIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <LuMonitor {...props} />;
+export const DepthMapIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <LuLayers {...props} />;

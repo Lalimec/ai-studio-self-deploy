@@ -43,6 +43,7 @@ export const endpoints = {
     // Placeholder for a third-party Gemini Flash Image provider
     nanoBanana: 'https://n8n.cemil.al/webhook/7c6e2f5c-24aa-4650-9152-3d718bd69f8c/higgsfield/edit-nano-banana',
     qwen: 'https://n8n.cemil.al/webhook/5533f0bb-064a-4757-adcb-56793505fdf3/fal/edit-qwen',
+    depthMap: 'https://n8n.cemil.al/webhook/3bd7adc2-c5ef-4e89-b43e-b0b0c063f199/fal/marigold-depth',
   },
 
   // Plainly Videos API (Ad Creative Studio)
@@ -180,6 +181,18 @@ export const schemas = {
           output_format: 'string (default: "png")',
           negative_prompt: 'string (default: "blurry, ugly")',
           acceleration: 'string (default: "regular")',
+      },
+      response: {
+          success: {
+              images: ['string (base64 encoded image data)'],
+          }
+      }
+    },
+    depthMap: {
+      request: {
+          image_url: 'string (public URL)',
+          num_inference_steps: 'number (default: 5)',
+          ensemble_size: 'number (default: 5)',
       },
       response: {
           success: {

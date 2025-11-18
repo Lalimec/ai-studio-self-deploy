@@ -93,6 +93,8 @@ export interface DownloadWithMetadataOptions {
     includeMetadataFile?: boolean; // Whether to download .txt metadata file (default: true if metadata/prompt provided)
     videoUrl?: string; // Optional video to download alongside image
     videoFilename?: string; // Optional video filename
+    depthMapUrl?: string; // Optional depth map to download (base64 data URL)
+    depthMapFilename?: string; // Optional depth map filename
 }
 
 export interface ZipFileEntry {
@@ -118,6 +120,8 @@ export interface BulkImageDownloadOptions {
         metadata?: Record<string, any>;
         videoUrl?: string; // Optional video to include
         videoFilename?: string;
+        depthMapUrl?: string; // Optional depth map to include (base64 data URL)
+        depthMapFilename?: string; // Optional depth map filename
     }>;
     zipFilename: string;
     folderName?: string;
@@ -166,6 +170,8 @@ export const downloadImageWithMetadata = async (
         includeMetadataFile = true,
         videoUrl,
         videoFilename,
+        depthMapUrl,
+        depthMapFilename,
     } = options;
 
     // Get image blob
@@ -227,6 +233,29 @@ export const downloadImageWithMetadata = async (
         const videoBlob = await fetch(videoUrl).then((res) => res.blob());
         const videoName = videoFilename || filename.replace(/\.[^/.]+$/, '.mp4');
         await downloadFile({ url: '', filename: videoName, blob: videoBlob });
+    }
+
+    // Download depth map if provided
+    if (depthMapUrl) {
+        await new Promise((res) => setTimeout(res, 200)); // Small delay between downloads
+        // Parse the depth map data URL
+        let depthMapBase64 = depthMapUrl.includes(',') ? depthMapUrl.split(',')[1] : depthMapUrl;
+        depthMapBase64 = depthMapBase64.replace(/\s/g, '');
+
+        const mimeType = depthMapUrl.includes('data:')
+            ? depthMapUrl.match(/data:([^;]+);/)?.[1] || 'image/png'
+            : 'image/png';
+
+        const byteCharacters = atob(depthMapBase64);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const depthMapBlob = new Blob([byteArray], { type: mimeType });
+
+        const depthMapName = depthMapFilename || `depth_map_${filename}`;
+        await downloadFile({ url: '', filename: depthMapName, blob: depthMapBlob });
     }
 
     // Download metadata file if provided AND enabled
@@ -309,6 +338,7 @@ export const downloadBulkImages = async (
 
     const zip = new JSZip();
     const targetFolder = folderName ? zip.folder(folderName)! : zip;
+    const depthMapsFolder = targetFolder.folder('depth_maps')!;
 
     progressCallback?.({ visible: true, message: 'Starting...', progress: 0 });
 
@@ -316,7 +346,7 @@ export const downloadBulkImages = async (
     let processedFiles = 0;
 
     for (const image of images) {
-        let { imageUrl, imageBlob, imageBase64, filename, prompt, metadata, videoUrl, videoFilename } = image;
+        let { imageUrl, imageBlob, imageBase64, filename, prompt, metadata, videoUrl, videoFilename, depthMapUrl, depthMapFilename } = image;
 
         // Process image
         let finalBlob: Blob;
@@ -378,6 +408,23 @@ export const downloadBulkImages = async (
             const videoBuffer = await videoBlob.arrayBuffer();
             const videoName = videoFilename || filename.replace(/\.[^/.]+$/, '.mp4');
             targetFolder.file(videoName, videoBuffer);
+        }
+
+        // Add depth map if provided (to depth_maps subdirectory with same filename)
+        if (depthMapUrl) {
+            let depthMapBase64 = depthMapUrl.includes(',') ? depthMapUrl.split(',')[1] : depthMapUrl;
+            depthMapBase64 = depthMapBase64.replace(/\s/g, '');
+
+            const byteCharacters = atob(depthMapBase64);
+            const byteNumbers = new Array(byteCharacters.length);
+            for (let i = 0; i < byteCharacters.length; i++) {
+                byteNumbers[i] = byteCharacters.charCodeAt(i);
+            }
+            const byteArray = new Uint8Array(byteNumbers);
+
+            // Use original filename for depth map (keep it exactly the same)
+            const depthMapName = depthMapFilename || filename;
+            depthMapsFolder.file(depthMapName, byteArray);
         }
 
         // Add metadata file if requested (use corrected filename)
