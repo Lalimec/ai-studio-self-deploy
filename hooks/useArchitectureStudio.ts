@@ -3,7 +3,8 @@ import {
     ArchitectureGenerationOptions,
     GeneratedArchitectureImage,
     Toast as ToastType,
-    DownloadSettings
+    DownloadSettings,
+    OriginalImageState
 } from '../types';
 import {
     generateArchitecturalStyles,
@@ -45,6 +46,20 @@ export const useArchitectureStudio = ({
     const [originalFile, setOriginalFile] = useState<File | null>(null);
     const [croppedImage, setCroppedImage] = useState<string | null>(null);
     const [croppedImageAspectRatio, setCroppedImageAspectRatio] = useState<number>(16 / 9);
+    const [originalImage, setOriginalImage] = useState<OriginalImageState>({
+        file: null,
+        croppedSrc: null,
+        publicUrl: undefined,
+        isPreparing: false,
+        videoPrompt: undefined,
+        isGeneratingVideo: false,
+        videoSrc: undefined,
+        filename: undefined,
+        videoGenerationFailed: false,
+        depthMapSrc: undefined,
+        isGeneratingDepthMap: false,
+        depthMapGenerationFailed: false,
+    });
     const [options, setOptions] = useState<ArchitectureGenerationOptions>({
         scope: 'interior',
         roomType: 'none',
@@ -71,7 +86,7 @@ export const useArchitectureStudio = ({
     const [isGeneratingVideos, setIsGeneratingVideos] = useState(false);
     const [isGeneratingDepthMaps, setIsGeneratingDepthMaps] = useState(false);
 
-    const isBusy = isPreparing || isGeneratingVideos || isGeneratingDepthMaps || pendingImageCount > 0;
+    const isBusy = isPreparing || isGeneratingVideos || isGeneratingDepthMaps || pendingImageCount > 0 || originalImage.isPreparing || originalImage.isGeneratingVideo || originalImage.isGeneratingDepthMap;
     const isGenerateDisabled = !croppedImage;
 
     const onCropConfirm = (croppedImageDataUrl: string, aspectRatio: number) => {
@@ -82,6 +97,25 @@ export const useArchitectureStudio = ({
             if (isNewUpload) {
                 const newSessionId = generateSetId();
                 setSessionId(newSessionId);
+                const timestamp = getTimestamp();
+                const baseFilename = originalFile?.name.split('.').slice(0, -1).join('.') || 'image';
+                const sanitizedFilename = baseFilename.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 40);
+                const filename = `${newSessionId}_${sanitizedFilename}_original_${timestamp}.jpg`;
+
+                setOriginalImage({
+                    file: originalFile,
+                    croppedSrc: croppedImageDataUrl,
+                    publicUrl: undefined,
+                    isPreparing: false,
+                    videoPrompt: undefined,
+                    isGeneratingVideo: false,
+                    videoSrc: undefined,
+                    filename: filename,
+                    videoGenerationFailed: false,
+                    depthMapSrc: undefined,
+                    isGeneratingDepthMap: false,
+                    depthMapGenerationFailed: false,
+                });
                 logUserAction('UPLOAD_ARCHITECTURE_IMAGE', { sessionId: newSessionId });
             }
         };
@@ -120,6 +154,20 @@ export const useArchitectureStudio = ({
                 setGeneratedImages([]);
                 setGenerationTimestamp('');
                 setSessionId(null);
+                setOriginalImage({
+                    file: null,
+                    croppedSrc: null,
+                    publicUrl: undefined,
+                    isPreparing: false,
+                    videoPrompt: undefined,
+                    isGeneratingVideo: false,
+                    videoSrc: undefined,
+                    filename: undefined,
+                    videoGenerationFailed: false,
+                    depthMapSrc: undefined,
+                    isGeneratingDepthMap: false,
+                    depthMapGenerationFailed: false,
+                });
             }
         });
     };
@@ -234,6 +282,20 @@ export const useArchitectureStudio = ({
                 setGenerationTimestamp('');
                 setPendingImageCount(0);
                 setSessionId(null);
+                setOriginalImage({
+                    file: null,
+                    croppedSrc: null,
+                    publicUrl: undefined,
+                    isPreparing: false,
+                    videoPrompt: undefined,
+                    isGeneratingVideo: false,
+                    videoSrc: undefined,
+                    filename: undefined,
+                    videoGenerationFailed: false,
+                    depthMapSrc: undefined,
+                    isGeneratingDepthMap: false,
+                    depthMapGenerationFailed: false,
+                });
             },
         });
     };
@@ -544,6 +606,78 @@ export const useArchitectureStudio = ({
         }
     };
 
+    // --- ORIGINAL IMAGE HANDLERS ---
+
+    const handlePrepareOriginal = async () => {
+        if (!originalImage.croppedSrc || originalImage.isPreparing || originalImage.isGeneratingVideo) return;
+        logUserAction('PREPARE_ORIGINAL_VIDEO', { sessionId });
+        setOriginalImage(prev => ({ ...prev, isPreparing: true }));
+        addToast(`Preparing video prompt for original image...`, 'info');
+        try {
+            const imageBlob = dataUrlToBlob(originalImage.croppedSrc);
+            const prompt = await generateArchitecturalVideoPrompt(imageBlob);
+            setOriginalImage(prev => ({ ...prev, videoPrompt: prompt, isPreparing: false }));
+            addToast("Video prompt for original image ready!", "success");
+        } catch (err) {
+            addToast(err instanceof Error ? err.message : `Error preparing original image.`, 'error');
+            setOriginalImage(prev => ({ ...prev, isPreparing: false }));
+        }
+    };
+
+    const handleGenerateOriginalVideo = async () => {
+        if (!originalImage.croppedSrc || !originalImage.videoPrompt || originalImage.isGeneratingVideo || originalImage.isPreparing) {
+            addToast("Original image must be prepared first.", "error");
+            return;
+        }
+        logUserAction('GENERATE_ORIGINAL_VIDEO', { sessionId });
+        setOriginalImage(prev => ({ ...prev, isGeneratingVideo: true, videoGenerationFailed: false }));
+        addToast(`Generating video for original image...`, 'info');
+
+        try {
+            let publicUrl = originalImage.publicUrl;
+            if (!publicUrl) {
+                publicUrl = await uploadImageFromDataUrl(originalImage.croppedSrc);
+                setOriginalImage(prev => ({ ...prev, publicUrl }));
+            }
+
+            const videoSrc = await generateSingleVideoForImage({
+                startImageUrl: publicUrl,
+                videoPrompt: originalImage.videoPrompt,
+                filename: originalImage.filename || 'original',
+            });
+
+            setOriginalImage(prev => ({ ...prev, videoSrc, isGeneratingVideo: false }));
+            addToast("Video for original image generated!", "success");
+        } catch (err) {
+            addToast(err instanceof Error ? err.message : `Error generating video for original image.`, 'error');
+            setOriginalImage(prev => ({ ...prev, isGeneratingVideo: false, videoGenerationFailed: true }));
+        }
+    };
+
+    const handleGenerateOriginalDepthMap = async () => {
+        if (!originalImage.croppedSrc || originalImage.isGeneratingDepthMap) return;
+        logUserAction('GENERATE_ORIGINAL_DEPTH_MAP', { sessionId });
+        setOriginalImage(prev => ({ ...prev, isGeneratingDepthMap: true, depthMapGenerationFailed: false }));
+        addToast(`Generating depth map for original image...`, 'info');
+
+        try {
+            let publicUrl = originalImage.publicUrl;
+            if (!publicUrl) {
+                publicUrl = await uploadImageFromDataUrl(originalImage.croppedSrc);
+                setOriginalImage(prev => ({ ...prev, publicUrl }));
+            }
+
+            const depthMapSrc = await generateDepthMap(originalImage.croppedSrc, publicUrl);
+            setOriginalImage(prev => ({ ...prev, depthMapSrc, isGeneratingDepthMap: false }));
+            addToast("Depth map for original image generated!", "success");
+        } catch (err) {
+            addToast(err instanceof Error ? err.message : `Error generating depth map for original image.`, 'error');
+            setOriginalImage(prev => ({ ...prev, isGeneratingDepthMap: false, depthMapGenerationFailed: true }));
+        }
+    };
+
+    // --- DOWNLOAD HANDLERS ---
+
     const handleDownloadSingle = (filename: string) => {
         withMultiDownloadWarning(async () => {
             logUserAction('DOWNLOAD_ARCHITECTURE_SINGLE', { filename, sessionId });
@@ -586,16 +720,38 @@ export const useArchitectureStudio = ({
 
     const handleDownloadAll = () => {
         withMultiDownloadWarning(async () => {
-            if (generatedImages.length === 0) {
+            if (generatedImages.length === 0 && !originalImage.croppedSrc) {
                 addToast("No images to download.", "info");
                 return;
             }
-            logUserAction('DOWNLOAD_ARCHITECTURE_ALL', { count: generatedImages.length, sessionId });
+            const totalCount = generatedImages.length + (originalImage.croppedSrc ? 1 : 0);
+            logUserAction('DOWNLOAD_ARCHITECTURE_ALL', { count: totalCount, sessionId });
 
             try {
-                const images = generatedImages.map(image => {
+                const images: any[] = [];
+
+                // Add original image if available
+                if (originalImage.croppedSrc && originalImage.filename) {
+                    const baseName = originalImage.filename.substring(0, originalImage.filename.lastIndexOf('.'));
+                    images.push({
+                        imageBase64: originalImage.croppedSrc,
+                        filename: `${baseName}.jpg`,
+                        prompt: 'Original uploaded image before any transformations',
+                        metadata: {
+                            type: "original_architecture_image",
+                            video_prompt: originalImage.videoPrompt,
+                        },
+                        videoUrl: originalImage.videoSrc,
+                        videoFilename: `${baseName}.mp4`,
+                        depthMapUrl: originalImage.depthMapSrc,
+                        depthMapFilename: `${baseName}.png`,
+                    });
+                }
+
+                // Add generated images
+                generatedImages.forEach(image => {
                     const baseName = image.filename.substring(0, image.filename.lastIndexOf('.'));
-                    return {
+                    images.push({
                         imageBase64: image.src,
                         filename: `${baseName}.jpg`,
                         prompt: image.imageGenerationPrompt,
@@ -610,8 +766,8 @@ export const useArchitectureStudio = ({
                         videoUrl: image.videoSrc,
                         videoFilename: `${baseName}.mp4`,
                         depthMapUrl: image.depthMapSrc,
-                        depthMapFilename: `${baseName}.png`, // Same filename as original in depth_maps folder
-                    };
+                        depthMapFilename: `${baseName}.png`,
+                    });
                 });
 
                 await downloadBulkImages({
@@ -635,6 +791,7 @@ export const useArchitectureStudio = ({
         setCroppedImage,
         croppedImageAspectRatio,
         setCroppedImageAspectRatio,
+        originalImage,
         options,
         setOptions,
         generatedImages,
@@ -658,6 +815,9 @@ export const useArchitectureStudio = ({
         handleGenerateAllVideos,
         handleGenerateSingleDepthMap,
         handleGenerateAllDepthMaps,
+        handlePrepareOriginal,
+        handleGenerateOriginalVideo,
+        handleGenerateOriginalDepthMap,
         handleDownloadSingle,
         handleDownloadAll,
     };

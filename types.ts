@@ -175,6 +175,22 @@ export type ParentImageState = {
     videoGenerationFailed?: boolean;
 };
 
+export type OriginalImageState = {
+    file: File | null;
+    croppedSrc: string | null;
+    publicUrl?: string; // To cache the uploaded URL
+    isPreparing?: boolean;
+    videoPrompt?: string;
+    isGeneratingVideo?: boolean;
+    videoSrc?: string;
+    filename?: string;
+    videoGenerationFailed?: boolean;
+    // Architecture Studio specific
+    depthMapSrc?: string;
+    isGeneratingDepthMap?: boolean;
+    depthMapGenerationFailed?: boolean;
+};
+
 
 // --- IMAGE STUDIO TYPES ---
 export interface AppFile {

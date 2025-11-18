@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import {
-    GenerationOptions, Gender, PoseStyle, ColorOption, GeneratedImage, Toast as ToastType, AdornmentOption, DownloadSettings
+    GenerationOptions, Gender, PoseStyle, ColorOption, GeneratedImage, Toast as ToastType, AdornmentOption, DownloadSettings, OriginalImageState
 } from '../types';
 import {
     generateHairstyles, regenerateSingleHairstyle
@@ -31,6 +31,17 @@ export const useHairStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
     const [originalFile, setOriginalFile] = useState<File | null>(null);
     const [croppedImage, setCroppedImage] = useState<string | null>(null);
     const [croppedImageAspectRatio, setCroppedImageAspectRatio] = useState<number>(4 / 5);
+    const [originalImage, setOriginalImage] = useState<OriginalImageState>({
+        file: null,
+        croppedSrc: null,
+        publicUrl: undefined,
+        isPreparing: false,
+        videoPrompt: undefined,
+        isGeneratingVideo: false,
+        videoSrc: undefined,
+        filename: undefined,
+        videoGenerationFailed: false,
+    });
     const [options, setOptions] = useState<GenerationOptions>({
         gender: Gender.Female,
         hairstyleCategories: [],
@@ -56,7 +67,7 @@ export const useHairStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
     const [isPreparing, setIsPreparing] = useState(false);
     const [isGeneratingVideos, setIsGeneratingVideos] = useState(false);
 
-    const isBusy = isPreparing || isGeneratingVideos || pendingImageCount > 0;
+    const isBusy = isPreparing || isGeneratingVideos || pendingImageCount > 0 || originalImage.isPreparing || originalImage.isGeneratingVideo;
     const isGenerateDisabled = !croppedImage;
 
     const onCropConfirm = (croppedImageDataUrl: string, aspectRatio: number) => {
@@ -67,6 +78,22 @@ export const useHairStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
             if (isNewUpload) {
                 const newSessionId = generateSetId();
                 setSessionId(newSessionId);
+                const timestamp = getTimestamp();
+                const baseFilename = originalFile?.name.split('.').slice(0, -1).join('.') || 'image';
+                const sanitizedFilename = baseFilename.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 40);
+                const filename = `${newSessionId}_${sanitizedFilename}_original_${timestamp}.jpg`;
+
+                setOriginalImage({
+                    file: originalFile,
+                    croppedSrc: croppedImageDataUrl,
+                    publicUrl: undefined,
+                    isPreparing: false,
+                    videoPrompt: undefined,
+                    isGeneratingVideo: false,
+                    videoSrc: undefined,
+                    filename: filename,
+                    videoGenerationFailed: false,
+                });
                 logUserAction('UPLOAD_HAIR_IMAGE', { sessionId: newSessionId });
             }
         };
@@ -104,6 +131,17 @@ export const useHairStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
                 setGeneratedImages([]);
                 setGenerationTimestamp('');
                 setSessionId(null);
+                setOriginalImage({
+                    file: null,
+                    croppedSrc: null,
+                    publicUrl: undefined,
+                    isPreparing: false,
+                    videoPrompt: undefined,
+                    isGeneratingVideo: false,
+                    videoSrc: undefined,
+                    filename: undefined,
+                    videoGenerationFailed: false,
+                });
             }
         });
     };
@@ -147,8 +185,19 @@ export const useHairStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
                 logUserAction('START_OVER_HAIR', { sessionId });
                 setOriginalFile(null); setCroppedImage(null); setGeneratedImages([]);
                 setIsPreparing(false); setIsGeneratingVideos(false);
-                setGenerationTimestamp(''); setPendingImageCount(0); 
+                setGenerationTimestamp(''); setPendingImageCount(0);
                 setSessionId(null);
+                setOriginalImage({
+                    file: null,
+                    croppedSrc: null,
+                    publicUrl: undefined,
+                    isPreparing: false,
+                    videoPrompt: undefined,
+                    isGeneratingVideo: false,
+                    videoSrc: undefined,
+                    filename: undefined,
+                    videoGenerationFailed: false,
+                });
             },
         });
     };
@@ -346,6 +395,56 @@ export const useHairStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
         }
     };
 
+    // --- ORIGINAL IMAGE HANDLERS ---
+
+    const handlePrepareOriginal = async () => {
+        if (!originalImage.croppedSrc || originalImage.isPreparing || originalImage.isGeneratingVideo) return;
+        logUserAction('PREPARE_ORIGINAL_VIDEO_HAIR', { sessionId });
+        setOriginalImage(prev => ({ ...prev, isPreparing: true }));
+        addToast(`Preparing video prompt for original image...`, 'info');
+        try {
+            const imageBlob = dataUrlToBlob(originalImage.croppedSrc);
+            const prompt = await generateVideoPromptForImage(imageBlob);
+            setOriginalImage(prev => ({ ...prev, videoPrompt: prompt, isPreparing: false }));
+            addToast("Video prompt for original image ready!", "success");
+        } catch (err) {
+            addToast(err instanceof Error ? err.message : `Error preparing original image.`, 'error');
+            setOriginalImage(prev => ({ ...prev, isPreparing: false }));
+        }
+    };
+
+    const handleGenerateOriginalVideo = async () => {
+        if (!originalImage.croppedSrc || !originalImage.videoPrompt || originalImage.isGeneratingVideo || originalImage.isPreparing) {
+            addToast("Original image must be prepared first.", "error");
+            return;
+        }
+        logUserAction('GENERATE_ORIGINAL_VIDEO_HAIR', { sessionId });
+        setOriginalImage(prev => ({ ...prev, isGeneratingVideo: true, videoGenerationFailed: false }));
+        addToast(`Generating video for original image...`, 'info');
+
+        try {
+            let publicUrl = originalImage.publicUrl;
+            if (!publicUrl) {
+                publicUrl = await uploadImageFromDataUrl(originalImage.croppedSrc);
+                setOriginalImage(prev => ({ ...prev, publicUrl }));
+            }
+
+            const videoSrc = await generateSingleVideoForImage({
+                startImageUrl: publicUrl,
+                videoPrompt: originalImage.videoPrompt,
+                filename: originalImage.filename || 'original',
+            });
+
+            setOriginalImage(prev => ({ ...prev, videoSrc, isGeneratingVideo: false }));
+            addToast("Video for original image generated!", "success");
+        } catch (err) {
+            addToast(err instanceof Error ? err.message : `Error generating video for original image.`, 'error');
+            setOriginalImage(prev => ({ ...prev, isGeneratingVideo: false, videoGenerationFailed: true }));
+        }
+    };
+
+    // --- DOWNLOAD HANDLERS ---
+
     const handleDownloadSingle = (filename: string) => {
         withMultiDownloadWarning(async () => {
             logUserAction('DOWNLOAD_HAIR_SINGLE', { filename, sessionId });
@@ -385,16 +484,36 @@ export const useHairStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
 
     const handleDownloadAll = () => {
         withMultiDownloadWarning(async () => {
-            if (generatedImages.length === 0) {
+            if (generatedImages.length === 0 && !originalImage.croppedSrc) {
                 addToast("No images to download.", "info");
                 return;
             }
-            logUserAction('DOWNLOAD_HAIR_ALL', { count: generatedImages.length, sessionId });
+            const totalCount = generatedImages.length + (originalImage.croppedSrc ? 1 : 0);
+            logUserAction('DOWNLOAD_HAIR_ALL', { count: totalCount, sessionId });
 
             try {
-                const images = generatedImages.map(image => {
+                const images: any[] = [];
+
+                // Add original image if available
+                if (originalImage.croppedSrc && originalImage.filename) {
+                    const baseName = originalImage.filename.substring(0, originalImage.filename.lastIndexOf('.'));
+                    images.push({
+                        imageBase64: originalImage.croppedSrc,
+                        filename: `${baseName}.jpg`,
+                        prompt: 'Original uploaded image before any transformations',
+                        metadata: {
+                            type: "original_hair_image",
+                            video_prompt: originalImage.videoPrompt,
+                        },
+                        videoUrl: originalImage.videoSrc,
+                        videoFilename: `${baseName}.mp4`,
+                    });
+                }
+
+                // Add generated images
+                generatedImages.forEach(image => {
                     const baseName = image.filename.substring(0, image.filename.lastIndexOf('.'));
-                    return {
+                    images.push({
                         imageBase64: image.src,
                         filename: `${baseName}.jpg`,
                         prompt: image.imageGenerationPrompt,
@@ -407,7 +526,7 @@ export const useHairStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
                         },
                         videoUrl: image.videoSrc,
                         videoFilename: `${baseName}.mp4`,
-                    };
+                    });
                 });
 
                 await downloadBulkImages({
@@ -428,6 +547,7 @@ export const useHairStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
         originalFile, setOriginalFile,
         croppedImage, setCroppedImage,
         croppedImageAspectRatio, setCroppedImageAspectRatio,
+        originalImage,
         options, setOptions,
         generatedImages,
         pendingImageCount,
@@ -446,6 +566,8 @@ export const useHairStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
         handleRemoveGeneratedImage,
         handlePrepareAll,
         handleGenerateAllVideos,
+        handlePrepareOriginal,
+        handleGenerateOriginalVideo,
         handleDownloadSingle,
         handleDownloadAll,
     };
