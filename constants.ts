@@ -721,6 +721,7 @@ export const AD_CREATIVE_APP_CODES = [
   { id: 'CFO', name: 'CFO' },
   { id: 'TCO', name: 'TCO' },
   { id: 'CHT', name: 'CHT' },
+  { id: 'ARC', name: 'ARC' },
 ];
 
 export const AD_CREATIVE_DESIGNERS = [
@@ -759,6 +760,34 @@ const GRID_SLIDESHOW_PARAMETERS: PlainlyParameter[] = [
   { name: 'varImageOriginal', type: 'image', value: null, displayName: 'Original Image' },
 ];
 
+// Define parameter templates for the finger-snap-warp-slideshow project
+const FINGER_SNAP_PARAMETERS: PlainlyParameter[] = [
+  { name: 'var0Jpg', type: 'image', value: null, displayName: 'Image 0' },
+  { name: 'var1Jpg', type: 'image', value: null, displayName: 'Image 1' },
+  { name: 'var2Jpg', type: 'image', value: null, displayName: 'Image 2' },
+  { name: 'var3Jpg', type: 'image', value: null, displayName: 'Image 3' },
+  { name: 'var4Jpg', type: 'image', value: null, displayName: 'Image 4' },
+  { name: 'var5Jpg', type: 'image', value: null, displayName: 'Image 5' },
+  { name: 'var6Jpg', type: 'image', value: null, displayName: 'Image 6' },
+  { name: 'var7Jpg', type: 'image', value: null, displayName: 'Image 7' },
+  { name: 'var8Jpg', type: 'image', value: null, displayName: 'Image 8' },
+  { name: 'var9Jpg', type: 'image', value: null, displayName: 'Image 9' },
+  { name: 'var0DepthJpg', type: 'image', value: null, displayName: 'Depth Map 0' },
+  { name: 'var1DepthJpg', type: 'image', value: null, displayName: 'Depth Map 1' },
+  { name: 'var2DepthJpg', type: 'image', value: null, displayName: 'Depth Map 2' },
+  { name: 'var3DepthJpg', type: 'image', value: null, displayName: 'Depth Map 3' },
+  { name: 'var4DepthJpg', type: 'image', value: null, displayName: 'Depth Map 4' },
+  { name: 'var5DepthJpg', type: 'image', value: null, displayName: 'Depth Map 5' },
+  { name: 'var6DepthJpg', type: 'image', value: null, displayName: 'Depth Map 6' },
+  { name: 'var7DepthJpg', type: 'image', value: null, displayName: 'Depth Map 7' },
+  { name: 'var8DepthJpg', type: 'image', value: null, displayName: 'Depth Map 8' },
+  { name: 'var9DepthJpg', type: 'image', value: null, displayName: 'Depth Map 9' },
+  { name: 'varScanColor', type: 'text', value: null, displayName: 'Scan Color' },
+  { name: 'var0Mp4', type: 'video', value: null, displayName: 'Video 0' },
+  { name: 'var1Mp4', type: 'video', value: null, displayName: 'Video 1' },
+  { name: 'varEndcard', type: 'video', value: null, displayName: 'Endcard Video' },
+];
+
 export const AD_CREATIVE_PROJECTS: PlainlyProject[] = [
   {
     id: '7f42a3cc-0e43-464a-a15b-a7b317ba09b6',
@@ -771,5 +800,17 @@ export const AD_CREATIVE_PROJECTS: PlainlyProject[] = [
       { id: 'd1c06c0e-8b04-429c-bdba-32ac95d3e42c', name: '1x1', aspectRatio: '1:1' },
     ],
     parameters: GRID_SLIDESHOW_PARAMETERS,
+  },
+  {
+    id: 'c94c74ac-e51a-4eaf-8479-e705790ea008',
+    name: 'Finger Snap Warp Slideshow',
+    templateName: 'finger-snap-warp-slideshow',
+    templates: [
+      { id: '1b59bad3-51e5-4baa-84f1-ae84a11efb8b', name: '4x5', aspectRatio: '4:5' },
+      { id: 'd07d8ce8-2ecc-4c76-908a-ee71c1e32a67', name: '1x1', aspectRatio: '1:1' },
+      { id: '94d9f0ce-c6be-45d6-b56d-55ee8ac3de8a', name: '16x9', aspectRatio: '16:9' },
+      { id: '28f8ff8a-4bba-492d-840c-ae35c7ca1bb6', name: '9x16', aspectRatio: '9:16' },
+    ],
+    parameters: FINGER_SNAP_PARAMETERS,
   },
 ];
