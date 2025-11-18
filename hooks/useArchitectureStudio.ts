@@ -1168,11 +1168,12 @@ export const useArchitectureStudio = ({
 
     const handleDownloadAll = () => {
         withMultiDownloadWarning(async () => {
-            if (generatedImages.length === 0 && !originalImage.croppedSrc) {
+            const transformedCount = Object.values(transformedVersions).filter(v => v).length;
+            if (generatedImages.length === 0 && !originalImage.croppedSrc && transformedCount === 0) {
                 addToast("No images to download.", "info");
                 return;
             }
-            const totalCount = generatedImages.length + (originalImage.croppedSrc ? 1 : 0);
+            const totalCount = generatedImages.length + (originalImage.croppedSrc ? 1 : 0) + transformedCount;
             logUserAction('DOWNLOAD_ARCHITECTURE_ALL', { count: totalCount, sessionId });
 
             try {
@@ -1192,9 +1193,33 @@ export const useArchitectureStudio = ({
                         videoUrl: originalImage.videoSrc,
                         videoFilename: `${baseName}.mp4`,
                         depthMapUrl: originalImage.depthMapSrc,
-                        depthMapFilename: `${baseName}.png`,
+                        depthMapFilename: `depth_map_${baseName}.png`,
                     });
                 }
+
+                // Add transformed versions if available
+                const transformationTypes: TransformationType[] = ['tidy', 'unfurnished', 'livedIn'];
+                transformationTypes.forEach(type => {
+                    const transformed = transformedVersions[type];
+                    if (transformed && transformed.croppedSrc && transformed.filename) {
+                        const baseName = transformed.filename.substring(0, transformed.filename.lastIndexOf('.'));
+                        images.push({
+                            imageBase64: transformed.croppedSrc,
+                            filename: `${baseName}_${type}.jpg`,
+                            prompt: `${type} transformation`,
+                            metadata: {
+                                type: `architecture_${type}`,
+                                transformation_type: type,
+                                source_version: transformed.sourceVersion,
+                                video_prompt: transformed.videoPrompt,
+                            },
+                            videoUrl: transformed.videoSrc,
+                            videoFilename: `${baseName}_${type}.mp4`,
+                            depthMapUrl: transformed.depthMapSrc,
+                            depthMapFilename: `depth_map_${baseName}_${type}.png`,
+                        });
+                    }
+                });
 
                 // Add generated images
                 generatedImages.forEach(image => {
@@ -1228,6 +1253,227 @@ export const useArchitectureStudio = ({
             } catch (err) {
                 addToast("Error creating ZIP file.", "error");
                 setDownloadProgress({ visible: false, message: '', progress: 0 });
+            }
+        });
+    };
+
+    // --- VERSION-AWARE HANDLERS (work on any version: original or transformed) ---
+
+    const handlePrepareVersion = async (version: ActiveVersionType) => {
+        const isOriginal = version === 'real';
+        const targetImage = isOriginal ? originalImage : transformedVersions[version as TransformationType];
+
+        if (!targetImage || !targetImage.croppedSrc || targetImage.isPreparing || targetImage.isGeneratingVideo) return;
+
+        const versionLabel = isOriginal ? 'original' : version;
+        logUserAction('PREPARE_VERSION_VIDEO', { version: versionLabel, sessionId });
+
+        if (isOriginal) {
+            setOriginalImage(prev => ({ ...prev, isPreparing: true }));
+        } else {
+            setTransformedVersions(prev => ({
+                ...prev,
+                [version]: { ...prev[version]!, isPreparing: true }
+            }));
+        }
+
+        addToast(`Preparing video prompt for ${versionLabel} version...`, 'info');
+
+        try {
+            const imageBlob = dataUrlToBlob(targetImage.croppedSrc);
+            const prompt = await generateArchitecturalVideoPrompt(imageBlob);
+
+            if (isOriginal) {
+                setOriginalImage(prev => ({ ...prev, videoPrompt: prompt, isPreparing: false }));
+            } else {
+                setTransformedVersions(prev => ({
+                    ...prev,
+                    [version]: { ...prev[version]!, videoPrompt: prompt, isPreparing: false }
+                }));
+            }
+
+            addToast(`Video prompt for ${versionLabel} version ready!`, "success");
+        } catch (err) {
+            addToast(err instanceof Error ? err.message : `Error preparing ${versionLabel} version.`, 'error');
+
+            if (isOriginal) {
+                setOriginalImage(prev => ({ ...prev, isPreparing: false }));
+            } else {
+                setTransformedVersions(prev => ({
+                    ...prev,
+                    [version]: { ...prev[version]!, isPreparing: false }
+                }));
+            }
+        }
+    };
+
+    const handleGenerateVersionVideo = async (version: ActiveVersionType) => {
+        const isOriginal = version === 'real';
+        const targetImage = isOriginal ? originalImage : transformedVersions[version as TransformationType];
+
+        if (!targetImage || !targetImage.croppedSrc || !targetImage.videoPrompt || targetImage.isGeneratingVideo || targetImage.isPreparing) {
+            addToast("Image must be prepared first.", "error");
+            return;
+        }
+
+        const versionLabel = isOriginal ? 'original' : version;
+        logUserAction('GENERATE_VERSION_VIDEO', { version: versionLabel, sessionId });
+
+        if (isOriginal) {
+            setOriginalImage(prev => ({ ...prev, isGeneratingVideo: true, videoGenerationFailed: false }));
+        } else {
+            setTransformedVersions(prev => ({
+                ...prev,
+                [version]: { ...prev[version]!, isGeneratingVideo: true, videoGenerationFailed: false }
+            }));
+        }
+
+        addToast(`Generating video for ${versionLabel} version...`, 'info');
+
+        try {
+            let publicUrl = targetImage.publicUrl;
+            if (!publicUrl) {
+                publicUrl = await uploadImageFromDataUrl(targetImage.croppedSrc);
+
+                if (isOriginal) {
+                    setOriginalImage(prev => ({ ...prev, publicUrl }));
+                } else {
+                    setTransformedVersions(prev => ({
+                        ...prev,
+                        [version]: { ...prev[version]!, publicUrl }
+                    }));
+                }
+            }
+
+            const videoSrc = await generateSingleVideoForImage({
+                startImageUrl: publicUrl,
+                videoPrompt: targetImage.videoPrompt,
+                filename: targetImage.filename || versionLabel,
+            });
+
+            if (isOriginal) {
+                setOriginalImage(prev => ({ ...prev, videoSrc, isGeneratingVideo: false }));
+            } else {
+                setTransformedVersions(prev => ({
+                    ...prev,
+                    [version]: { ...prev[version]!, videoSrc, isGeneratingVideo: false }
+                }));
+            }
+
+            addToast(`Video for ${versionLabel} version generated!`, "success");
+        } catch (err) {
+            addToast(err instanceof Error ? err.message : `Error generating video for ${versionLabel} version.`, 'error');
+
+            if (isOriginal) {
+                setOriginalImage(prev => ({ ...prev, isGeneratingVideo: false, videoGenerationFailed: true }));
+            } else {
+                setTransformedVersions(prev => ({
+                    ...prev,
+                    [version]: { ...prev[version]!, isGeneratingVideo: false, videoGenerationFailed: true }
+                }));
+            }
+        }
+    };
+
+    const handleGenerateVersionDepthMap = async (version: ActiveVersionType) => {
+        const isOriginal = version === 'real';
+        const targetImage = isOriginal ? originalImage : transformedVersions[version as TransformationType];
+
+        if (!targetImage || !targetImage.croppedSrc || targetImage.isGeneratingDepthMap) return;
+
+        const versionLabel = isOriginal ? 'original' : version;
+        logUserAction('GENERATE_VERSION_DEPTH_MAP', { version: versionLabel, sessionId });
+
+        if (isOriginal) {
+            setOriginalImage(prev => ({ ...prev, isGeneratingDepthMap: true, depthMapGenerationFailed: false }));
+        } else {
+            setTransformedVersions(prev => ({
+                ...prev,
+                [version]: { ...prev[version]!, isGeneratingDepthMap: true, depthMapGenerationFailed: false }
+            }));
+        }
+
+        addToast(`Generating depth map for ${versionLabel} version...`, 'info');
+
+        try {
+            let publicUrl = targetImage.publicUrl;
+            if (!publicUrl) {
+                publicUrl = await uploadImageFromDataUrl(targetImage.croppedSrc);
+
+                if (isOriginal) {
+                    setOriginalImage(prev => ({ ...prev, publicUrl }));
+                } else {
+                    setTransformedVersions(prev => ({
+                        ...prev,
+                        [version]: { ...prev[version]!, publicUrl }
+                    }));
+                }
+            }
+
+            const depthMapSrc = await generateDepthMap(targetImage.croppedSrc, publicUrl);
+
+            if (isOriginal) {
+                setOriginalImage(prev => ({ ...prev, depthMapSrc, isGeneratingDepthMap: false }));
+            } else {
+                setTransformedVersions(prev => ({
+                    ...prev,
+                    [version]: { ...prev[version]!, depthMapSrc, isGeneratingDepthMap: false }
+                }));
+            }
+
+            addToast(`Depth map for ${versionLabel} version generated!`, "success");
+        } catch (err) {
+            addToast(err instanceof Error ? err.message : `Error generating depth map for ${versionLabel} version.`, 'error');
+
+            if (isOriginal) {
+                setOriginalImage(prev => ({ ...prev, isGeneratingDepthMap: false, depthMapGenerationFailed: true }));
+            } else {
+                setTransformedVersions(prev => ({
+                    ...prev,
+                    [version]: { ...prev[version]!, isGeneratingDepthMap: false, depthMapGenerationFailed: true }
+                }));
+            }
+        }
+    };
+
+    const handleDownloadVersion = (version: ActiveVersionType) => {
+        withMultiDownloadWarning(async () => {
+            const isOriginal = version === 'real';
+            const targetImage = isOriginal ? originalImage : transformedVersions[version as TransformationType];
+
+            if (!targetImage || !targetImage.croppedSrc || !targetImage.filename) {
+                addToast("No image to download.", "error");
+                return;
+            }
+
+            const versionLabel = isOriginal ? 'original' : version;
+            logUserAction('DOWNLOAD_ARCHITECTURE_VERSION', { version: versionLabel, filename: targetImage.filename, sessionId });
+
+            const baseName = targetImage.filename.substring(0, targetImage.filename.lastIndexOf('.'));
+            const suffix = isOriginal ? '' : `_${version}`;
+
+            try {
+                await downloadImageWithMetadata({
+                    imageBase64: targetImage.croppedSrc,
+                    filename: `${baseName}${suffix}.jpg`,
+                    prompt: isOriginal ? 'Original uploaded image before any transformations' : `${versionLabel} transformation`,
+                    metadata: {
+                        type: `architecture_${versionLabel}`,
+                        version: versionLabel,
+                        video_prompt: targetImage.videoPrompt,
+                        session_id: sessionId,
+                        timestamp: getTimestamp(),
+                    },
+                    videoUrl: targetImage.videoSrc,
+                    videoFilename: `${baseName}${suffix}.mp4`,
+                    depthMapUrl: targetImage.depthMapSrc,
+                    depthMapFilename: `depth_map_${baseName}${suffix}.png`,
+                    embedInImage: false,
+                    includeMetadataFile: downloadSettings.includeMetadataFiles,
+                });
+                addToast("Download complete!", "success");
+            } catch (err) {
+                addToast(err instanceof Error ? err.message : "Download failed.", "error");
             }
         });
     };
@@ -1274,5 +1520,9 @@ export const useArchitectureStudio = ({
         handleDownloadAll,
         handleGenerateTransformation,
         handleRemoveTransformation,
+        handlePrepareVersion,
+        handleGenerateVersionVideo,
+        handleGenerateVersionDepthMap,
+        handleDownloadVersion,
     };
 };

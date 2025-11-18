@@ -24,10 +24,10 @@ const OriginalImageCard: React.FC<{
     onRecrop: () => void;
     onClear: () => void;
     isDataLocked: boolean;
-    onPrepare: () => void;
-    onGenerateVideo: () => void;
-    onGenerateDepthMap: () => void;
-    onDownload: () => void;
+    onPrepare: (version: any) => void;
+    onGenerateVideo: (version: any) => void;
+    onGenerateDepthMap: (version: any) => void;
+    onDownload: (version: any) => void;
     onGenerateTransformation: (type: any) => void;
     onRemoveTransformation: (type: any) => void;
     aspectRatio: number;
@@ -157,10 +157,10 @@ const OriginalImageCard: React.FC<{
 
                 <div className="absolute top-2 right-2 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-20">
                     <button onClick={onClear} className="p-2 bg-black bg-opacity-60 rounded-full text-[var(--color-text-main)] hover:bg-opacity-80 transition-all" aria-label="Remove photo" disabled={isDataLocked || isBusy}><TrashIcon className="w-5 h-5" /></button>
-                    <button onClick={onDownload} className="p-2 bg-black bg-opacity-60 rounded-full text-[var(--color-text-main)] hover:bg-opacity-80 transition-all" title="Download image, video, depth map, and info" disabled={isBusy}><DownloadIcon className="w-5 h-5" /></button>
-                    <button onClick={onPrepare} className="p-2 bg-black bg-opacity-60 rounded-full text-[var(--color-text-main)] hover:bg-opacity-80 transition-all" title="Prepare for video" disabled={isBusy}><PrepareMagicIcon className={`w-5 h-5 ${isPreparing ? 'animate-spin' : ''}`} /></button>
-                    <button onClick={onGenerateVideo} className="p-2 bg-black bg-opacity-60 rounded-full text-[var(--color-text-main)] hover:bg-opacity-80 transition-all disabled:opacity-50" title="Generate video" disabled={isBusy || !videoPrompt}><VideoIcon className={`w-5 h-5 ${isGeneratingVideo ? 'animate-spin' : ''}`} /></button>
-                    <button onClick={onGenerateDepthMap} className="p-2 bg-black bg-opacity-60 rounded-full text-[var(--color-text-main)] hover:bg-opacity-80 transition-all" title="Generate depth map" disabled={isBusy}><DepthMapIcon className={`w-5 h-5 ${isGeneratingDepthMap ? 'animate-spin' : ''}`} /></button>
+                    <button onClick={() => onDownload(selectedVersion)} className="p-2 bg-black bg-opacity-60 rounded-full text-[var(--color-text-main)] hover:bg-opacity-80 transition-all" title="Download image, video, depth map, and info" disabled={isBusy}><DownloadIcon className="w-5 h-5" /></button>
+                    <button onClick={() => onPrepare(selectedVersion)} className="p-2 bg-black bg-opacity-60 rounded-full text-[var(--color-text-main)] hover:bg-opacity-80 transition-all" title="Prepare for video" disabled={isBusy}><PrepareMagicIcon className={`w-5 h-5 ${isPreparing ? 'animate-spin' : ''}`} /></button>
+                    <button onClick={() => onGenerateVideo(selectedVersion)} className="p-2 bg-black bg-opacity-60 rounded-full text-[var(--color-text-main)] hover:bg-opacity-80 transition-all disabled:opacity-50" title="Generate video" disabled={isBusy || !videoPrompt}><VideoIcon className={`w-5 h-5 ${isGeneratingVideo ? 'animate-spin' : ''}`} /></button>
+                    <button onClick={() => onGenerateDepthMap(selectedVersion)} className="p-2 bg-black bg-opacity-60 rounded-full text-[var(--color-text-main)] hover:bg-opacity-80 transition-all" title="Generate depth map" disabled={isBusy}><DepthMapIcon className={`w-5 h-5 ${isGeneratingDepthMap ? 'animate-spin' : ''}`} /></button>
                 </div>
 
                 {isBusy && (
@@ -244,6 +244,10 @@ const ArchitectureStudio: React.FC<ArchitectureStudioProps> = ({
         handleDownloadSingle,
         handleGenerateTransformation,
         handleRemoveTransformation,
+        handlePrepareVersion,
+        handleGenerateVersionVideo,
+        handleGenerateVersionDepthMap,
+        handleDownloadVersion,
     } = logic;
 
     const areGlobalActionsDisabled = isPreparing || isGeneratingVideos || pendingImageCount > 0 || generatedImages.length === 0;
@@ -265,10 +269,10 @@ const ArchitectureStudio: React.FC<ArchitectureStudioProps> = ({
                             onRecrop={onRecrop}
                             onClear={handleClearImageAndResults}
                             isDataLocked={pendingImageCount > 0}
-                            onPrepare={handlePrepareOriginal}
-                            onGenerateVideo={handleGenerateOriginalVideo}
-                            onGenerateDepthMap={handleGenerateOriginalDepthMap}
-                            onDownload={handleDownloadOriginal}
+                            onPrepare={handlePrepareVersion}
+                            onGenerateVideo={handleGenerateVersionVideo}
+                            onGenerateDepthMap={handleGenerateVersionDepthMap}
+                            onDownload={handleDownloadVersion}
                             onGenerateTransformation={handleGenerateTransformation}
                             onRemoveTransformation={handleRemoveTransformation}
                             aspectRatio={croppedImageAspectRatio}
