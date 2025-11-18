@@ -4,6 +4,7 @@ import { OriginalImageState } from '../../types';
 import ImageUploader from '../ImageUploader';
 import HairOptionsPanel from './HairOptionsPanel';
 import ImageGrid from '../ImageGrid';
+import GenerationToolbar from '../GenerationToolbar';
 import { TrashIcon, HelpIcon, DownloadIcon, PrepareMagicIcon, VideoIcon, AlertCircleIcon, CheckCircleIcon } from '../Icons';
 import { useHairStudio } from '../../hooks/useHairStudio';
 
@@ -127,7 +128,8 @@ const HairStudio: React.FC<HairStudioProps> = ({
     const areGlobalActionsDisabled = isPreparing || isGeneratingVideos || pendingImageCount > 0 || generatedImages.length === 0;
 
     return (
-        <div className="w-full max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-12">
+        <>
+        <div className="w-full max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-12 pb-28">
             <div className="bg-[var(--color-bg-surface)] p-6 rounded-2xl shadow-lg border border-[var(--color-border-muted)] flex flex-col gap-6">
                 <div className="w-full">
                     {!croppedImage ? (
@@ -147,10 +149,6 @@ const HairStudio: React.FC<HairStudioProps> = ({
                 </div>
                 <div className="w-full">
                     <HairOptionsPanel options={options} setOptions={setOptions} disabled={false} />
-                    <button onClick={handleGenerate} disabled={isGenerateDisabled} className="w-full mt-6 bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] disabled:bg-[var(--color-bg-muted)] disabled:cursor-not-allowed text-[var(--color-text-on-primary)] font-bold py-3 px-4 rounded-lg transition-colors text-lg shadow-md shadow-[var(--color-shadow-primary)]/30">
-                        {pendingImageCount > 0 ? `Generating... (${pendingImageCount} left)` : 'Generate My Styles'}
-                    </button>
-                    <button onClick={handleStartOver} disabled={isBusy} className="w-full mt-3 bg-[var(--color-bg-muted)] hover:bg-[var(--color-bg-muted-hover)] text-[var(--color-text-main)] font-bold py-2 px-4 rounded-lg transition-colors disabled:bg-[var(--color-bg-surface)] disabled:text-[var(--color-text-dimmer)] disabled:cursor-not-allowed text-sm">Start Over</button>
                 </div>
             </div>
 
@@ -186,6 +184,26 @@ const HairStudio: React.FC<HairStudioProps> = ({
                 />
             </div>
         </div>
+
+        <GenerationToolbar
+            aspectRatio={options.aspectRatio}
+            onAspectRatioChange={(ratio) => setOptions(prev => ({ ...prev, aspectRatio: ratio }))}
+            aspectRatioDisabled={false}
+            imageCount={options.imageCount}
+            onImageCountChange={(count) => setOptions(prev => ({ ...prev, imageCount: count }))}
+            imageCountMin={1}
+            imageCountMax={20}
+            imageCountDisabled={false}
+            generateButtonText="Generate"
+            onGenerate={handleGenerate}
+            generateDisabled={isGenerateDisabled}
+            pendingCount={pendingImageCount}
+            startOverButtonText="Clear"
+            onStartOver={handleStartOver}
+            startOverDisabled={isBusy}
+            studioMode="hair"
+        />
+        </>
     );
 };
 
