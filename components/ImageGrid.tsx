@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { DownloadIcon, RegenerateIcon, TrashIcon, PrepareMagicIcon, CheckCircleIcon, VideoIcon, HairStudioIcon, BabyIcon, AlertCircleIcon } from './Icons';
+import { DownloadIcon, RegenerateIcon, TrashIcon, PrepareMagicIcon, CheckCircleIcon, VideoIcon, HairStudioIcon, BabyIcon, ArchitectureStudioIcon, AlertCircleIcon, DepthMapIcon } from './Icons';
 import { DisplayImage } from '../types';
 
 interface ImageGridProps {
@@ -12,7 +12,8 @@ interface ImageGridProps {
   onReprepare: (id: string) => void;
   onDownloadSingle: (id: string) => void;
   onGenerateSingleVideo: (id: string) => void;
-  mode?: 'hairStudio' | 'videoStudio' | 'babyStudio';
+  onGenerateDepthMap?: (id: string) => void;
+  mode?: 'hairStudio' | 'videoStudio' | 'babyStudio' | 'architectureStudio';
 }
 
 const ImageCard: React.FC<Omit<ImageGridProps, 'images' | 'pendingCount' | 'placeholderAspectRatio'> & { image: DisplayImage }> = ({
@@ -23,6 +24,7 @@ const ImageCard: React.FC<Omit<ImageGridProps, 'images' | 'pendingCount' | 'plac
   onReprepare,
   onDownloadSingle,
   onGenerateSingleVideo,
+  onGenerateDepthMap,
   mode = 'hairStudio',
 }) => {
   const [isHovering, setIsHovering] = useState(false);
@@ -31,9 +33,18 @@ const ImageCard: React.FC<Omit<ImageGridProps, 'images' | 'pendingCount' | 'plac
   const { src, filename, isPreparing, videoPrompt, videoSrc, isGeneratingVideo } = image;
   const isRegenerating = 'isRegenerating' in image && image.isRegenerating;
   const videoGenerationFailed = 'videoGenerationFailed' in image && image.videoGenerationFailed;
-  const isBusy = isRegenerating || isPreparing || isGeneratingVideo;
+  const depthMapSrc = 'depthMapSrc' in image ? image.depthMapSrc : undefined;
+  const isGeneratingDepthMap = 'isGeneratingDepthMap' in image && image.isGeneratingDepthMap;
+  const depthMapGenerationFailed = 'depthMapGenerationFailed' in image && image.depthMapGenerationFailed;
+  const isBusy = isRegenerating || isPreparing || isGeneratingVideo || isGeneratingDepthMap;
   
-  const title = 'hairstyle' in image ? image.hairstyle.name : ('description' in image ? image.description : image.filename);
+  const title = 'hairstyle' in image
+    ? image.hairstyle.name
+    : ('description' in image
+      ? image.description
+      : ('style' in image
+        ? image.style
+        : image.filename));
   const color = 'color' in image ? image.color : 'N/A';
   
   const uniqueId = 'id' in image ? image.id : image.filename;
@@ -107,6 +118,11 @@ const ImageCard: React.FC<Omit<ImageGridProps, 'images' | 'pendingCount' | 'plac
           <CheckCircleIcon className="w-5 h-5" />
         </div>
       )}
+      {depthMapSrc && !isBusy && mode === 'architectureStudio' && (
+        <div className="absolute top-14 left-2 p-1 bg-black bg-opacity-60 rounded-full text-[var(--color-info-accent)] pointer-events-none" title="Depth map is ready">
+          <DepthMapIcon className="w-5 h-5" />
+        </div>
+      )}
 
       <div className="absolute top-2 right-2 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity focus-within:opacity-100 z-20">
         <button
@@ -123,6 +139,17 @@ const ImageCard: React.FC<Omit<ImageGridProps, 'images' | 'pendingCount' | 'plac
               className="p-2 bg-black bg-opacity-60 rounded-full text-[var(--color-text-main)] hover:bg-opacity-80 transition-all disabled:opacity-50"
               aria-label="Generate a new random style using the current filters"
               title="Generate a new random style"
+              disabled={isBusy}
+            >
+              <RegenerateIcon className={`w-5 h-5 ${isRegenerating ? 'animate-spin' : ''}`} />
+            </button>
+        )}
+        {mode === 'architectureStudio' && onRegenerate && (
+            <button
+              onClick={(e) => { handleActionClick(e); onRegenerate(uniqueId); }}
+              className="p-2 bg-black bg-opacity-60 rounded-full text-[var(--color-text-main)] hover:bg-opacity-80 transition-all disabled:opacity-50"
+              aria-label="Generate a new variation using the current filters"
+              title="Generate a new variation"
               disabled={isBusy}
             >
               <RegenerateIcon className={`w-5 h-5 ${isRegenerating ? 'animate-spin' : ''}`} />
@@ -146,6 +173,17 @@ const ImageCard: React.FC<Omit<ImageGridProps, 'images' | 'pendingCount' | 'plac
         >
           <VideoIcon className={`w-5 h-5 ${isGeneratingVideo ? 'animate-spin' : ''}`} />
         </button>
+        {mode === 'architectureStudio' && onGenerateDepthMap && (
+          <button
+            onClick={(e) => { handleActionClick(e); onGenerateDepthMap(uniqueId); }}
+            className="p-2 bg-black bg-opacity-60 rounded-full text-[var(--color-text-main)] hover:bg-opacity-80 transition-all disabled:opacity-50"
+            aria-label={depthMapSrc ? 'Regenerate depth map' : 'Generate depth map'}
+            title={depthMapSrc ? 'Regenerate depth map' : 'Generate depth map'}
+            disabled={isBusy}
+          >
+            <DepthMapIcon className={`w-5 h-5 ${isGeneratingDepthMap ? 'animate-spin' : ''}`} />
+          </button>
+        )}
         <button
           onClick={(e) => { handleActionClick(e); onRemove(uniqueId); }}
           className="p-2 bg-black bg-opacity-60 rounded-full text-[var(--color-text-main)] hover:bg-opacity-80 transition-all disabled:opacity-50"
@@ -192,6 +230,10 @@ const ImageGrid: React.FC<ImageGridProps> = ({
               icon = <BabyIcon className="mx-auto h-24 w-24 text-[var(--color-border-default)] opacity-75"/>;
               title = "Family Album is Empty";
               description = "Upload photos for both parents and click Generate!";
+          } else if (mode === 'architectureStudio') {
+              icon = <ArchitectureStudioIcon className="mx-auto h-24 w-24 text-[var(--color-border-default)] opacity-75"/>;
+              title = "Design Gallery Empty";
+              description = "Upload an architectural photo and select styles to begin!";
           } else {
               // Fallback for video studio or other modes.
               icon = <VideoIcon className="mx-auto h-24 w-24 text-[var(--color-border-default)] opacity-75"/>;
