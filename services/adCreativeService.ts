@@ -5,7 +5,7 @@
 
 import { endpoints } from './endpoints';
 import { PlainlyParameter, PlainlyProject, WebhookPassthrough } from '../types';
-import { uploadImageToGCS } from './imageUploadService';
+import { uploadImageFromDataUrl } from './imageUploadService';
 import { uploadVideoToGCS } from './videoUploadService';
 import { logUserAction } from './loggingService';
 
@@ -40,19 +40,13 @@ async function uploadAsset(file: File, type: 'image' | 'video' | 'audio'): Promi
         reader.readAsDataURL(file);
       });
 
-      const result = await uploadImageToGCS(dataUrl, file.name);
-      return result.image_url;
+      // uploadImageFromDataUrl returns the URL directly
+      const imageUrl = await uploadImageFromDataUrl(dataUrl, file.name);
+      return imageUrl;
     } else if (type === 'video' || type === 'audio') {
-      // For videos and audio, use the video upload service
-      const dataUrl = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
-
-      const result = await uploadVideoToGCS(dataUrl, file.name);
-      return result.file_url;
+      // For videos and audio, use the video upload service (takes File, returns URL directly)
+      const fileUrl = await uploadVideoToGCS(file);
+      return fileUrl;
     }
 
     throw new Error(`Unsupported asset type: ${type}`);
