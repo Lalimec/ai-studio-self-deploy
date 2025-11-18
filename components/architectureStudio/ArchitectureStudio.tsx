@@ -210,20 +210,20 @@ const ArchitectureStudio: React.FC<ArchitectureStudioProps> = ({
             imageCountMin={1}
             imageCountMax={4}
             imageCountDisabled={false}
-            generateButtonText="Generate Architectural Styles"
+            generateButtonText="Generate"
             onGenerate={handleGenerate}
             generateDisabled={isGenerateDisabled}
             pendingCount={pendingImageCount}
             additionalButtons={[
                 {
                     key: 'unstyled',
-                    text: 'Generate Unstyled',
+                    text: 'Unstyled',
                     onClick: handleGenerateUnstyled,
                     disabled: isGenerateDisabled,
                     variant: 'action',
                 },
             ]}
-            startOverButtonText="Start Over"
+            startOverButtonText="Clear"
             onStartOver={handleStartOver}
             startOverDisabled={isBusy}
             studioMode="architecture"

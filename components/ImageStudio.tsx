@@ -339,7 +339,7 @@ const ImageStudio: React.FC<ImageStudioProps> = ({ logic, onImageClick, onShowHe
                     variant: 'secondary',
                 },
             ]}
-            startOverButtonText="Clear Gallery"
+            startOverButtonText="Clear"
             onStartOver={logic.handleClearGallery}
             startOverDisabled={logic.isLoading || logic.generationResults.length === 0}
             studioMode="image"
