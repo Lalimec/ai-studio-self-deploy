@@ -257,10 +257,11 @@ function App() {
   };
 
   // --- Cross-Studio Interactions ---
-  const handleImportToStudio = (source: 'hair' | 'baby' | 'imageStudio' | 'adCloner') => {
+  const handleImportToStudio = (source: 'hair' | 'baby' | 'architecture' | 'imageStudio' | 'adCloner') => {
     let sourceImages: DisplayImage[] = [];
     if (source === 'hair') sourceImages = hairStudioLogic.generatedImages;
     if (source === 'baby') sourceImages = babyStudioLogic.generatedImages;
+    if (source === 'architecture') sourceImages = architectureStudioLogic.generatedImages;
     if (source === 'imageStudio') sourceImages = imageStudioLogic.generationResults.filter(r => r.status === 'success').map(r => ({ src: r.url!, filename: imageStudioLogic.getDownloadFilename(r), imageGenerationPrompt: r.prompt! }));
     if (source === 'adCloner') {
         // FIX: Added explicit 'VariationState' type annotation to the 'state' parameter to resolve 'unknown' type errors.
@@ -290,10 +291,11 @@ function App() {
     addToast(`${sourceImages.length} image(s) imported to Video Studio.`, 'success');
   };
 
-  const handleImportToTimelineStudio = (source: 'hair' | 'baby' | 'imageStudio' | 'adCloner') => {
+  const handleImportToTimelineStudio = (source: 'hair' | 'baby' | 'architecture' | 'imageStudio' | 'adCloner') => {
     let sourceImages: DisplayImage[] = [];
     if (source === 'hair') sourceImages = hairStudioLogic.generatedImages;
     if (source === 'baby') sourceImages = babyStudioLogic.generatedImages;
+    if (source === 'architecture') sourceImages = architectureStudioLogic.generatedImages;
     if (source === 'imageStudio') sourceImages = imageStudioLogic.generationResults.filter(r => r.status === 'success').map(r => ({ src: r.url!, filename: imageStudioLogic.getDownloadFilename(r), imageGenerationPrompt: r.prompt! }));
     if (source === 'adCloner') {
         // FIX: Added explicit 'VariationState' type annotation to the 'state' parameter to resolve 'unknown' type errors.
@@ -418,6 +420,7 @@ function App() {
         <div className="flex items-center justify-center gap-1 sm:gap-2 flex-wrap mb-2 bg-[var(--color-bg-surface)] p-2 rounded-full max-w-max mx-auto">
             <NavButton mode="hairStudio" label="Hair" icon={<HairStudioIcon className="h-6 w-6" />} />
             <NavButton mode="babyStudio" label="Baby" icon={<BabyIcon className="h-6 w-6" />} />
+            <NavButton mode="architectureStudio" label="Architecture" icon={<ArchitectureStudioIcon className="h-6 w-6" />} />
             <NavButton mode="imageStudio" label="Image" icon={<ImageStudioIcon className="h-6 w-6" />} />
             {showBetaFeatures && <NavButton mode="adCloner" label="Ad Cloner" icon={<AdClonerIcon className="h-6 w-6" />} />}
             {showBetaFeatures && <NavButton mode="videoAnalyzer" label="Video Analyzer" icon={<VideoAnalyzerIcon className="h-6 w-6" />} />}
@@ -427,6 +430,7 @@ function App() {
         <p className={`mt-4 text-lg text-[var(--color-text-dim)]`}>
             {appMode === 'hairStudio' && 'Virtually try on new hairstyles in seconds.'}
             {appMode === 'babyStudio' && 'See what your future baby could look like.'}
+            {appMode === 'architectureStudio' && 'Transform architectural spaces with various styles, lighting, and themes.'}
             {appMode === 'videoStudio' && 'Bring your images to life with custom video prompts.'}
             {appMode === 'imageStudio' && 'Batch generate image variations with multiple models.'}
             {appMode === 'timelineStudio' && 'Create video transitions between a sequence of images.'}
@@ -456,11 +460,20 @@ function App() {
             onShowHelp={() => setShowHelpModal(true)}
             onDownloadSingle={babyStudioLogic.handleDownloadSingle}
           />
+        ) : appMode === 'architectureStudio' ? (
+            <ArchitectureStudio
+                logic={architectureStudioLogic}
+                onUpload={(file) => handleImageUpload(file, { type: 'architecture' })}
+                onRecrop={() => { setImageToCrop(architectureStudioLogic.croppedImage); setActiveCropper({ type: 'architecture' }); setIsCropping(true); }}
+                onShowHelp={() => setShowHelpModal(true)}
+                onImageClick={handleImageClick}
+            />
         ) : appMode === 'videoStudio' ? (
-            <VideoStudio 
+            <VideoStudio
                 logic={videoStudioLogic}
                 hairImages={hairStudioLogic.generatedImages}
                 babyImages={babyStudioLogic.generatedImages}
+                architectureImages={architectureStudioLogic.generatedImages}
                 imageStudioImages={imageStudioLogic.generationResults.filter(r => r.status === 'success').map(r => ({ src: r.url!, filename: imageStudioLogic.getDownloadFilename(r), imageGenerationPrompt: r.prompt! }))}
                 adClonerImageCount={adClonerImageCount}
                 showBetaFeatures={showBetaFeatures}
@@ -472,6 +485,7 @@ function App() {
                 logic={timelineStudioLogic}
                 hairImages={hairStudioLogic.generatedImages}
                 babyImages={babyStudioLogic.generatedImages}
+                architectureImages={architectureStudioLogic.generatedImages}
                 imageStudioImages={imageStudioLogic.generationResults.filter(r => r.status === 'success').map(r => ({ src: r.url!, filename: imageStudioLogic.getDownloadFilename(r), imageGenerationPrompt: r.prompt! }))}
                 adClonerImageCount={adClonerImageCount}
                 showBetaFeatures={showBetaFeatures}
