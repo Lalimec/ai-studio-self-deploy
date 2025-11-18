@@ -216,7 +216,7 @@ const OriginalImageCard: React.FC<{
                             <button
                                 onClick={() => onGenerateTransformation(selectedVersion)}
                                 disabled={isDataLocked}
-                                className="bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-secondary)] hover:from-[var(--color-primary-hover)] hover:to-[var(--color-secondary)] text-[var(--color-text-on-primary)] py-3 px-6 rounded-lg text-sm font-bold shadow-lg transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                                className="bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-secondary)] hover:from-[var(--color-primary-hover)] hover:to-[var(--color-secondary)] text-[var(--color-text-on-primary)] py-2 px-4 rounded-lg text-sm font-bold shadow-lg transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                             >
                                 Generate {currentTransformationType?.label} Version
                             </button>

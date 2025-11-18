@@ -199,8 +199,8 @@ export const useArchitectureStudio = ({
 
     // Generate a transformed version
     const handleGenerateTransformation = async (transformationType: TransformationType) => {
-        const sourceImage = getActiveImage();
-        if (!sourceImage?.croppedSrc || !sessionId) {
+        // Always use original image as source for transformations
+        if (!originalImage?.croppedSrc || !sessionId) {
             addToast("No source image available for transformation.", "error");
             return;
         }
@@ -224,7 +224,7 @@ export const useArchitectureStudio = ({
 
         try {
             const result = await generateImageTransformation(
-                sourceImage.croppedSrc,
+                originalImage.croppedSrc,
                 transformationType,
                 'auto',
                 useNanoBananaWebhook,
