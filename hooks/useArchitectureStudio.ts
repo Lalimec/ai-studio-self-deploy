@@ -257,12 +257,27 @@ export const useArchitectureStudio = ({
 
             // Automatically switch to the newly generated version
             setSelectedVersion(transformationType);
-        } catch (err) {
-            addToast(err instanceof Error ? err.message : `Error generating ${transformationType} version.`, 'error');
-            setTransformedVersions(prev => {
-                const updated = { ...prev };
-                delete updated[transformationType];
-                return updated;
+        } catch (error) {
+            console.error(`Error generating ${transformationType} transformation:`, error);
+
+            setTransformedVersions(prev => ({
+                ...prev,
+                [transformationType]: {
+                    ...prev[transformationType],
+                    isGenerating: false,
+                }
+            }));
+
+            const errorMessage = error instanceof Error ? error.message : `Error generating ${transformationType} version`;
+            addToast(
+                `Failed to generate ${transformationType} version: ${errorMessage}`,
+                'error'
+            );
+
+            logUserAction('GENERATE_TRANSFORMATION_ERROR', {
+                transformationType,
+                error: error instanceof Error ? error.message : String(error),
+                sessionId
             });
         }
     };
