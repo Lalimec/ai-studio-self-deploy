@@ -1205,7 +1205,7 @@ export const useArchitectureStudio = ({
                         const baseName = transformed.filename.substring(0, transformed.filename.lastIndexOf('.'));
                         images.push({
                             imageBase64: transformed.croppedSrc,
-                            filename: `${baseName}_${type}.jpg`,
+                            filename: `${baseName}.jpg`,
                             prompt: `${type} transformation`,
                             metadata: {
                                 type: `architecture_${type}`,
@@ -1214,9 +1214,9 @@ export const useArchitectureStudio = ({
                                 video_prompt: transformed.videoPrompt,
                             },
                             videoUrl: transformed.videoSrc,
-                            videoFilename: `${baseName}_${type}.mp4`,
+                            videoFilename: `${baseName}.mp4`,
                             depthMapUrl: transformed.depthMapSrc,
-                            depthMapFilename: `depth_map_${baseName}_${type}.png`,
+                            depthMapFilename: `depth_map_${baseName}.png`,
                         });
                     }
                 });
@@ -1450,12 +1450,11 @@ export const useArchitectureStudio = ({
             logUserAction('DOWNLOAD_ARCHITECTURE_VERSION', { version: versionLabel, filename: targetImage.filename, sessionId });
 
             const baseName = targetImage.filename.substring(0, targetImage.filename.lastIndexOf('.'));
-            const suffix = isOriginal ? '' : `_${version}`;
 
             try {
                 await downloadImageWithMetadata({
                     imageBase64: targetImage.croppedSrc,
-                    filename: `${baseName}${suffix}.jpg`,
+                    filename: `${baseName}.jpg`,
                     prompt: isOriginal ? 'Original uploaded image before any transformations' : `${versionLabel} transformation`,
                     metadata: {
                         type: `architecture_${versionLabel}`,
@@ -1465,9 +1464,9 @@ export const useArchitectureStudio = ({
                         timestamp: getTimestamp(),
                     },
                     videoUrl: targetImage.videoSrc,
-                    videoFilename: `${baseName}${suffix}.mp4`,
+                    videoFilename: `${baseName}.mp4`,
                     depthMapUrl: targetImage.depthMapSrc,
-                    depthMapFilename: `depth_map_${baseName}${suffix}.png`,
+                    depthMapFilename: `depth_map_${baseName}.png`,
                     embedInImage: false,
                     includeMetadataFile: downloadSettings.includeMetadataFiles,
                 });
