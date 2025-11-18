@@ -149,33 +149,11 @@ const ArchitectureOptionsPanel: React.FC<OptionsPanelProps> = ({ options, setOpt
                 </div>
             </div>
 
-            {/* 2. Style Selection Mode */}
-            <div>
-                <label className="block text-sm font-medium text-[var(--color-text-light)] mb-2">2. Style Selection Mode</label>
-                <p className="text-xs text-[var(--color-text-dimmer)] mb-2">Choose how styles are selected for generation.</p>
-                <div className="flex flex-wrap gap-2">
-                    <FilterButton
-                        label="Generate Selected Styles"
-                        isActive={options.styleSelectionMode === 'selected'}
-                        onClick={() => setOptions(prev => ({ ...prev, styleSelectionMode: 'selected' }))}
-                        title="Generate images for each selected style (imageCount × styles)"
-                        buttonDisabled={disabled}
-                    />
-                    <FilterButton
-                        label="Randomize Styles"
-                        isActive={options.styleSelectionMode === 'random'}
-                        onClick={() => setOptions(prev => ({ ...prev, styleSelectionMode: 'random' }))}
-                        title="Randomly pick styles from selected or all styles"
-                        buttonDisabled={disabled}
-                    />
-                </div>
-            </div>
-
-            {/* 3. Room/Building Type (Optional - Collapsible) */}
+            {/* 2. Room/Building Type (Optional - Collapsible) */}
             {options.scope === 'interior' && (
                 <details className="group">
                     <summary className="block text-sm font-medium text-[var(--color-text-light)] mb-2 cursor-pointer hover:text-[var(--color-primary)]">
-                        3. Room Type (Optional - Auto-Detect Available) ▼
+                        2. Room Type (Optional - Auto-Detect Available) ▼
                     </summary>
                     <p className="text-xs text-[var(--color-text-dimmer)] mb-2 mt-2">Override automatic detection by specifying room type.</p>
                     <div className="flex flex-wrap gap-2 mt-2">
@@ -196,7 +174,7 @@ const ArchitectureOptionsPanel: React.FC<OptionsPanelProps> = ({ options, setOpt
             {(options.scope === 'exterior' || options.scope === 'facade' || options.scope === 'garden' || options.scope === 'landscape') && (
                 <details className="group">
                     <summary className="block text-sm font-medium text-[var(--color-text-light)] mb-2 cursor-pointer hover:text-[var(--color-primary)]">
-                        3. Building / Space Type (Optional - Auto-Detect Available) ▼
+                        2. Building / Space Type (Optional - Auto-Detect Available) ▼
                     </summary>
                     <p className="text-xs text-[var(--color-text-dimmer)] mb-2 mt-2">Override automatic detection by specifying building type.</p>
                     <div className="flex flex-wrap gap-2 mt-2">
@@ -214,9 +192,9 @@ const ArchitectureOptionsPanel: React.FC<OptionsPanelProps> = ({ options, setOpt
                 </details>
             )}
 
-            {/* 4. Styles */}
+            {/* 3. Styles */}
             <div>
-                <label className="block text-sm font-medium text-[var(--color-text-light)] mb-2">4. Styles</label>
+                <label className="block text-sm font-medium text-[var(--color-text-light)] mb-2">3. Styles</label>
                 <p className="text-xs text-[var(--color-text-dimmer)] mb-2">
                     {options.styleSelectionMode === 'selected'
                         ? 'Select specific styles to generate. Each style will generate the number of images specified above.'
@@ -255,9 +233,9 @@ const ArchitectureOptionsPanel: React.FC<OptionsPanelProps> = ({ options, setOpt
                 )}
             </div>
 
-            {/* 5. Show Unfinished/Before Version */}
+            {/* 4. Show Unfinished/Before Version */}
             <div>
-                <label className="block text-sm font-medium text-[var(--color-text-light)] mb-2">5. Before/After View</label>
+                <label className="block text-sm font-medium text-[var(--color-text-light)] mb-2">4. Before/After View</label>
                 <p className="text-xs text-[var(--color-text-dimmer)] mb-2">Generate styled unfinished/before-renovation versions.</p>
                 <div className="flex items-center gap-3">
                     <label className="flex items-center cursor-pointer">
@@ -273,9 +251,9 @@ const ArchitectureOptionsPanel: React.FC<OptionsPanelProps> = ({ options, setOpt
                 </div>
             </div>
 
-            {/* 6. Tidiness Level */}
+            {/* 5. Tidiness Level */}
             <div>
-                <label className="block text-sm font-medium text-[var(--color-text-light)] mb-2">6. Tidiness Level</label>
+                <label className="block text-sm font-medium text-[var(--color-text-light)] mb-2">5. Tidiness Level</label>
                 <p className="text-xs text-[var(--color-text-dimmer)] mb-2">Choose between neat and organized or lived-in appearance.</p>
                 <div className="flex flex-wrap gap-2">
                     {TIDY_OPTIONS.map(tidyOption => (
@@ -291,9 +269,9 @@ const ArchitectureOptionsPanel: React.FC<OptionsPanelProps> = ({ options, setOpt
                 </div>
             </div>
 
-            {/* 7. Color Scheme */}
+            {/* 6. Color Scheme */}
             <div>
-                <label className="block text-sm font-medium text-[var(--color-text-light)] mb-2">7. Color Scheme (Optional)</label>
+                <label className="block text-sm font-medium text-[var(--color-text-light)] mb-2">6. Color Scheme (Optional)</label>
                 <div className="flex flex-wrap gap-2">
                     {COLOR_SCHEMES.map(colorScheme => (
                         <FilterButton
@@ -308,9 +286,9 @@ const ArchitectureOptionsPanel: React.FC<OptionsPanelProps> = ({ options, setOpt
                 </div>
             </div>
 
-            {/* 8. Time of Day */}
+            {/* 7. Time of Day */}
             <div>
-                <label className="block text-sm font-medium text-[var(--color-text-light)] mb-2">8. Time of Day / Lighting</label>
+                <label className="block text-sm font-medium text-[var(--color-text-light)] mb-2">7. Time of Day / Lighting</label>
                 <div className="flex flex-wrap gap-2">
                     {ARCHITECTURE_TIMES.map(time => (
                         <FilterButton
@@ -325,9 +303,9 @@ const ArchitectureOptionsPanel: React.FC<OptionsPanelProps> = ({ options, setOpt
                 </div>
             </div>
 
-            {/* 9. Theme / Season */}
+            {/* 8. Theme / Season */}
             <div>
-                <label className="block text-sm font-medium text-[var(--color-text-light)] mb-2">9. Theme / Season</label>
+                <label className="block text-sm font-medium text-[var(--color-text-light)] mb-2">8. Theme / Season</label>
                 <div className="flex flex-wrap gap-2">
                     {ARCHITECTURE_THEMES.map(theme => (
                         <FilterButton
@@ -342,9 +320,9 @@ const ArchitectureOptionsPanel: React.FC<OptionsPanelProps> = ({ options, setOpt
                 </div>
             </div>
 
-            {/* 10. Camera Angle */}
+            {/* 9. Camera Angle */}
             <div>
-                <label className="block text-sm font-medium text-[var(--color-text-light)] mb-2">10. Camera Angle</label>
+                <label className="block text-sm font-medium text-[var(--color-text-light)] mb-2">9. Camera Angle</label>
                 <p className="text-xs text-[var(--color-text-dimmer)] mb-2">Control how the camera perspective is handled.</p>
                 <div className="flex flex-wrap gap-2">
                     {CAMERA_ANGLE_OPTIONS.map(angle => (

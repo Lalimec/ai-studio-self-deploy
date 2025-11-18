@@ -321,24 +321,13 @@ const ImageStudio: React.FC<ImageStudioProps> = ({ logic, onImageClick, onShowHe
             aspectRatio={'1:1' as AspectRatio}
             onAspectRatioChange={() => {}}
             showAspectRatio={false}
-            imageCount={logic.numberOfVersions}
-            onImageCountChange={logic.setNumberOfVersions}
-            imageCountMin={1}
-            imageCountMax={10}
-            imageCountDisabled={logic.isLoading}
+            showImageCount={false}
+            imageCount={1}
+            onImageCountChange={() => {}}
             generateButtonText="Generate"
             onGenerate={logic.handleGenerate}
             generateDisabled={logic.isGenerateDisabled}
             pendingCount={logic.isLoading ? logic.progress.total - logic.progress.completed : 0}
-            additionalButtons={[
-                {
-                    key: 'download-all',
-                    text: 'Download All',
-                    onClick: logic.handleDownloadAll,
-                    disabled: logic.isLoading || logic.generationResults.filter(r => r.status === 'success').length === 0,
-                    variant: 'secondary',
-                },
-            ]}
             startOverButtonText="Clear"
             onStartOver={logic.handleClearGallery}
             startOverDisabled={logic.isLoading || logic.generationResults.length === 0}

@@ -216,6 +216,20 @@ const ArchitectureStudio: React.FC<ArchitectureStudioProps> = ({
             pendingCount={pendingImageCount}
             additionalButtons={[
                 {
+                    key: 'selected',
+                    text: 'Selected',
+                    onClick: () => setOptions(prev => ({ ...prev, styleSelectionMode: 'selected' })),
+                    disabled: false,
+                    isActive: options.styleSelectionMode === 'selected',
+                },
+                {
+                    key: 'random',
+                    text: 'Random',
+                    onClick: () => setOptions(prev => ({ ...prev, styleSelectionMode: 'random' })),
+                    disabled: false,
+                    isActive: options.styleSelectionMode === 'random',
+                },
+                {
                     key: 'unstyled',
                     text: 'Unstyled',
                     onClick: handleGenerateUnstyled,

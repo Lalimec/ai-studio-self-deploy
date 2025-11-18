@@ -35,6 +35,7 @@ export type GenerationToolbarConfig = {
     onClick: () => void;
     disabled?: boolean;
     variant?: 'primary' | 'secondary' | 'action'; // default 'action'
+    isActive?: boolean; // for toggle-style buttons
   }>;
 
   // Studio mode for specific customization
@@ -144,10 +145,11 @@ const GenerationToolbar: React.FC<GenerationToolbarConfig> = ({
           {/* Right side: Additional Buttons + Generate + Start Over */}
           <div className="flex flex-wrap items-center gap-2">
             {additionalButtons.map((btn) => {
-              const variantClass =
-                btn.variant === 'primary' ? 'bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)]' :
-                btn.variant === 'secondary' ? 'bg-[var(--color-secondary)] hover:bg-[var(--color-secondary-hover)]' :
-                'bg-[var(--color-action-generate)] hover:bg-[var(--color-action-generate-hover)]';
+              const variantClass = btn.isActive
+                ? 'bg-[var(--color-secondary)] text-[var(--color-text-on-primary)]'
+                : btn.variant === 'primary' ? 'bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)]' :
+                  btn.variant === 'secondary' ? 'bg-[var(--color-secondary)] hover:bg-[var(--color-secondary-hover)]' :
+                  'bg-[var(--color-action-generate)] hover:bg-[var(--color-action-generate-hover)]';
 
               return (
                 <button
@@ -164,7 +166,7 @@ const GenerationToolbar: React.FC<GenerationToolbarConfig> = ({
             <button
               onClick={onGenerate}
               disabled={generateDisabled}
-              className="bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] disabled:bg-[var(--color-bg-muted)] disabled:cursor-not-allowed text-[var(--color-text-on-primary)] font-bold py-2.5 px-6 rounded-lg transition-colors text-base shadow-md shadow-[var(--color-shadow-primary)]/30"
+              className="bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] disabled:bg-[var(--color-bg-muted)] disabled:cursor-not-allowed text-[var(--color-text-on-primary)] font-semibold py-2 px-4 rounded-lg transition-colors text-sm"
             >
               {pendingCount > 0 ? `Generating... (${pendingCount} left)` : generateButtonText}
             </button>
