@@ -87,7 +87,17 @@ export const useArchitectureStudio = ({
     const [isGeneratingDepthMaps, setIsGeneratingDepthMaps] = useState(false);
 
     const isBusy = isPreparing || isGeneratingVideos || isGeneratingDepthMaps || pendingImageCount > 0 || originalImage.isPreparing || originalImage.isGeneratingVideo || originalImage.isGeneratingDepthMap;
-    const isGenerateDisabled = !croppedImage;
+
+    // Compute if Generate button should be disabled
+    const isGenerateDisabled = !croppedImage || (
+        options.styleSelectionMode === 'selected' &&
+        !options.useCustomStyles &&
+        options.styles.length === 0
+    ) || (
+        options.styleSelectionMode === 'selected' &&
+        options.useCustomStyles &&
+        !options.customStyles.trim()
+    );
 
     const onCropConfirm = (croppedImageDataUrl: string, aspectRatio: number) => {
         const isNewUpload = !croppedImage;
@@ -176,27 +186,16 @@ export const useArchitectureStudio = ({
         if (!croppedImage || !originalFile || !sessionId) return;
 
         const currentOptions = { ...options };
-
-        // Validation: In "selected" mode, require at least one style to be selected
-        if (currentOptions.styleSelectionMode === 'selected') {
-            const hasCustomStyles = currentOptions.useCustomStyles && currentOptions.customStyles.trim();
-            const hasSelectedStyles = currentOptions.styles.length > 0;
-
-            if (!hasCustomStyles && !hasSelectedStyles) {
-                addToast('Please select at least one style when using "Generate Selected Styles" mode, or switch to "Random Style" mode.', 'warning');
-                return;
-            }
-        }
-
         logUserAction('GENERATE_ARCHITECTURAL_STYLES', { options: currentOptions, sessionId });
 
         // Calculate batch size based on style selection mode
         let batchSize = currentOptions.imageCount;
         if (currentOptions.styleSelectionMode === 'selected') {
+            // In selected mode, imageCount is always 1, so batchSize = number of styles
             const styleCount = currentOptions.useCustomStyles && currentOptions.customStyles.trim()
                 ? currentOptions.customStyles.split(',').filter(s => s.trim()).length
                 : currentOptions.styles.length;
-            batchSize = styleCount * currentOptions.imageCount;
+            batchSize = styleCount; // imageCount is always 1 in selected mode
         }
 
         setPendingImageCount(prev => prev + batchSize);
