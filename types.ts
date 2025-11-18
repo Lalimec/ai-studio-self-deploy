@@ -478,7 +478,6 @@ export type ArchitectureGenerationOptions = {
   styleSelectionMode: 'selected' | 'random'; // How to generate: selected styles or random
   colorScheme: string; // Color scheme (optional)
   tidy: string; // tidy or untidy
-  showUnfinished: boolean; // Whether to show unfinished/before version
   generateUnstyledVersion: boolean; // Whether to generate a completely unstyled version
   time: string; // Time of day
   theme: string; // Holiday/seasonal theme

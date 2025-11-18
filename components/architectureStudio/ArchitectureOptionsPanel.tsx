@@ -146,10 +146,6 @@ const ArchitectureOptionsPanel: React.FC<OptionsPanelProps> = ({ options, setOpt
         setOptions(prev => ({ ...prev, tidy: tidyId }));
     };
 
-    const handleShowUnfinishedToggle = () => {
-        setOptions(prev => ({ ...prev, showUnfinished: !prev.showUnfinished }));
-    };
-
     const currentStyles = getStylesForScope(options.scope);
     const isCustomActive = options.useCustomStyles;
 
@@ -323,27 +319,9 @@ const ArchitectureOptionsPanel: React.FC<OptionsPanelProps> = ({ options, setOpt
                 )}
             </div>
 
-            {/* 7. Show Unfinished/Before Version */}
+            {/* 7. Tidiness Level */}
             <div>
-                <label className="block text-sm font-medium text-[var(--color-text-light)] mb-2">7. Before/After View</label>
-                <p className="text-xs text-[var(--color-text-dimmer)] mb-2">Generate styled unfinished/before-renovation versions.</p>
-                <div className="flex items-center gap-3">
-                    <label className="flex items-center cursor-pointer">
-                        <input
-                            type="checkbox"
-                            checked={options.showUnfinished}
-                            onChange={handleShowUnfinishedToggle}
-                            disabled={disabled}
-                            className="w-4 h-4 accent-[var(--color-primary)] cursor-pointer disabled:opacity-50"
-                        />
-                        <span className="ml-2 text-sm text-[var(--color-text-light)]">Show Styled Unfinished State</span>
-                    </label>
-                </div>
-            </div>
-
-            {/* 8. Tidiness Level */}
-            <div>
-                <label className="block text-sm font-medium text-[var(--color-text-light)] mb-2">8. Tidiness Level</label>
+                <label className="block text-sm font-medium text-[var(--color-text-light)] mb-2">7. Tidiness Level</label>
                 <p className="text-xs text-[var(--color-text-dimmer)] mb-2">Choose between neat and organized or lived-in appearance.</p>
                 <div className="flex flex-wrap gap-2">
                     {TIDY_OPTIONS.map(tidyOption => (
@@ -359,9 +337,9 @@ const ArchitectureOptionsPanel: React.FC<OptionsPanelProps> = ({ options, setOpt
                 </div>
             </div>
 
-            {/* 9. Color Scheme */}
+            {/* 8. Color Scheme */}
             <div>
-                <label className="block text-sm font-medium text-[var(--color-text-light)] mb-2">9. Color Scheme (Optional)</label>
+                <label className="block text-sm font-medium text-[var(--color-text-light)] mb-2">8. Color Scheme (Optional)</label>
                 <div className="flex flex-wrap gap-2">
                     {COLOR_SCHEMES.map(colorScheme => (
                         <FilterButton
@@ -376,9 +354,9 @@ const ArchitectureOptionsPanel: React.FC<OptionsPanelProps> = ({ options, setOpt
                 </div>
             </div>
 
-            {/* 10. Time of Day */}
+            {/* 9. Time of Day */}
             <div>
-                <label className="block text-sm font-medium text-[var(--color-text-light)] mb-2">10. Time of Day / Lighting</label>
+                <label className="block text-sm font-medium text-[var(--color-text-light)] mb-2">9. Time of Day / Lighting</label>
                 <div className="flex flex-wrap gap-2">
                     {ARCHITECTURE_TIMES.map(time => (
                         <FilterButton
@@ -393,9 +371,9 @@ const ArchitectureOptionsPanel: React.FC<OptionsPanelProps> = ({ options, setOpt
                 </div>
             </div>
 
-            {/* 11. Theme / Season */}
+            {/* 10. Theme / Season */}
             <div>
-                <label className="block text-sm font-medium text-[var(--color-text-light)] mb-2">11. Theme / Season</label>
+                <label className="block text-sm font-medium text-[var(--color-text-light)] mb-2">10. Theme / Season</label>
                 <div className="flex flex-wrap gap-2">
                     {ARCHITECTURE_THEMES.map(theme => (
                         <FilterButton
@@ -410,9 +388,9 @@ const ArchitectureOptionsPanel: React.FC<OptionsPanelProps> = ({ options, setOpt
                 </div>
             </div>
 
-            {/* 12. Camera Angle */}
+            {/* 11. Camera Angle */}
             <div>
-                <label className="block text-sm font-medium text-[var(--color-text-light)] mb-2">12. Camera Angle</label>
+                <label className="block text-sm font-medium text-[var(--color-text-light)] mb-2">11. Camera Angle</label>
                 <p className="text-xs text-[var(--color-text-dimmer)] mb-2">Control how the camera perspective is handled.</p>
                 <div className="flex flex-wrap gap-2">
                     {CAMERA_ANGLE_OPTIONS.map(angle => (

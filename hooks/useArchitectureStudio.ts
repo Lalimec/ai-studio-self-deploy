@@ -76,7 +76,6 @@ export const useArchitectureStudio = ({
         styleSelectionMode: 'selected',
         colorScheme: 'none',
         tidy: 'tidy',
-        showUnfinished: false,
         generateUnstyledVersion: false,
         time: 'current',
         theme: 'none',
@@ -343,7 +342,6 @@ export const useArchitectureStudio = ({
             colorScheme: 'none',
             time: 'current',
             theme: 'none',
-            showUnfinished: false,
             imageCount: 1, // Always generate just 1 unstyled version
         };
 
