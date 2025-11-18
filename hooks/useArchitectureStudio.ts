@@ -564,7 +564,7 @@ export const useArchitectureStudio = ({
                     videoUrl: image.videoSrc,
                     videoFilename: `${baseName}.mp4`,
                     depthMapUrl: image.depthMapSrc,
-                    depthMapFilename: `depth_map_${baseName}.jpg`,
+                    depthMapFilename: `depth_map_${baseName}.png`,
                     embedInImage: false,
                     includeMetadataFile: downloadSettings.includeMetadataFiles,
                 });
@@ -601,7 +601,7 @@ export const useArchitectureStudio = ({
                         videoUrl: image.videoSrc,
                         videoFilename: `${baseName}.mp4`,
                         depthMapUrl: image.depthMapSrc,
-                        depthMapFilename: `${baseName}.jpg`, // Same filename as original in depth_maps folder
+                        depthMapFilename: `${baseName}.png`, // Same filename as original in depth_maps folder
                     };
                 });
 

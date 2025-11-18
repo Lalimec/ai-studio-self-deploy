@@ -242,6 +242,7 @@ export const downloadImageWithMetadata = async (
         let depthMapBase64 = depthMapUrl.includes(',') ? depthMapUrl.split(',')[1] : depthMapUrl;
         depthMapBase64 = depthMapBase64.replace(/\s/g, '');
 
+        // Always use PNG mime type for depth maps
         const mimeType = depthMapUrl.includes('data:')
             ? depthMapUrl.match(/data:([^;]+);/)?.[1] || 'image/png'
             : 'image/png';
@@ -254,7 +255,12 @@ export const downloadImageWithMetadata = async (
         const byteArray = new Uint8Array(byteNumbers);
         const depthMapBlob = new Blob([byteArray], { type: mimeType });
 
-        const depthMapName = depthMapFilename || `depth_map_${filename}`;
+        // Ensure depth map filename has .png extension
+        let depthMapName = depthMapFilename || `depth_map_${filename}`;
+        if (!depthMapName.toLowerCase().endsWith('.png')) {
+            depthMapName = depthMapName.replace(/\.[^/.]+$/, '') + '.png';
+        }
+
         await downloadFile({ url: '', filename: depthMapName, blob: depthMapBlob });
     }
 
@@ -338,7 +344,10 @@ export const downloadBulkImages = async (
 
     const zip = new JSZip();
     const targetFolder = folderName ? zip.folder(folderName)! : zip;
-    const depthMapsFolder = targetFolder.folder('depth_maps')!;
+
+    // Only create depth_maps folder if at least one image has a depth map
+    const hasDepthMaps = images.some(img => img.depthMapUrl);
+    const depthMapsFolder = hasDepthMaps ? targetFolder.folder('depth_maps')! : null;
 
     progressCallback?.({ visible: true, message: 'Starting...', progress: 0 });
 
@@ -411,9 +420,13 @@ export const downloadBulkImages = async (
         }
 
         // Add depth map if provided (to depth_maps subdirectory with same filename)
-        if (depthMapUrl) {
+        if (depthMapUrl && depthMapsFolder) {
             let depthMapBase64 = depthMapUrl.includes(',') ? depthMapUrl.split(',')[1] : depthMapUrl;
             depthMapBase64 = depthMapBase64.replace(/\s/g, '');
+
+            const mimeType = depthMapUrl.includes('data:')
+                ? depthMapUrl.match(/data:([^;]+);/)?.[1] || 'image/png'
+                : 'image/png';
 
             const byteCharacters = atob(depthMapBase64);
             const byteNumbers = new Array(byteCharacters.length);
@@ -422,9 +435,13 @@ export const downloadBulkImages = async (
             }
             const byteArray = new Uint8Array(byteNumbers);
 
-            // Use original filename for depth map (keep it exactly the same)
+            // Create blob with correct PNG mime type
+            const depthMapBlob = new Blob([byteArray], { type: mimeType });
+            const depthMapBuffer = await depthMapBlob.arrayBuffer();
+
+            // Use provided filename or fall back to main image filename
             const depthMapName = depthMapFilename || filename;
-            depthMapsFolder.file(depthMapName, byteArray);
+            depthMapsFolder.file(depthMapName, depthMapBuffer);
         }
 
         // Add metadata file if requested (use corrected filename)
