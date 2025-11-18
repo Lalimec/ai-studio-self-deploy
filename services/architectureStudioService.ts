@@ -104,9 +104,12 @@ const createGenerationTasks = (
       stylePool = customStyles.split(',').map(s => s.trim()).filter(Boolean).map((s, i) => ({ name: s, prompt: s }));
   } else {
       const availableStyles = getStylesForScope(scope);
-      if (styleSelectionMode === 'random' || styles.length === 0) {
+      if (styleSelectionMode === 'random') {
         // Random mode: use all styles for this scope
         stylePool = availableStyles.map(s => ({ name: s.name, prompt: s.prompt }));
+      } else if (styles.length === 0) {
+        // Selected mode with no styles selected: generate 1 image with "Current Style" (no transformation)
+        stylePool = [{ name: 'Current Style', prompt: '' }];
       } else {
         // Selected mode: use only selected styles
         stylePool = availableStyles
@@ -114,7 +117,7 @@ const createGenerationTasks = (
           .map(s => ({ name: s.name, prompt: s.prompt }));
       }
   }
-  if (stylePool.length === 0) stylePool.push({ name: 'Current Style', prompt: '' });
+  // No fallback needed - we handle all cases above
 
   // 2. Time prompt
   const timeData = ARCHITECTURE_TIMES.find(t => t.id === time);
