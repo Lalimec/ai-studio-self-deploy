@@ -4,7 +4,7 @@ import {
     BABY_AGES, BABY_COMPOSITIONS, BABY_BACKGROUNDS, BABY_CLOTHING_STYLES_UNISEX, 
     BABY_CLOTHING_STYLES_BOY, BABY_CLOTHING_STYLES_GIRL, BABY_ACTIONS 
 } from '../constants';
-import { CloseIcon, HairStudioIcon, BabyIcon, ImageStudioIcon, VideoStudioIcon, HelpIcon, TimelineStudioIcon, AdClonerIcon, ArchitectureStudioIcon } from './Icons';
+import { CloseIcon, HairStudioIcon, BabyIcon, ImageStudioIcon, VideoStudioIcon, HelpIcon, TimelineStudioIcon, AdClonerIcon, ArchitectureStudioIcon, AdCreativeIcon } from './Icons';
 
 import GeneralHelp from './help/GeneralHelp';
 import HairStudioHelp from './help/HairStudioHelp';
@@ -14,6 +14,7 @@ import VideoStudioHelp from './help/VideoStudioHelp';
 import TimelineStudioHelp from './help/TimelineStudioHelp';
 import AdClonerHelp from './help/AdClonerHelp';
 import ArchitectureStudioHelp from './help/ArchitectureStudioHelp';
+import AdCreativeHelp from './help/AdCreativeHelp';
 
 interface HelpModalProps {
   onClose: () => void;
@@ -37,7 +38,7 @@ interface HelpModalProps {
   babyActions: typeof BABY_ACTIONS;
 }
 
-type HelpTab = 'general' | 'hair' | 'baby' | 'architecture' | 'image' | 'adCloner' | 'video' | 'timeline';
+type HelpTab = 'general' | 'hair' | 'baby' | 'architecture' | 'image' | 'adCloner' | 'adCreative' | 'video' | 'timeline';
 
 const TabButton: React.FC<{
     name: HelpTab;
@@ -98,6 +99,7 @@ const HelpModal: React.FC<HelpModalProps> = (props) => {
             <TabButton name="architecture" label="Architecture" icon={<ArchitectureStudioIcon className="w-5 h-5" />} activeTab={activeTab} setActiveTab={setActiveTab} />
             <TabButton name="image" label="Image Studio" icon={<ImageStudioIcon className="w-5 h-5" />} activeTab={activeTab} setActiveTab={setActiveTab} />
             <TabButton name="adCloner" label="Ad Cloner" icon={<AdClonerIcon className="w-5 h-5" />} activeTab={activeTab} setActiveTab={setActiveTab} />
+            <TabButton name="adCreative" label="Ad Creative" icon={<AdCreativeIcon className="w-5 h-5" />} activeTab={activeTab} setActiveTab={setActiveTab} />
             <TabButton name="video" label="Video Studio" icon={<VideoStudioIcon className="w-5 h-5" />} activeTab={activeTab} setActiveTab={setActiveTab} />
             <TabButton name="timeline" label="Timeline" icon={<TimelineStudioIcon className="w-5 h-5" />} activeTab={activeTab} setActiveTab={setActiveTab} />
         </nav>
@@ -117,6 +119,7 @@ const HelpModal: React.FC<HelpModalProps> = (props) => {
             {activeTab === 'architecture' && <ArchitectureStudioHelp />}
             {activeTab === 'image' && <ImageStudioHelp />}
             {activeTab === 'adCloner' && <AdClonerHelp />}
+            {activeTab === 'adCreative' && <AdCreativeHelp />}
             {activeTab === 'video' && <VideoStudioHelp />}
             {activeTab === 'timeline' && <TimelineStudioHelp />}
         </div>
