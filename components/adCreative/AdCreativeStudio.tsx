@@ -265,16 +265,55 @@ export default function AdCreativeStudio({
 
       {/* Render Results */}
       {renderResults.length > 0 && (
-        <div className="mt-8 p-6 bg-[var(--color-bg-surface)] rounded-lg">
-          <h3 className="text-xl font-semibold mb-4 text-[var(--color-text-main)]">
-            Render Results
-          </h3>
+        <div className="mt-8 p-6 bg-[var(--color-bg-surface)] rounded-lg border-2 border-green-500">
+          <div className="flex items-center gap-3 mb-4">
+            <svg className="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div>
+              <h3 className="text-xl font-semibold text-[var(--color-text-main)]">
+                Batch Render Triggered Successfully!
+              </h3>
+              <p className="text-sm text-[var(--color-text-dim)]">
+                Your videos are being rendered. You'll receive a webhook notification when complete.
+              </p>
+            </div>
+          </div>
           <div className="space-y-4">
             {renderResults.map((result, index) => (
-              <div key={index} className="p-4 bg-[var(--color-bg-base)] rounded-lg">
-                <pre className="text-xs text-[var(--color-text-dim)] overflow-x-auto">
-                  {JSON.stringify(result, null, 2)}
-                </pre>
+              <div key={index} className="p-4 bg-[var(--color-bg-base)] rounded-lg border border-[var(--color-border)]">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
+                  <div>
+                    <p className="text-xs text-[var(--color-text-dim)] mb-1">Batch ID</p>
+                    <p className="text-sm font-mono text-[var(--color-text-main)] bg-[var(--color-bg-surface)] px-2 py-1 rounded">{result.id || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-[var(--color-text-dim)] mb-1">Project ID</p>
+                    <p className="text-sm font-mono text-[var(--color-text-main)] bg-[var(--color-bg-surface)] px-2 py-1 rounded">{result.projectId || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-[var(--color-text-dim)] mb-1">Reference</p>
+                    <p className="text-sm font-mono text-[var(--color-text-main)] bg-[var(--color-bg-surface)] px-2 py-1 rounded">{result.reference || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-[var(--color-text-dim)] mb-1">Total Renders</p>
+                    <p className="text-sm font-mono text-[var(--color-text-main)] bg-[var(--color-bg-surface)] px-2 py-1 rounded">{result.totalRenders ?? selectedProject?.templates.length ?? 'N/A'}</p>
+                  </div>
+                  {result.createdDate && (
+                    <div className="md:col-span-2">
+                      <p className="text-xs text-[var(--color-text-dim)] mb-1">Created Date</p>
+                      <p className="text-sm font-mono text-[var(--color-text-main)] bg-[var(--color-bg-surface)] px-2 py-1 rounded">{new Date(result.createdDate).toLocaleString()}</p>
+                    </div>
+                  )}
+                </div>
+                <details className="mt-3">
+                  <summary className="text-xs text-[var(--color-text-dim)] cursor-pointer hover:text-[var(--color-text-main)]">
+                    View full response
+                  </summary>
+                  <pre className="text-xs text-[var(--color-text-dim)] overflow-x-auto mt-2 p-2 bg-[var(--color-bg-surface)] rounded">
+                    {JSON.stringify(result, null, 2)}
+                  </pre>
+                </details>
               </div>
             ))}
           </div>

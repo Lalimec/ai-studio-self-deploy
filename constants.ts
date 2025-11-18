@@ -731,12 +731,15 @@ export const AD_CREATIVE_DESIGNERS = [
   { id: 'MK', name: 'MK' },
 ];
 
+// Default endcard URL for 4grid-and-slideshow-v2 project
+export const DEFAULT_ENDCARD_URL = 'https://d6ut7of78kezj.cloudfront.net/4grid-and-slideshow/other-assets/ortak-endcard.mp4';
+
 // Define parameter templates for the 4grid-and-slideshow-v2 project
 const GRID_SLIDESHOW_PARAMETERS: PlainlyParameter[] = [
-  { name: 'varEndcard', type: 'image', value: null, displayName: 'Endcard' },
+  { name: 'varEndcard', type: 'video', value: DEFAULT_ENDCARD_URL, displayName: 'Endcard' },
   { name: 'varSpeach', type: 'speech', value: null, displayName: 'Speech' },
   { name: 'varMusic', type: 'music', value: null, displayName: 'Music' },
-  { name: 'varCaptions', type: 'card', value: null, displayName: 'Captions' },
+  { name: 'varCaptions', type: 'video', value: null, displayName: 'Captions' },
   { name: 'varImage01', type: 'image', value: null, displayName: 'Image 01' },
   { name: 'varImage02', type: 'image', value: null, displayName: 'Image 02' },
   { name: 'varImage03', type: 'image', value: null, displayName: 'Image 03' },

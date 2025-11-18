@@ -143,8 +143,14 @@ export async function triggerPlainlyBatchRender(
       },
     };
 
+    // Determine the API endpoint - use proxy in development, direct in production with server
+    const isDevelopment = import.meta.env.DEV;
+    const apiEndpoint = isDevelopment
+      ? '/plainly-proxy/api/v2/renders'
+      : endpoints.plainlyRender;
+
     // Make API request with Basic Auth
-    const response = await fetch(endpoints.plainlyRender, {
+    const response = await fetch(apiEndpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

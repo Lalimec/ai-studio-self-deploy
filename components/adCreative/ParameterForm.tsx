@@ -97,7 +97,7 @@ function ParameterSection({
         {title}
       </h3>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3">
         {parameters.map(param => (
           <FileUploader
             key={param.name}
@@ -129,7 +129,9 @@ function FileUploader({
   const [isDragging, setIsDragging] = React.useState(false);
   const [preview, setPreview] = React.useState<string | null>(null);
 
-  const hasFile = param.file || param.value;
+  // Check if parameter has a default value (like endcard)
+  const hasDefaultValue = param.name === 'varEndcard' && param.value && !param.file;
+  const hasFile = param.file || (param.value && !hasDefaultValue);
 
   // Get accept attribute based on type
   const getAcceptAttribute = () => {
@@ -232,25 +234,27 @@ function FileUploader({
 
   return (
     <div className="relative">
-      <label className="block text-sm font-medium mb-2 text-[var(--color-text-main)]">
+      <label className="block text-xs font-medium mb-1 text-[var(--color-text-main)] truncate" title={param.displayName || param.name}>
         {param.displayName || param.name}
       </label>
 
       <div
-        onClick={() => !hasFile && fileInputRef.current?.click()}
+        onClick={() => (!hasFile && !hasDefaultValue) && fileInputRef.current?.click()}
         onDragEnter={handleDragEnter}
         onDragLeave={handleDragLeave}
         onDragOver={handleDragOver}
         onDrop={handleDrop}
         className={`
-          relative border-2 border-dashed rounded-lg p-4 transition-all cursor-pointer
+          relative border-2 border-dashed rounded-lg p-2 transition-all cursor-pointer
           ${isDragging
             ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10'
-            : hasFile
-              ? 'border-green-500 bg-green-500/10'
-              : 'border-[var(--color-border)] hover:border-[var(--color-primary)] bg-[var(--color-bg-base)]'
+            : hasDefaultValue
+              ? 'border-blue-500 bg-blue-500/10'
+              : hasFile
+                ? 'border-green-500 bg-green-500/10'
+                : 'border-[var(--color-border)] hover:border-[var(--color-primary)] bg-[var(--color-bg-base)]'
           }
-          ${hasFile ? 'min-h-[150px]' : 'min-h-[120px]'}
+          aspect-[4/5] flex flex-col items-center justify-center
         `}
       >
         <input
@@ -261,37 +265,61 @@ function FileUploader({
           className="hidden"
         />
 
-        {hasFile ? (
-          <div className="flex flex-col items-center justify-center h-full">
+        {hasDefaultValue ? (
+          <div className="flex flex-col items-center justify-center w-full h-full">
+            <div className="text-blue-500 mb-1">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <p className="text-xs text-center text-[var(--color-text-main)] mb-1 font-medium">
+              Default
+            </p>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                fileInputRef.current?.click();
+              }}
+              className="text-xs text-blue-500 hover:text-blue-600 underline"
+            >
+              Upload Custom
+            </button>
+          </div>
+        ) : hasFile ? (
+          <div className="flex flex-col items-center justify-center w-full h-full">
             {preview ? (
               <img
                 src={preview}
                 alt={param.displayName || param.name}
-                className="max-w-full max-h-[100px] object-contain mb-2 rounded"
+                className="w-full h-full object-cover rounded mb-1"
               />
             ) : (
-              <div className="text-green-500 mb-2">
-                {getIcon()}
+              <div className="text-green-500 mb-1">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
               </div>
             )}
-            <p className="text-xs text-center text-[var(--color-text-main)] mb-2 font-medium">
-              {param.file?.name || 'File uploaded'}
+            <p className="text-xs text-center text-[var(--color-text-main)] mb-1 font-medium truncate w-full px-1" title={param.file?.name || 'Uploaded'}>
+              {param.file?.name || 'Uploaded'}
             </p>
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 handleClear();
               }}
-              className="text-xs text-red-500 hover:text-red-600 underline"
+              className="text-xs text-red-500 hover:text-red-600"
             >
-              Remove
+              ✕
             </button>
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center h-full text-[var(--color-text-dim)]">
-            {getIcon()}
-            <p className="text-xs text-center mt-2">
-              Click or drag to upload
+          <div className="flex flex-col items-center justify-center w-full h-full text-[var(--color-text-dim)]">
+            <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+            </svg>
+            <p className="text-xs text-center">
+              Upload
             </p>
           </div>
         )}
