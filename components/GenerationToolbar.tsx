@@ -28,6 +28,16 @@ export type GenerationToolbarConfig = {
   onStartOver?: () => void;
   startOverDisabled?: boolean;
 
+  // Mode Selection Buttons (shown in their own section, e.g., for style selection modes)
+  modeButtons?: Array<{
+    key: string;
+    text: string;
+    onClick: () => void;
+    disabled?: boolean;
+    isActive?: boolean;
+    tooltip?: string;
+  }>;
+
   // Additional Buttons (left side of generate button)
   additionalButtons?: Array<{
     key: string;
@@ -83,6 +93,7 @@ const GenerationToolbar: React.FC<GenerationToolbarConfig> = ({
   onStartOver,
   startOverDisabled = false,
 
+  modeButtons = [],
   additionalButtons = [],
 
   studioMode,
@@ -137,6 +148,32 @@ const GenerationToolbar: React.FC<GenerationToolbarConfig> = ({
                   <span className="font-semibold text-[var(--color-primary-accent)] w-6 text-center">
                     {imageCount}
                   </span>
+                </div>
+              </div>
+            )}
+
+            {/* Mode Selection Buttons */}
+            {modeButtons.length > 0 && (
+              <div className="flex items-center gap-2 border-l-2 border-[var(--color-border-muted)] pl-6">
+                <label className="text-xs font-medium text-[var(--color-text-light)] whitespace-nowrap">
+                  Mode:
+                </label>
+                <div className="flex gap-1">
+                  {modeButtons.map((btn) => (
+                    <button
+                      key={btn.key}
+                      onClick={btn.onClick}
+                      disabled={btn.disabled}
+                      title={btn.tooltip}
+                      className={`${
+                        btn.isActive
+                          ? 'bg-[var(--color-secondary)] text-[var(--color-text-on-primary)]'
+                          : 'bg-[var(--color-bg-muted)] text-[var(--color-text-main)] hover:bg-[var(--color-bg-muted-hover)]'
+                      } font-semibold py-2 px-4 rounded-lg transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed`}
+                    >
+                      {btn.text}
+                    </button>
+                  ))}
                 </div>
               </div>
             )}

@@ -214,13 +214,14 @@ const ArchitectureStudio: React.FC<ArchitectureStudioProps> = ({
             onGenerate={handleGenerate}
             generateDisabled={isGenerateDisabled}
             pendingCount={pendingImageCount}
-            additionalButtons={[
+            modeButtons={[
                 {
                     key: 'selected',
                     text: 'Selected',
                     onClick: () => setOptions(prev => ({ ...prev, styleSelectionMode: 'selected' })),
                     disabled: false,
                     isActive: options.styleSelectionMode === 'selected',
+                    tooltip: 'Generate images for each selected style',
                 },
                 {
                     key: 'random',
@@ -228,13 +229,7 @@ const ArchitectureStudio: React.FC<ArchitectureStudioProps> = ({
                     onClick: () => setOptions(prev => ({ ...prev, styleSelectionMode: 'random' })),
                     disabled: false,
                     isActive: options.styleSelectionMode === 'random',
-                },
-                {
-                    key: 'unstyled',
-                    text: 'Unstyled',
-                    onClick: handleGenerateUnstyled,
-                    disabled: isGenerateDisabled,
-                    variant: 'action',
+                    tooltip: 'Randomly pick styles from selected or all styles',
                 },
             ]}
             startOverButtonText="Clear"
