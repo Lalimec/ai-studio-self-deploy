@@ -101,7 +101,7 @@ const GenerationToolbar: React.FC<GenerationToolbarConfig> = ({
                 <label className="text-xs font-medium text-[var(--color-text-light)] whitespace-nowrap">
                   Aspect Ratio:
                 </label>
-                <div className="grid grid-cols-3 gap-1">
+                <div className="grid grid-cols-6 gap-1">
                   {ASPECT_RATIO_OPTIONS.map(({ label, value }) => (
                     <AspectRatioButton
                       key={value}
