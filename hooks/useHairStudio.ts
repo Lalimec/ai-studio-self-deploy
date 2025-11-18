@@ -510,6 +510,40 @@ export const useHairStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
 
     // --- DOWNLOAD HANDLERS ---
 
+    const handleDownloadOriginal = () => {
+        withMultiDownloadWarning(async () => {
+            if (!originalImage.croppedSrc || !originalImage.filename) {
+                addToast("No original image to download.", "error");
+                return;
+            }
+
+            logUserAction('DOWNLOAD_HAIR_ORIGINAL', { filename: originalImage.filename, sessionId });
+
+            const baseName = originalImage.filename.substring(0, originalImage.filename.lastIndexOf('.'));
+
+            try {
+                await downloadImageWithMetadata({
+                    imageBase64: originalImage.croppedSrc,
+                    filename: `${baseName}.jpg`,
+                    prompt: 'Original uploaded image before any transformations',
+                    metadata: {
+                        type: "original_hair_image",
+                        video_prompt: originalImage.videoPrompt,
+                        session_id: sessionId,
+                        timestamp: getTimestamp(),
+                    },
+                    videoUrl: originalImage.videoSrc,
+                    videoFilename: `${baseName}.mp4`,
+                    embedInImage: false,
+                    includeMetadataFile: downloadSettings.includeMetadataFiles,
+                });
+                addToast("Download complete!", "success");
+            } catch (err) {
+                addToast(err instanceof Error ? err.message : "Error downloading files.", "error");
+            }
+        });
+    };
+
     const handleDownloadSingle = (filename: string) => {
         withMultiDownloadWarning(async () => {
             logUserAction('DOWNLOAD_HAIR_SINGLE', { filename, sessionId });
@@ -633,6 +667,7 @@ export const useHairStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
         handleGenerateAllVideos,
         handlePrepareOriginal,
         handleGenerateOriginalVideo,
+        handleDownloadOriginal,
         handleDownloadSingle,
         handleDownloadAll,
     };

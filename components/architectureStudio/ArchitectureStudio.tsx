@@ -1,10 +1,10 @@
 /// <reference lib="dom" />
-import React from 'react';
-import { ArchitectureGenerationOptions } from '../../types';
+import React, { useState, useEffect } from 'react';
+import { ArchitectureGenerationOptions, OriginalImageState } from '../../types';
 import ImageUploader from '../ImageUploader';
 import ArchitectureOptionsPanel from './ArchitectureOptionsPanel';
 import ImageGrid from '../ImageGrid';
-import { TrashIcon, HelpIcon, DownloadIcon, PrepareMagicIcon, VideoIcon, DepthMapIcon } from '../Icons';
+import { TrashIcon, HelpIcon, DownloadIcon, PrepareMagicIcon, VideoIcon, DepthMapIcon, AlertCircleIcon } from '../Icons';
 import { useArchitectureStudio } from '../../hooks/useArchitectureStudio';
 
 type ArchitectureStudioProps = {
@@ -15,12 +15,82 @@ type ArchitectureStudioProps = {
     onImageClick: (id: string) => void;
 };
 
+const OriginalImageCard: React.FC<{
+    originalImage: OriginalImageState;
+    onRecrop: () => void;
+    onClear: () => void;
+    isDataLocked: boolean;
+    onPrepare: () => void;
+    onGenerateVideo: () => void;
+    onGenerateDepthMap: () => void;
+    onDownload: () => void;
+    aspectRatio: number;
+}> = ({ originalImage, onRecrop, onClear, isDataLocked, onPrepare, onGenerateVideo, onGenerateDepthMap, onDownload, aspectRatio }) => {
+    const { croppedSrc, isPreparing, isGeneratingVideo, isGeneratingDepthMap, videoSrc, videoPrompt, videoGenerationFailed, depthMapSrc, depthMapGenerationFailed } = originalImage;
+    const isBusy = isPreparing || isGeneratingVideo || isGeneratingDepthMap;
+    const [isHovering, setIsHovering] = useState(false);
+    const [isVideoReady, setIsVideoReady] = useState(false);
+
+    useEffect(() => {
+        if (videoSrc) setIsVideoReady(false);
+    }, [videoSrc]);
+
+    if (!croppedSrc) return null;
+
+    return (
+        <div className="w-full flex flex-col items-center">
+            <div
+                className="relative group w-full"
+                onMouseEnter={() => videoSrc && setIsHovering(true)}
+                onMouseLeave={() => videoSrc && setIsHovering(false)}
+                style={{ aspectRatio }}
+            >
+                <img src={croppedSrc} alt="Original architectural photo" className="rounded-xl shadow-lg shadow-[var(--color-shadow-primary)]/20 object-cover w-full h-full" />
+
+                {videoSrc && isHovering && (
+                    <div className="absolute inset-0">
+                        {!isVideoReady && <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center z-10 rounded-xl"><div className="w-6 h-6 border-2 border-dashed rounded-full animate-spin border-[var(--color-text-main)]"></div></div>}
+                        <video key={videoSrc} src={videoSrc} onCanPlay={() => setIsVideoReady(true)} autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover transition-opacity duration-300 z-5 rounded-xl" style={{ opacity: isVideoReady ? 1 : 0 }} />
+                    </div>
+                )}
+
+                {(videoGenerationFailed || depthMapGenerationFailed) && !isBusy && (
+                    <div className="absolute inset-0 bg-red-500/30 pointer-events-none flex items-center justify-center rounded-xl" title={videoGenerationFailed ? "Video generation failed" : "Depth map generation failed"}>
+                        <AlertCircleIcon className="w-8 h-8 text-white/80" />
+                    </div>
+                )}
+
+                <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl">
+                    <button onClick={onRecrop} className="bg-[var(--color-bg-surface)]/80 text-[var(--color-text-main)] py-2 px-4 rounded-md text-sm font-semibold hover:bg-black/80" disabled={isDataLocked || isBusy}>Recrop</button>
+                </div>
+
+                <div className="absolute top-2 right-2 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-20">
+                    <button onClick={onClear} className="p-2 bg-black bg-opacity-60 rounded-full text-[var(--color-text-main)] hover:bg-opacity-80 transition-all" aria-label="Remove photo" disabled={isDataLocked || isBusy}><TrashIcon className="w-5 h-5" /></button>
+                    <button onClick={onDownload} className="p-2 bg-black bg-opacity-60 rounded-full text-[var(--color-text-main)] hover:bg-opacity-80 transition-all" title="Download image, video, depth map, and info" disabled={isBusy}><DownloadIcon className="w-5 h-5" /></button>
+                    <button onClick={onPrepare} className="p-2 bg-black bg-opacity-60 rounded-full text-[var(--color-text-main)] hover:bg-opacity-80 transition-all" title="Prepare for video" disabled={isBusy}><PrepareMagicIcon className={`w-5 h-5 ${isPreparing ? 'animate-spin' : ''}`} /></button>
+                    <button onClick={onGenerateVideo} className="p-2 bg-black bg-opacity-60 rounded-full text-[var(--color-text-main)] hover:bg-opacity-80 transition-all disabled:opacity-50" title="Generate video" disabled={isBusy || !videoPrompt}><VideoIcon className={`w-5 h-5 ${isGeneratingVideo ? 'animate-spin' : ''}`} /></button>
+                    <button onClick={onGenerateDepthMap} className="p-2 bg-black bg-opacity-60 rounded-full text-[var(--color-text-main)] hover:bg-opacity-80 transition-all" title="Generate depth map" disabled={isBusy}><DepthMapIcon className={`w-5 h-5 ${isGeneratingDepthMap ? 'animate-spin' : ''}`} /></button>
+                </div>
+
+                {isBusy && (
+                    <div className="absolute inset-0 bg-black bg-opacity-70 flex flex-col items-center justify-center text-[var(--color-text-main)] text-xs font-semibold z-30 rounded-xl">
+                        <div className="w-8 h-8 border-4 border-dashed rounded-full animate-spin border-[var(--color-primary-accent)]"></div>
+                        <span className="mt-2">{isPreparing ? 'Preparing...' : isGeneratingVideo ? 'Making Video...' : 'Generating Depth Map...'}</span>
+                    </div>
+                )}
+            </div>
+            <div className="mt-2 text-xs text-[var(--color-text-dim)] text-center">Original Image</div>
+        </div>
+    );
+};
+
 const ArchitectureStudio: React.FC<ArchitectureStudioProps> = ({
     logic, onUpload, onRecrop, onShowHelp, onImageClick
 }) => {
     const {
         croppedImage,
         croppedImageAspectRatio,
+        originalImage,
         options, setOptions,
         isGenerateDisabled,
         pendingImageCount,
@@ -42,6 +112,10 @@ const ArchitectureStudio: React.FC<ArchitectureStudioProps> = ({
         handlePrepareSingleImage,
         handleGenerateSingleVideo,
         handleGenerateSingleDepthMap,
+        handlePrepareOriginal,
+        handleGenerateOriginalVideo,
+        handleGenerateOriginalDepthMap,
+        handleDownloadOriginal,
         handleDownloadAll,
         handleDownloadSingle,
     } = logic;
@@ -56,13 +130,17 @@ const ArchitectureStudio: React.FC<ArchitectureStudioProps> = ({
                     {!croppedImage ? (
                         <ImageUploader onImageUpload={onUpload} />
                     ) : (
-                        <div className="relative group w-full">
-                            <img src={croppedImage} alt="Your cropped architectural photo" className="rounded-xl shadow-lg shadow-[var(--color-shadow-primary)]/20 object-cover w-full" style={{ aspectRatio: croppedImageAspectRatio }} />
-                            <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-xl" >
-                                <button onClick={onRecrop} className="bg-[var(--color-bg-surface)]/80 text-[var(--color-text-main)] py-2 px-4 rounded-md text-sm font-semibold hover:bg-black/80" disabled={isBusy}>Recrop</button>
-                            </div>
-                            <button onClick={handleClearImageAndResults} className="absolute top-2 right-2 p-2 bg-[var(--color-bg-overlay)] rounded-full text-[var(--color-text-main)] hover:bg-opacity-80 transition-all opacity-0 group-hover:opacity-100" disabled={isBusy}><TrashIcon className="w-5 h-5" /></button>
-                        </div>
+                        <OriginalImageCard
+                            originalImage={originalImage}
+                            onRecrop={onRecrop}
+                            onClear={handleClearImageAndResults}
+                            isDataLocked={pendingImageCount > 0}
+                            onPrepare={handlePrepareOriginal}
+                            onGenerateVideo={handleGenerateOriginalVideo}
+                            onGenerateDepthMap={handleGenerateOriginalDepthMap}
+                            onDownload={handleDownloadOriginal}
+                            aspectRatio={croppedImageAspectRatio}
+                        />
                     )}
                 </div>
                 <div className="w-full">

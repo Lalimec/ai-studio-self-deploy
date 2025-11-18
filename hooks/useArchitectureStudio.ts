@@ -775,6 +775,42 @@ export const useArchitectureStudio = ({
 
     // --- DOWNLOAD HANDLERS ---
 
+    const handleDownloadOriginal = () => {
+        withMultiDownloadWarning(async () => {
+            if (!originalImage.croppedSrc || !originalImage.filename) {
+                addToast("No original image to download.", "error");
+                return;
+            }
+
+            logUserAction('DOWNLOAD_ARCHITECTURE_ORIGINAL', { filename: originalImage.filename, sessionId });
+
+            const baseName = originalImage.filename.substring(0, originalImage.filename.lastIndexOf('.'));
+
+            try {
+                await downloadImageWithMetadata({
+                    imageBase64: originalImage.croppedSrc,
+                    filename: `${baseName}.jpg`,
+                    prompt: 'Original uploaded image before any transformations',
+                    metadata: {
+                        type: "original_architecture_image",
+                        video_prompt: originalImage.videoPrompt,
+                        session_id: sessionId,
+                        timestamp: getTimestamp(),
+                    },
+                    videoUrl: originalImage.videoSrc,
+                    videoFilename: `${baseName}.mp4`,
+                    depthMapUrl: originalImage.depthMapSrc,
+                    depthMapFilename: `depth_map_${baseName}.png`,
+                    embedInImage: false,
+                    includeMetadataFile: downloadSettings.includeMetadataFiles,
+                });
+                addToast("Download complete!", "success");
+            } catch (err) {
+                addToast(err instanceof Error ? err.message : "Error downloading files.", "error");
+            }
+        });
+    };
+
     const handleDownloadSingle = (filename: string) => {
         withMultiDownloadWarning(async () => {
             logUserAction('DOWNLOAD_ARCHITECTURE_SINGLE', { filename, sessionId });
@@ -915,6 +951,7 @@ export const useArchitectureStudio = ({
         handlePrepareOriginal,
         handleGenerateOriginalVideo,
         handleGenerateOriginalDepthMap,
+        handleDownloadOriginal,
         handleDownloadSingle,
         handleDownloadAll,
     };
