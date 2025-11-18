@@ -4,7 +4,7 @@ import { ArchitectureGenerationOptions, OriginalImageState } from '../../types';
 import ImageUploader from '../ImageUploader';
 import ArchitectureOptionsPanel from './ArchitectureOptionsPanel';
 import ImageGrid from '../ImageGrid';
-import { TrashIcon, HelpIcon, DownloadIcon, PrepareMagicIcon, VideoIcon, DepthMapIcon, AlertCircleIcon } from '../Icons';
+import { TrashIcon, HelpIcon, DownloadIcon, PrepareMagicIcon, VideoIcon, DepthMapIcon, AlertCircleIcon, CheckCircleIcon } from '../Icons';
 import { useArchitectureStudio } from '../../hooks/useArchitectureStudio';
 
 type ArchitectureStudioProps = {
@@ -57,6 +57,22 @@ const OriginalImageCard: React.FC<{
                 {(videoGenerationFailed || depthMapGenerationFailed) && !isBusy && (
                     <div className="absolute inset-0 bg-red-500/30 pointer-events-none flex items-center justify-center rounded-xl" title={videoGenerationFailed ? "Video generation failed" : "Depth map generation failed"}>
                         <AlertCircleIcon className="w-8 h-8 text-white/80" />
+                    </div>
+                )}
+
+                {videoSrc && !isBusy && (
+                    <div className="absolute top-2 left-2 p-1 bg-black bg-opacity-60 rounded-full text-[var(--color-primary-accent)] pointer-events-none" title="Video is ready">
+                        <VideoIcon className="w-5 h-5" />
+                    </div>
+                )}
+                {!videoSrc && videoPrompt && !isBusy && (
+                    <div className="absolute top-2 left-2 p-1 bg-black bg-opacity-60 rounded-full text-[var(--color-success-accent)] pointer-events-none" title="Video prompt is ready">
+                        <CheckCircleIcon className="w-5 h-5" />
+                    </div>
+                )}
+                {depthMapSrc && !isBusy && (
+                    <div className="absolute top-14 left-2 p-1 bg-black bg-opacity-60 rounded-full text-[var(--color-info-accent)] pointer-events-none" title="Depth map is ready">
+                        <DepthMapIcon className="w-5 h-5" />
                     </div>
                 )}
 

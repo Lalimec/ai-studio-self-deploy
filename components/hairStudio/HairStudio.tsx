@@ -4,7 +4,7 @@ import { OriginalImageState } from '../../types';
 import ImageUploader from '../ImageUploader';
 import HairOptionsPanel from './HairOptionsPanel';
 import ImageGrid from '../ImageGrid';
-import { TrashIcon, HelpIcon, DownloadIcon, PrepareMagicIcon, VideoIcon, AlertCircleIcon } from '../Icons';
+import { TrashIcon, HelpIcon, DownloadIcon, PrepareMagicIcon, VideoIcon, AlertCircleIcon, CheckCircleIcon } from '../Icons';
 import { useHairStudio } from '../../hooks/useHairStudio';
 
 type HairStudioProps = {
@@ -56,6 +56,17 @@ const OriginalImageCard: React.FC<{
                 {videoGenerationFailed && !isBusy && (
                     <div className="absolute inset-0 bg-red-500/30 pointer-events-none flex items-center justify-center rounded-xl" title="Video generation failed">
                         <AlertCircleIcon className="w-8 h-8 text-white/80" />
+                    </div>
+                )}
+
+                {videoSrc && !isBusy && (
+                    <div className="absolute top-2 left-2 p-1 bg-black bg-opacity-60 rounded-full text-[var(--color-primary-accent)] pointer-events-none" title="Video is ready">
+                        <VideoIcon className="w-5 h-5" />
+                    </div>
+                )}
+                {!videoSrc && videoPrompt && !isBusy && (
+                    <div className="absolute top-2 left-2 p-1 bg-black bg-opacity-60 rounded-full text-[var(--color-success-accent)] pointer-events-none" title="Video prompt is ready">
+                        <CheckCircleIcon className="w-5 h-5" />
                     </div>
                 )}
 
