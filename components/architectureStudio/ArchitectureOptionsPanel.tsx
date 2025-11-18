@@ -197,9 +197,23 @@ const ArchitectureOptionsPanel: React.FC<OptionsPanelProps> = ({ options, setOpt
                 <label className="block text-sm font-medium text-[var(--color-text-light)] mb-2">3. Styles</label>
                 <p className="text-xs text-[var(--color-text-dimmer)] mb-2">
                     {options.styleSelectionMode === 'selected'
-                        ? 'Select specific styles to generate. Each style will generate the number of images specified above.'
+                        ? 'Select at least one style to generate. One image will be generated per style.'
                         : 'Select styles to include in randomization, or leave blank to use all styles.'}
                 </p>
+                {options.styleSelectionMode === 'selected' && !options.useCustomStyles && options.styles.length === 0 && (
+                    <div className="mb-2 p-2 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+                        <p className="text-xs text-amber-600 dark:text-amber-400 font-medium">
+                            ⚠️ Please select at least one style to continue.
+                        </p>
+                    </div>
+                )}
+                {options.styleSelectionMode === 'selected' && options.useCustomStyles && !options.customStyles.trim() && (
+                    <div className="mb-2 p-2 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+                        <p className="text-xs text-amber-600 dark:text-amber-400 font-medium">
+                            ⚠️ Please enter at least one custom style to continue.
+                        </p>
+                    </div>
+                )}
                 <div className="flex flex-wrap gap-2">
                     {currentStyles.map(style => (
                         <FilterButton

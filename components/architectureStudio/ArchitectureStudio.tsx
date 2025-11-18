@@ -205,10 +205,11 @@ const ArchitectureStudio: React.FC<ArchitectureStudioProps> = ({
             aspectRatio={options.aspectRatio}
             onAspectRatioChange={(ratio) => setOptions(prev => ({ ...prev, aspectRatio: ratio }))}
             aspectRatioDisabled={false}
+            showImageCount={options.styleSelectionMode === 'random'}
             imageCount={options.imageCount}
             onImageCountChange={(count) => setOptions(prev => ({ ...prev, imageCount: count }))}
             imageCountMin={1}
-            imageCountMax={4}
+            imageCountMax={12}
             imageCountDisabled={false}
             generateButtonText="Generate"
             onGenerate={handleGenerate}
@@ -218,10 +219,10 @@ const ArchitectureStudio: React.FC<ArchitectureStudioProps> = ({
                 {
                     key: 'selected',
                     text: 'Selected',
-                    onClick: () => setOptions(prev => ({ ...prev, styleSelectionMode: 'selected' })),
+                    onClick: () => setOptions(prev => ({ ...prev, styleSelectionMode: 'selected', imageCount: 1 })),
                     disabled: false,
                     isActive: options.styleSelectionMode === 'selected',
-                    tooltip: 'Generate images for each selected style',
+                    tooltip: 'Generate one image for each selected style',
                 },
                 {
                     key: 'random',
