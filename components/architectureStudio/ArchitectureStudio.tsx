@@ -47,15 +47,14 @@ const OriginalImageCard: React.FC<{
     onRemoveTransformation,
     aspectRatio
 }) => {
+    // IMPORTANT: All hooks must be called before any conditional returns
     const [isHovering, setIsHovering] = useState(false);
     const [isVideoReady, setIsVideoReady] = useState(false);
 
     // Get the currently displayed image based on selected version
     const activeImage = selectedVersion === 'real' ? originalImage : (transformedVersions[selectedVersion] || null);
 
-    if (!activeImage || !activeImage.croppedSrc) return null;
-
-    const { croppedSrc, isPreparing, isGeneratingVideo, isGeneratingDepthMap, videoSrc, videoPrompt, videoGenerationFailed, depthMapSrc, depthMapGenerationFailed } = activeImage;
+    const { croppedSrc, isPreparing, isGeneratingVideo, isGeneratingDepthMap, videoSrc, videoPrompt, videoGenerationFailed, depthMapSrc, depthMapGenerationFailed } = activeImage || {};
     const isGenerating = transformedVersions[selectedVersion]?.isGenerating || false;
     const isBusy = isPreparing || isGeneratingVideo || isGeneratingDepthMap || isGenerating;
 
@@ -64,10 +63,13 @@ const OriginalImageCard: React.FC<{
     }, [videoSrc]);
 
     const transformationTypes = [
-        { id: 'tidy', label: 'Tidy', color: 'blue' },
-        { id: 'unfurnished', label: 'Unfurnished', color: 'orange' },
-        { id: 'livedIn', label: 'Lived-in', color: 'green' }
+        { id: 'tidy', label: 'Tidy', icon: '✨', tooltip: 'Clean and organized' },
+        { id: 'unfurnished', label: 'Unfurnished', icon: '🏗️', tooltip: 'Under construction' },
+        { id: 'livedIn', label: 'Lived-in', icon: '🛋️', tooltip: 'Daily life clutter' }
     ];
+
+    // Early return AFTER all hooks have been called
+    if (!activeImage || !croppedSrc) return null;
 
     return (
         <div className="w-full flex flex-col items-center">
@@ -75,32 +77,41 @@ const OriginalImageCard: React.FC<{
             <div className="w-full flex gap-1 mb-3">
                 <button
                     onClick={() => onSelectVersion('real')}
-                    disabled={isDataLocked}
-                    className={`flex-1 py-2 px-3 text-xs font-semibold rounded-md transition-colors ${
+                    title="Original image"
+                    className={`flex-1 py-2 px-2 text-xs font-semibold rounded-md transition-colors ${
                         selectedVersion === 'real'
                             ? 'bg-[var(--color-primary)] text-[var(--color-text-on-primary)]'
                             : 'bg-[var(--color-bg-muted)] text-[var(--color-text-main)] hover:bg-[var(--color-bg-muted-hover)]'
-                    } disabled:opacity-50 disabled:cursor-not-allowed`}
+                    }`}
                 >
-                    Real
+                    🏠
                 </button>
-                {transformationTypes.map(({ id, label }) => (
-                    <button
-                        key={id}
-                        onClick={() => transformedVersions[id] && onSelectVersion(id)}
-                        disabled={!transformedVersions[id] || isDataLocked}
-                        className={`flex-1 py-2 px-3 text-xs font-semibold rounded-md transition-colors ${
-                            selectedVersion === id
-                                ? 'bg-[var(--color-primary)] text-[var(--color-text-on-primary)]'
-                                : transformedVersions[id]
-                                ? 'bg-[var(--color-bg-muted)] text-[var(--color-text-main)] hover:bg-[var(--color-bg-muted-hover)]'
-                                : 'bg-[var(--color-bg-surface)] text-[var(--color-text-dimmer)] cursor-not-allowed opacity-50'
-                        }`}
-                    >
-                        {label}
-                        {transformedVersions[id] && ' ✓'}
-                    </button>
-                ))}
+                {transformationTypes.map(({ id, label, icon, tooltip }) => {
+                    const version = transformedVersions[id];
+                    const isVersionGenerating = version?.isGenerating;
+                    const canClick = version || isVersionGenerating; // Allow clicking if exists or is generating
+                    return (
+                        <button
+                            key={id}
+                            onClick={() => canClick && onSelectVersion(id)}
+                            disabled={!canClick}
+                            title={isVersionGenerating ? `Generating ${label}...` : tooltip}
+                            className={`flex-1 py-2 px-2 text-xs font-semibold rounded-md transition-colors relative ${
+                                selectedVersion === id
+                                    ? 'bg-[var(--color-primary)] text-[var(--color-text-on-primary)]'
+                                    : canClick
+                                    ? 'bg-[var(--color-bg-muted)] text-[var(--color-text-main)] hover:bg-[var(--color-bg-muted-hover)]'
+                                    : 'bg-[var(--color-bg-surface)] text-[var(--color-text-dimmer)] cursor-not-allowed opacity-50'
+                            }`}
+                        >
+                            {isVersionGenerating ? (
+                                <span className="inline-block w-3 h-3 border-2 border-dashed rounded-full animate-spin border-current"></span>
+                            ) : (
+                                icon
+                            )}
+                        </button>
+                    );
+                })}
             </div>
 
             <div
@@ -164,7 +175,7 @@ const OriginalImageCard: React.FC<{
 
             {/* Transformation Buttons */}
             <div className="w-full flex gap-2 mt-3">
-                {transformationTypes.map(({ id, label }) => {
+                {transformationTypes.map(({ id, label, icon }) => {
                     const exists = transformedVersions[id];
                     const isGenerating = transformedVersions[id]?.isGenerating;
                     return (
@@ -172,21 +183,23 @@ const OriginalImageCard: React.FC<{
                             key={id}
                             onClick={() => exists ? onRemoveTransformation(id) : onGenerateTransformation(id)}
                             disabled={isBusy || isDataLocked}
-                            className={`flex-1 py-1.5 px-2 text-xs font-medium rounded-md transition-colors ${
+                            className={`flex-1 py-2 px-2 text-lg rounded-md transition-colors ${
                                 exists
-                                    ? 'bg-red-500/20 text-red-600 hover:bg-red-500/30 border border-red-500/50'
-                                    : 'bg-[var(--color-action-generate)] hover:bg-[var(--color-action-generate-hover)] text-[var(--color-text-on-primary)]'
+                                    ? 'bg-red-500/20 hover:bg-red-500/30 border border-red-500/50'
+                                    : 'bg-[var(--color-action-generate)] hover:bg-[var(--color-action-generate-hover)]'
                             } disabled:opacity-50 disabled:cursor-not-allowed`}
                             title={exists ? `Remove ${label} version` : `Generate ${label} version`}
                         >
-                            {isGenerating ? '...' : exists ? `✗ ${label}` : `+ ${label}`}
+                            {isGenerating ? (
+                                <span className="inline-block w-4 h-4 border-2 border-dashed rounded-full animate-spin border-current"></span>
+                            ) : exists ? (
+                                '🗑️'
+                            ) : (
+                                icon
+                            )}
                         </button>
                     );
                 })}
-            </div>
-
-            <div className="mt-2 text-xs text-[var(--color-text-dim)] text-center">
-                {selectedVersion === 'real' ? 'Original Image' : `${transformationTypes.find(t => t.id === selectedVersion)?.label || ''} Version`}
             </div>
         </div>
     );

@@ -226,7 +226,7 @@ export const useArchitectureStudio = ({
             const result = await generateImageTransformation(
                 sourceImage.croppedSrc,
                 transformationType,
-                options.aspectRatio,
+                'auto',
                 useNanoBananaWebhook,
                 sessionId,
                 originalFile?.name || 'image'

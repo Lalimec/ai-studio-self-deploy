@@ -512,27 +512,36 @@ export const generateImageTransformation = async (
   switch (transformationType) {
     case 'tidy':
       transformationLabel = 'tidy';
-      transformationPrompt = `Transform this architectural space to be completely clean, organized, and uncluttered.
-CRITICAL REQUIREMENTS:
-- REMOVE ALL scattered items from floors (shoes, bags, boxes, papers, toys, clothing, books, etc.)
-- REMOVE ALL clutter from surfaces (tables, counters, desks, shelves - clear them completely)
-- REMOVE ALL excessive decorations or random items from walls
-- REMOVE ALL visible mess, debris, trash, or disorganized objects
-- REMOVE ALL piles of items or stacks of objects that create visual clutter
-- Surfaces should be clear and clean
-- Floors should be completely empty and clean
-- Result must show pristine, magazine-quality cleanliness
+      transformationPrompt = `Transform this architectural space to be completely clean, organized, and uncluttered. MAXIMUM CLEANLINESS REQUIRED.
+
+CRITICAL REQUIREMENTS - REMOVE EVERYTHING LISTED:
+✗ FLOORS: Remove ALL items from floors - shoes, bags, boxes, papers, toys, clothing, books, cables, packaging, debris, dirt, stains
+✗ SURFACES: Clear ALL surfaces completely - tables, counters, desks, shelves, nightstands must be EMPTY or have only 1-2 minimal decorative items
+✗ BEDS: Make beds perfectly - smooth sheets, arranged pillows, tucked blankets, hotel-quality presentation
+✗ WALLS: Remove ALL posters, papers, excessive decorations, hooks with items, calendars, notes, tape marks
+✗ CEILINGS: Remove ANY hanging items, posters, decorations, or clutter
+✗ CLUTTER: Remove ALL piles, stacks, random objects, packaging materials, scattered items
+✗ TRASH: Remove ALL waste baskets contents, debris, packaging, wrappers
+✗ PERSONAL ITEMS: Remove scattered personal belongings - leave only intentional decor
+
+CLEAN STATE REQUIREMENTS:
+✓ Floors: Completely empty, clean, spotless
+✓ Surfaces: Clear or minimally decorated (1-2 items max per surface)
+✓ Walls: Clean with only permanent fixtures or intentional art
+✓ Furniture: In place, clean, organized
+✓ Beds: Perfectly made with smooth linens
+✓ Overall: Magazine-quality, professionally staged appearance
 
 PRESERVE EXACTLY:
-- The exact spatial layout and room structure
-- All major furniture pieces (sofas, beds, tables, chairs, cabinets) in their exact positions
-- All architectural elements (doors, windows, columns, beams, fixtures) in exact locations
-- The lighting conditions and time of day
-- The overall design style and aesthetic
-- Wall colors, flooring, and finishes
-- Only intentional, well-placed decorative items may remain
+- Spatial layout and room structure
+- Major furniture in exact positions
+- Architectural elements (doors, windows, fixtures)
+- Lighting and time of day
+- Design style and aesthetic
+- Wall colors, flooring, finishes
+- Built-in fixtures and permanent features
 
-This is a tidying transformation, not a redesign. The space should look like the same room that has been professionally cleaned and organized.`;
+This is a TIDYING transformation, not a redesign. Show the SAME room after professional cleaning and staging. The result should be pristine, spotless, and perfectly organized.`;
       break;
 
     case 'unfurnished':
