@@ -176,6 +176,18 @@ export const useArchitectureStudio = ({
         if (!croppedImage || !originalFile || !sessionId) return;
 
         const currentOptions = { ...options };
+
+        // Validation: In "selected" mode, require at least one style to be selected
+        if (currentOptions.styleSelectionMode === 'selected') {
+            const hasCustomStyles = currentOptions.useCustomStyles && currentOptions.customStyles.trim();
+            const hasSelectedStyles = currentOptions.styles.length > 0;
+
+            if (!hasCustomStyles && !hasSelectedStyles) {
+                addToast('Please select at least one style when using "Generate Selected Styles" mode, or switch to "Random Style" mode.', 'warning');
+                return;
+            }
+        }
+
         logUserAction('GENERATE_ARCHITECTURAL_STYLES', { options: currentOptions, sessionId });
 
         // Calculate batch size based on style selection mode
@@ -183,7 +195,7 @@ export const useArchitectureStudio = ({
         if (currentOptions.styleSelectionMode === 'selected') {
             const styleCount = currentOptions.useCustomStyles && currentOptions.customStyles.trim()
                 ? currentOptions.customStyles.split(',').filter(s => s.trim()).length
-                : currentOptions.styles.length || 1;
+                : currentOptions.styles.length;
             batchSize = styleCount * currentOptions.imageCount;
         }
 
