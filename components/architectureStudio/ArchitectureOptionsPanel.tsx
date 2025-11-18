@@ -7,11 +7,11 @@ import {
     FACADE_STYLES,
     GARDEN_STYLES,
     LANDSCAPE_STYLES,
+    ROOM_TYPES,
+    BUILDING_TYPES,
     ARCHITECTURE_TIMES,
     ARCHITECTURE_THEMES,
     CAMERA_ANGLE_OPTIONS,
-    ROOM_TYPES,
-    BUILDING_TYPES,
     COLOR_SCHEMES,
     TIDY_OPTIONS
 } from '../../architectureConstants';
@@ -26,17 +26,16 @@ const FilterButton: React.FC<{
     label: string;
     isActive: boolean;
     onClick: () => void;
-    className?: string;
     title?: string;
-    buttonDisabled?: boolean;
-}> = ({ label, isActive, onClick, className = '', title, buttonDisabled }) => (
+    buttonDisabled: boolean;
+}> = ({ label, isActive, onClick, title, buttonDisabled }) => (
     <button
         onClick={onClick}
         disabled={buttonDisabled}
         title={title}
-        className={`py-2 px-3 rounded-md font-semibold transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed ${
+        className={`py-2 px-3 rounded-md text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
             isActive ? 'bg-[var(--color-secondary)] text-[var(--color-text-on-primary)]' : 'bg-[var(--color-bg-muted)] hover:bg-[var(--color-bg-muted-hover)]'
-        } ${className}`}
+        }`}
     >
         {label}
     </button>
@@ -58,7 +57,12 @@ const ArchitectureOptionsPanel: React.FC<OptionsPanelProps> = ({ options, setOpt
         setOptions(prev => ({
             ...prev,
             scope: scopeId,
-            styles: [], // Clear styles when scope changes
+            // Reset room/building type when changing scope
+            roomType: 'none',
+            buildingType: 'none',
+            // Reset styles when changing scope to avoid incompatible styles
+            styles: [],
+            customStyles: '',
             useCustomStyles: false,
         }));
     };
@@ -68,30 +72,16 @@ const ArchitectureOptionsPanel: React.FC<OptionsPanelProps> = ({ options, setOpt
             const newStyles = prev.styles.includes(styleId)
                 ? prev.styles.filter(s => s !== styleId)
                 : [...prev.styles, styleId];
-
-            return { ...prev, styles: newStyles, useCustomStyles: false };
+            return { ...prev, styles: newStyles };
         });
-    };
-
-    const handleCustomStylesChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-        const { value } = e.target;
-        setOptions(prev => ({
-            ...prev,
-            customStyles: value,
-            styles: [],
-            useCustomStyles: true,
-        }));
     };
 
     const handleToggleCustomStyles = () => {
-        setOptions(prev => {
-            const isActivatingCustom = !prev.useCustomStyles;
-            if (isActivatingCustom) {
-                return { ...prev, useCustomStyles: true, styles: [] };
-            } else {
-                return { ...prev, useCustomStyles: false };
-            }
-        });
+        setOptions(prev => ({ ...prev, useCustomStyles: !prev.useCustomStyles }));
+    };
+
+    const handleCustomStylesChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+        setOptions(prev => ({ ...prev, customStyles: e.target.value }));
     };
 
     const handleTimeChange = (timeId: string) => {
@@ -100,6 +90,10 @@ const ArchitectureOptionsPanel: React.FC<OptionsPanelProps> = ({ options, setOpt
 
     const handleThemeChange = (themeId: string) => {
         setOptions(prev => ({ ...prev, theme: themeId }));
+    };
+
+    const handleColorSchemeChange = (colorSchemeId: string) => {
+        setOptions(prev => ({ ...prev, colorScheme: colorSchemeId }));
     };
 
     const handleCameraAngleChange = (angleId: string) => {
@@ -114,16 +108,8 @@ const ArchitectureOptionsPanel: React.FC<OptionsPanelProps> = ({ options, setOpt
         setOptions(prev => ({ ...prev, buildingType: buildingTypeId }));
     };
 
-    const handleColorSchemeChange = (colorSchemeId: string) => {
-        setOptions(prev => ({ ...prev, colorScheme: colorSchemeId }));
-    };
-
     const handleTidyChange = (tidyId: string) => {
         setOptions(prev => ({ ...prev, tidy: tidyId }));
-    };
-
-    const handleShowUnfinishedToggle = () => {
-        setOptions(prev => ({ ...prev, showUnfinished: !prev.showUnfinished }));
     };
 
     const currentStyles = getStylesForScope(options.scope);
@@ -134,7 +120,7 @@ const ArchitectureOptionsPanel: React.FC<OptionsPanelProps> = ({ options, setOpt
             {/* 1. Architectural Scope */}
             <div>
                 <label className="block text-sm font-medium text-[var(--color-text-light)] mb-2">1. Architectural Scope</label>
-                <p className="text-xs text-[var(--color-text-dimmer)] mb-2">Select the type of space you want to transform.</p>
+                <p className="text-xs text-[var(--color-text-dimmer)] mb-2">Choose the type of space to transform.</p>
                 <div className="flex flex-wrap gap-2">
                     {ARCHITECTURE_SCOPES.map(scope => (
                         <FilterButton
@@ -247,27 +233,9 @@ const ArchitectureOptionsPanel: React.FC<OptionsPanelProps> = ({ options, setOpt
                 )}
             </div>
 
-            {/* 4. Show Unfinished/Before Version */}
+            {/* 4. Tidiness Level */}
             <div>
-                <label className="block text-sm font-medium text-[var(--color-text-light)] mb-2">4. Before/After View</label>
-                <p className="text-xs text-[var(--color-text-dimmer)] mb-2">Generate styled unfinished/before-renovation versions.</p>
-                <div className="flex items-center gap-3">
-                    <label className="flex items-center cursor-pointer">
-                        <input
-                            type="checkbox"
-                            checked={options.showUnfinished}
-                            onChange={handleShowUnfinishedToggle}
-                            disabled={disabled}
-                            className="w-4 h-4 accent-[var(--color-primary)] cursor-pointer disabled:opacity-50"
-                        />
-                        <span className="ml-2 text-sm text-[var(--color-text-light)]">Show Styled Unfinished State</span>
-                    </label>
-                </div>
-            </div>
-
-            {/* 5. Tidiness Level */}
-            <div>
-                <label className="block text-sm font-medium text-[var(--color-text-light)] mb-2">5. Tidiness Level</label>
+                <label className="block text-sm font-medium text-[var(--color-text-light)] mb-2">4. Tidiness Level</label>
                 <p className="text-xs text-[var(--color-text-dimmer)] mb-2">Choose between neat and organized or lived-in appearance.</p>
                 <div className="flex flex-wrap gap-2">
                     {TIDY_OPTIONS.map(tidyOption => (
@@ -283,9 +251,9 @@ const ArchitectureOptionsPanel: React.FC<OptionsPanelProps> = ({ options, setOpt
                 </div>
             </div>
 
-            {/* 6. Color Scheme */}
+            {/* 5. Color Scheme */}
             <div>
-                <label className="block text-sm font-medium text-[var(--color-text-light)] mb-2">6. Color Scheme (Optional)</label>
+                <label className="block text-sm font-medium text-[var(--color-text-light)] mb-2">5. Color Scheme (Optional)</label>
                 <div className="flex flex-wrap gap-2">
                     {COLOR_SCHEMES.map(colorScheme => (
                         <FilterButton
@@ -300,9 +268,9 @@ const ArchitectureOptionsPanel: React.FC<OptionsPanelProps> = ({ options, setOpt
                 </div>
             </div>
 
-            {/* 7. Time of Day */}
+            {/* 6. Time of Day */}
             <div>
-                <label className="block text-sm font-medium text-[var(--color-text-light)] mb-2">7. Time of Day / Lighting</label>
+                <label className="block text-sm font-medium text-[var(--color-text-light)] mb-2">6. Time of Day / Lighting</label>
                 <div className="flex flex-wrap gap-2">
                     {ARCHITECTURE_TIMES.map(time => (
                         <FilterButton
@@ -317,9 +285,9 @@ const ArchitectureOptionsPanel: React.FC<OptionsPanelProps> = ({ options, setOpt
                 </div>
             </div>
 
-            {/* 8. Theme / Season */}
+            {/* 7. Theme / Season */}
             <div>
-                <label className="block text-sm font-medium text-[var(--color-text-light)] mb-2">8. Theme / Season</label>
+                <label className="block text-sm font-medium text-[var(--color-text-light)] mb-2">7. Theme / Season</label>
                 <div className="flex flex-wrap gap-2">
                     {ARCHITECTURE_THEMES.map(theme => (
                         <FilterButton
@@ -334,9 +302,9 @@ const ArchitectureOptionsPanel: React.FC<OptionsPanelProps> = ({ options, setOpt
                 </div>
             </div>
 
-            {/* 9. Camera Angle */}
+            {/* 8. Camera Angle */}
             <div>
-                <label className="block text-sm font-medium text-[var(--color-text-light)] mb-2">9. Camera Angle</label>
+                <label className="block text-sm font-medium text-[var(--color-text-light)] mb-2">8. Camera Angle</label>
                 <p className="text-xs text-[var(--color-text-dimmer)] mb-2">Control how the camera perspective is handled.</p>
                 <div className="flex flex-wrap gap-2">
                     {CAMERA_ANGLE_OPTIONS.map(angle => (

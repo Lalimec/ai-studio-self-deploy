@@ -191,6 +191,22 @@ export type OriginalImageState = {
     depthMapGenerationFailed?: boolean;
 };
 
+// Architecture Studio - Image Transformation Types
+export type TransformationType = 'tidy' | 'unfurnished' | 'livedIn';
+export type ActiveVersionType = 'real' | TransformationType;
+
+export type TransformedVersionState = OriginalImageState & {
+    transformationType: TransformationType;
+    sourceVersion: ActiveVersionType; // Which version this was created from
+    isGenerating?: boolean; // Currently generating this transformation
+};
+
+export type TransformedVersionsState = {
+    tidy?: TransformedVersionState;
+    unfurnished?: TransformedVersionState;
+    livedIn?: TransformedVersionState;
+};
+
 
 // --- IMAGE STUDIO TYPES ---
 export interface AppFile {
@@ -462,7 +478,6 @@ export type ArchitectureGenerationOptions = {
   styleSelectionMode: 'selected' | 'random'; // How to generate: selected styles or random
   colorScheme: string; // Color scheme (optional)
   tidy: string; // tidy or untidy
-  showUnfinished: boolean; // Whether to show unfinished/before version
   generateUnstyledVersion: boolean; // Whether to generate a completely unstyled version
   time: string; // Time of day
   theme: string; // Holiday/seasonal theme

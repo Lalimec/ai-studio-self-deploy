@@ -27,7 +27,6 @@ type GenerationTask = {
   buildingTypePrompt: string;
   colorSchemePrompt: string;
   tidyPrompt: string;
-  unfinishedPrompt: string;
   timePrompt: string;
   themePrompt: string;
   cameraAnglePrompt: string;
@@ -146,31 +145,7 @@ const createGenerationTasks = (
   const tidyData = TIDY_OPTIONS.find(t => t.id === options.tidy);
   const tidyPrompt = tidyData?.prompt || '';
 
-  // 9. Unfinished prompt (if showUnfinished is true)
-  let unfinishedPrompt = '';
-  if (options.showUnfinished) {
-    switch (scope) {
-      case 'interior':
-        unfinishedPrompt = 'unfinished, uncompleted, unfurnished version with bare walls, incomplete construction, minimal or no furniture, exposed subflooring or unfinished surfaces, providing a before-renovation appearance';
-        break;
-      case 'exterior':
-        unfinishedPrompt = 'under construction with exposed framing, incomplete exterior, construction materials visible, scaffolding, and unfinished building state';
-        break;
-      case 'facade':
-        unfinishedPrompt = 'unfinished facade with exposed structure, incomplete cladding, visible construction materials, and raw building state';
-        break;
-      case 'garden':
-        unfinishedPrompt = 'undeveloped garden space with bare soil, no landscaping, minimal or no plants, showing the initial state before garden installation';
-        break;
-      case 'landscape':
-        unfinishedPrompt = 'raw undeveloped landscape with natural terrain, no landscaping improvements, showing the original state before development';
-        break;
-      default:
-        unfinishedPrompt = 'unfinished state showing the before condition';
-    }
-  }
-
-  // 10. Create Combinations
+  // 9. Create Combinations
   const getRandomElement = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
 
   const tasks: GenerationTask[] = [];
@@ -198,7 +173,6 @@ const createGenerationTasks = (
           buildingTypePrompt,
           colorSchemePrompt,
           tidyPrompt,
-          unfinishedPrompt,
           timePrompt,
           themePrompt,
           cameraAnglePrompt,
@@ -230,7 +204,6 @@ const createGenerationTasks = (
         buildingTypePrompt,
         colorSchemePrompt,
         tidyPrompt,
-        unfinishedPrompt,
         timePrompt,
         themePrompt,
         cameraAnglePrompt,
@@ -255,7 +228,6 @@ const generateSingleImage = async (
     buildingTypePrompt,
     colorSchemePrompt,
     tidyPrompt,
-    unfinishedPrompt,
     timePrompt,
     themePrompt,
     cameraAnglePrompt
@@ -279,32 +251,27 @@ const generateSingleImage = async (
     components.push('Maintain the current architectural style and design elements exactly as shown');
   }
 
-  // 3. Unfinished state (if specified)
-  if (unfinishedPrompt) {
-    components.push(unfinishedPrompt);
-  }
-
-  // 4. Tidy/untidy state
+  // 3. Tidy/untidy state
   if (tidyPrompt) {
     components.push(tidyPrompt);
   }
 
-  // 5. Color scheme (only if specified)
+  // 4. Color scheme (only if specified)
   if (colorSchemePrompt) {
     components.push(colorSchemePrompt);
   }
 
-  // 6. Time of day (if specified)
+  // 5. Time of day (if specified)
   if (timePrompt) {
     components.push(timePrompt);
   }
 
-  // 7. Theme (if specified)
+  // 6. Theme (if specified)
   if (themePrompt) {
     components.push(themePrompt);
   }
 
-  // 8. Camera angle instruction (if specified)
+  // 7. Camera angle instruction (if specified)
   if (cameraAnglePrompt) {
     components.push(cameraAnglePrompt);
   }
@@ -515,6 +482,150 @@ export const generateDepthMap = async (
     console.error('Depth map generation error:', error);
     throw error;
   }
+};
+
+/**
+ * Generates a transformed version of an architectural image
+ * Preserves the original layout, furnishings, and lighting while changing tidiness/furnishing state
+ * @param sourceImageDataUrl - The source image data URL
+ * @param transformationType - Type of transformation (tidy, unfurnished, livedIn)
+ * @param aspectRatio - Aspect ratio for generation
+ * @param useNanoBananaWebhook - Whether to use webhook or native Gemini
+ * @param sessionId - Session ID for filename generation
+ * @param originalFilename - Original filename for the base image
+ * @returns Object with imageUrl and promptText
+ */
+export const generateImageTransformation = async (
+  sourceImageDataUrl: string,
+  transformationType: 'tidy' | 'unfurnished' | 'livedIn',
+  aspectRatio: AspectRatio,
+  useNanoBananaWebhook: boolean,
+  sessionId: string,
+  originalFilename: string = 'image'
+): Promise<{ imageUrl: string; promptText: string; filename: string }> => {
+  const imageSource = dataUrlToBlob(sourceImageDataUrl);
+
+  // Build transformation-specific prompt
+  let transformationPrompt = '';
+  let transformationLabel = '';
+
+  switch (transformationType) {
+    case 'tidy':
+      transformationLabel = 'tidy';
+      transformationPrompt = `Transform this architectural space to be completely clean, organized, and uncluttered. MAXIMUM CLEANLINESS REQUIRED.
+
+CRITICAL REQUIREMENTS - REMOVE EVERYTHING LISTED:
+✗ FLOORS: Remove ALL items from floors - shoes, bags, boxes, papers, toys, clothing, books, cables, packaging, debris, dirt, stains
+✗ SURFACES: Clear surfaces of clutter - remove piles, stacks, scattered items. Single intentional objects (one coffee mug, one book, one vase) can stay if neatly placed, but remove all excessive items and clutter
+✗ BEDS: Make beds perfectly - smooth sheets, arranged pillows, tucked blankets, hotel-quality presentation
+✗ WALLS & CEILINGS: Remove ALL posters, stickers, sticky notes, papers, tape marks, temporary decorations, hanging items, string lights, flags, banners. Only permanent art, framed pictures, or architectural features should remain
+✗ CLUTTER: Remove ALL piles, stacks, random objects, packaging materials, scattered items anywhere in the space
+✗ TRASH: Remove ALL waste baskets contents, debris, packaging, wrappers, recyclables
+✗ PERSONAL ITEMS: Remove scattered personal belongings - clothing on furniture, bags on floor, shoes everywhere. Leave only intentional decor
+
+WHAT CAN STAY (if neat and intentional):
+✓ Single decorative objects on surfaces (one vase, one lamp, one book)
+✓ Permanent wall-mounted art or framed pictures
+✓ Built-in shelving with minimal organized items
+✓ Essential functional items if neatly placed (alarm clock on nightstand, soap dispenser in bathroom)
+
+CLEAN STATE REQUIREMENTS:
+✓ Floors: Completely empty, clean, spotless
+✓ Surfaces: Clear or very minimally decorated (maximum 1-2 intentional items per surface)
+✓ Walls & Ceilings: Clean, no temporary decorations or stickers, only permanent fixtures or framed art
+✓ Furniture: In place, clean, organized
+✓ Beds: Perfectly made with smooth linens
+✓ Overall: Magazine-quality, professionally staged appearance
+
+PRESERVE EXACTLY:
+- Spatial layout and room structure
+- Major furniture in exact positions
+- Architectural elements (doors, windows, fixtures)
+- Lighting and time of day
+- Design style and aesthetic
+- Wall colors, flooring, finishes
+- Built-in fixtures and permanent features
+
+This is a TIDYING transformation, not a redesign. Show the SAME room after professional cleaning and staging. The result should be pristine, spotless, and perfectly organized.`;
+      break;
+
+    case 'unfurnished':
+      transformationLabel = 'unfurnished';
+      transformationPrompt = `Transform this architectural space to an unfinished, unfurnished, under-construction state.
+
+CRITICAL REQUIREMENTS:
+- Show bare walls without paint or wallpaper (exposed drywall or plaster)
+- Remove or minimize furniture (empty or near-empty space)
+- Show exposed subflooring or unfinished floor surfaces
+- Include construction elements: drop cloths, sawdust, construction materials
+- Show incomplete finishes and work-in-progress state
+- Provide a before-renovation or under-construction appearance
+- May show exposed wiring, unfinished trim, construction equipment
+
+PRESERVE EXACTLY - THESE MUST REMAIN IN EXACT SAME POSITIONS:
+- The exact spatial layout and room dimensions
+- ALL doors in their exact locations (just unfinished/unpainted, but structurally complete)
+- ALL windows in their exact locations and sizes (just without trim or finished frames)
+- ALL doorways, door frames, and window openings in exact positions
+- The ceiling height and structure
+- The architectural proportions and room shape
+- The camera angle and perspective
+- The overall building structure and all wall positions
+- Any built-in architectural features (alcoves, columns, beams)
+
+IMPORTANT: Doors and windows should be present in the same locations as the original image, just appearing unfinished (no paint, trim, or final finishes). Do not remove or relocate any structural openings.
+
+This is a before/during construction transformation showing the raw, unfinished state of the space while maintaining all structural openings and architectural elements.`;
+      break;
+
+    case 'livedIn':
+      transformationLabel = 'lived_in';
+      transformationPrompt = `Transform this architectural space to show everyday living with realistic daily clutter and use.
+CRITICAL REQUIREMENTS:
+- ADD personal items scattered naturally (books, magazines, remote controls, throw blankets)
+- ADD some clutter on surfaces (coffee table items, kitchen counter items, bathroom counter items)
+- ADD signs of daily life (shoes by door, bags on furniture, clothing draped casually)
+- ADD lived-in details (rumpled cushions, slightly disheveled bed, everyday items out)
+- Show realistic human occupation and daily use
+- The space should feel warm, lived-in, and currently inhabited
+- Balance between "messy" and "realistic everyday living"
+
+PRESERVE EXACTLY:
+- The exact spatial layout and room structure
+- All major furniture pieces in their exact positions
+- All architectural elements in exact locations
+- The lighting conditions and time of day
+- The overall design style and aesthetic
+- Wall colors, flooring, and finishes
+
+This is a lived-in transformation, not a redesign. The space should look like the same room where people actually live and use daily.`;
+      break;
+  }
+
+  const fullPrompt = `${transformationPrompt}
+
+Maintain photorealistic quality and architectural accuracy. Ensure all architectural elements are harmonious and professionally designed.`;
+
+  // Generate the transformed image using the existing pipeline
+  const imageUrl = await generateFigureImage(
+    Constance.models.image.nanoBanana,
+    fullPrompt,
+    [imageSource],
+    { aspectRatio: aspectRatio !== 'auto' ? aspectRatio : undefined },
+    useNanoBananaWebhook
+  );
+
+  // Generate filename
+  const timestamp = new Date().getTime().toString();
+  const baseFilename = originalFilename.split('.').slice(0, -1).join('.') || 'image';
+  const sanitizedFilename = baseFilename.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 40);
+  const filename = `${sessionId}_${sanitizedFilename}_${transformationLabel}_${timestamp}.jpg`;
+
+  return {
+    imageUrl,
+    promptText: fullPrompt,
+    filename
+  };
 };
 
 /**
