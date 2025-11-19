@@ -278,10 +278,19 @@ const generateSingleImage = async (
 
   // Assemble the full prompt
   if (components.length > 0) {
-    promptText = `Transform this architectural scene to have ${components.join(', ')}. `;
+    promptText = `Transform and completely renovate this architectural scene to have ${components.join(', ')}. `;
     promptText += 'Maintain photorealistic quality and architectural accuracy. ';
-    promptText += 'CRITICAL: Preserve the exact locations, positions, and placements of all structural elements including doors, windows, columns, archways, and other architectural fixtures from the original image. Do not move, relocate, or reposition these elements. ';
-    promptText += 'Preserve the overall spatial layout and structural proportions. ';
+    promptText += 'CRITICAL RENOVATION REQUIREMENTS: ';
+    promptText += 'TRANSFORM COMPLETELY (apply new style to ALL surfaces): ';
+    promptText += '- Ceilings: Apply new finishes, materials, and style (even if currently unfinished with exposed beams/structure) ';
+    promptText += '- Walls: Apply new colors, finishes, materials, and textures throughout ';
+    promptText += '- Floors: Apply new flooring materials and finishes completely ';
+    promptText += '- All surfaces, materials, colors, and finishes must match the new style ';
+    promptText += 'PRESERVE ONLY (keep structural positions): ';
+    promptText += '- Exact locations and positions of doors, windows, columns, archways, and architectural openings ';
+    promptText += '- Overall spatial layout, room dimensions, and structural proportions ';
+    promptText += '- Do NOT move or relocate structural elements, but DO apply new finishes to them ';
+    promptText += 'This is a COMPLETE renovation - transform all surfaces while maintaining the structural skeleton. ';
 
     // Add EXTREMELY strong tidiness emphasis if specified - MUST be aggressive
     if (tidyPrompt) {
@@ -542,9 +551,6 @@ PRESERVE EXACTLY:
 - Major furniture in exact positions
 - Architectural elements (doors, windows, fixtures)
 - Lighting and time of day
-- Design style and aesthetic
-- Wall colors, flooring, finishes
-- Built-in fixtures and permanent features
 
 This is a TIDYING transformation, not a redesign. Show the SAME room after professional cleaning and staging. The result should be pristine, spotless, and perfectly organized.`;
       break;
@@ -595,10 +601,8 @@ PRESERVE EXACTLY:
 - All major furniture pieces in their exact positions
 - All architectural elements in exact locations
 - The lighting conditions and time of day
-- The overall design style and aesthetic
-- Wall colors, flooring, and finishes
 
-This is a lived-in transformation, not a redesign. The space should look like the same room where people actually live and use daily.`;
+This is a lived-in transformation showing realistic daily use. Add clutter and signs of life while maintaining the architectural structure.`;
       break;
   }
 
