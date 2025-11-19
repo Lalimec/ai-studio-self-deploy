@@ -273,22 +273,98 @@ function App() {
                 imageGenerationPrompt: 'Generated from Ad Cloner variation.'
             }));
     }
-    
-    if (sourceImages.length === 0) return addToast(`No images in the selected studio to import.`, 'info');
-    
-    logUserAction('IMPORT_TO_VIDEOSTUDIO', { source, count: sourceImages.length });
 
-    videoStudioLogic.setStudioImages(prev => [
-      ...sourceImages.map(img => ({
-        id: `imported-${Date.now()}-${Math.random()}`,
-        src: img.src,
-        filename: img.filename,
-        videoPrompt: img.videoPrompt,
-      })),
-      ...prev
-    ]);
-    if (!videoStudioLogic.sessionId) videoStudioLogic.setSessionId(hairStudioLogic.sessionId || babyStudioLogic.sessionId || imageStudioLogic.setId || adClonerLogic.sessionId);
-    addToast(`${sourceImages.length} image(s) imported to Video Studio.`, 'success');
+    if (sourceImages.length === 0) return addToast(`No images in the selected studio to import.`, 'info');
+
+    // Collect original images if available
+    const originalImages: DisplayImage[] = [];
+    if (source === 'hair' && hairStudioLogic.croppedImage) {
+        originalImages.push({
+            src: hairStudioLogic.croppedImage,
+            filename: 'hair-studio-original.jpg',
+            imageGenerationPrompt: 'Original source image from Hair Studio'
+        });
+    }
+    if (source === 'baby') {
+        if (babyStudioLogic.parent1) {
+            originalImages.push({
+                src: babyStudioLogic.parent1,
+                filename: 'baby-studio-parent1.jpg',
+                imageGenerationPrompt: 'Parent 1 from Baby Studio'
+            });
+        }
+        if (babyStudioLogic.parent2) {
+            originalImages.push({
+                src: babyStudioLogic.parent2,
+                filename: 'baby-studio-parent2.jpg',
+                imageGenerationPrompt: 'Parent 2 from Baby Studio'
+            });
+        }
+    }
+    if (source === 'architecture' && architectureStudioLogic.croppedImage) {
+        originalImages.push({
+            src: architectureStudioLogic.croppedImage,
+            filename: 'architecture-studio-original.jpg',
+            imageGenerationPrompt: 'Original source image from Architecture Studio'
+        });
+    }
+    if (source === 'imageStudio' && imageStudioLogic.imageFiles.length > 0) {
+        imageStudioLogic.imageFiles.forEach((file: { id: string; file: File; croppedDataUrl: string }) => {
+            originalImages.push({
+                src: file.croppedDataUrl,
+                filename: `image-studio-original-${file.file.name}`,
+                imageGenerationPrompt: 'Original source image from Image Studio'
+            });
+        });
+    }
+    if (source === 'adCloner') {
+        if (adClonerLogic.adImage) {
+            originalImages.push({
+                src: adClonerLogic.adImage,
+                filename: 'ad-cloner-ad-image.jpg',
+                imageGenerationPrompt: 'Ad image from Ad Cloner'
+            });
+        }
+        adClonerLogic.subjectImages.forEach((img, index) => {
+            originalImages.push({
+                src: img,
+                filename: `ad-cloner-subject-${index + 1}.jpg`,
+                imageGenerationPrompt: 'Subject image from Ad Cloner'
+            });
+        });
+    }
+
+    const performImport = (includeOriginals: boolean) => {
+        const imagesToImport = includeOriginals ? [...originalImages, ...sourceImages] : sourceImages;
+
+        logUserAction('IMPORT_TO_VIDEOSTUDIO', { source, count: imagesToImport.length, includeOriginals });
+
+        videoStudioLogic.setStudioImages(prev => [
+          ...imagesToImport.map(img => ({
+            id: `imported-${Date.now()}-${Math.random()}`,
+            src: img.src,
+            filename: img.filename,
+            videoPrompt: img.videoPrompt,
+          })),
+          ...prev
+        ]);
+        if (!videoStudioLogic.sessionId) videoStudioLogic.setSessionId(hairStudioLogic.sessionId || babyStudioLogic.sessionId || imageStudioLogic.setId || adClonerLogic.sessionId);
+        addToast(`${imagesToImport.length} image(s) imported to Video Studio.`, 'success');
+    };
+
+    // Ask user if they want to include original images
+    if (originalImages.length > 0) {
+        setConfirmAction({
+            title: "Include Original Images?",
+            message: `Do you want to include the original source image(s) (${originalImages.length}) along with the generated images (${sourceImages.length})?`,
+            confirmText: "Yes, Include Originals",
+            cancelText: "No, Generated Only",
+            onConfirm: () => performImport(true),
+            onCancel: () => performImport(false),
+        });
+    } else {
+        performImport(false);
+    }
   };
 
   const handleImportToTimelineStudio = (source: 'hair' | 'baby' | 'architecture' | 'imageStudio' | 'adCloner') => {
@@ -310,13 +386,89 @@ function App() {
 
     if (sourceImages.length === 0) return addToast(`No images in the selected studio to import.`, 'info');
 
-    Promise.all(sourceImages.map(img => 
-        fetch(img.src).then(res => res.blob()).then(blob => new File([blob], img.filename, { type: blob.type }))
-    )).then(files => {
-        logUserAction('IMPORT_TO_TIMELINE', { source, count: files.length });
+    // Collect original images if available
+    const originalImages: DisplayImage[] = [];
+    if (source === 'hair' && hairStudioLogic.croppedImage) {
+        originalImages.push({
+            src: hairStudioLogic.croppedImage,
+            filename: 'hair-studio-original.jpg',
+            imageGenerationPrompt: 'Original source image from Hair Studio'
+        });
+    }
+    if (source === 'baby') {
+        if (babyStudioLogic.parent1) {
+            originalImages.push({
+                src: babyStudioLogic.parent1,
+                filename: 'baby-studio-parent1.jpg',
+                imageGenerationPrompt: 'Parent 1 from Baby Studio'
+            });
+        }
+        if (babyStudioLogic.parent2) {
+            originalImages.push({
+                src: babyStudioLogic.parent2,
+                filename: 'baby-studio-parent2.jpg',
+                imageGenerationPrompt: 'Parent 2 from Baby Studio'
+            });
+        }
+    }
+    if (source === 'architecture' && architectureStudioLogic.croppedImage) {
+        originalImages.push({
+            src: architectureStudioLogic.croppedImage,
+            filename: 'architecture-studio-original.jpg',
+            imageGenerationPrompt: 'Original source image from Architecture Studio'
+        });
+    }
+    if (source === 'imageStudio' && imageStudioLogic.imageFiles.length > 0) {
+        imageStudioLogic.imageFiles.forEach((file: { id: string; file: File; croppedDataUrl: string }) => {
+            originalImages.push({
+                src: file.croppedDataUrl,
+                filename: `image-studio-original-${file.file.name}`,
+                imageGenerationPrompt: 'Original source image from Image Studio'
+            });
+        });
+    }
+    if (source === 'adCloner') {
+        if (adClonerLogic.adImage) {
+            originalImages.push({
+                src: adClonerLogic.adImage,
+                filename: 'ad-cloner-ad-image.jpg',
+                imageGenerationPrompt: 'Ad image from Ad Cloner'
+            });
+        }
+        adClonerLogic.subjectImages.forEach((img, index) => {
+            originalImages.push({
+                src: img,
+                filename: `ad-cloner-subject-${index + 1}.jpg`,
+                imageGenerationPrompt: 'Subject image from Ad Cloner'
+            });
+        });
+    }
+
+    const performImport = async (includeOriginals: boolean) => {
+        const imagesToImport = includeOriginals ? [...originalImages, ...sourceImages] : sourceImages;
+
+        const files = await Promise.all(imagesToImport.map(img =>
+            fetch(img.src).then(res => res.blob()).then(blob => new File([blob], img.filename, { type: blob.type }))
+        ));
+
+        logUserAction('IMPORT_TO_TIMELINE', { source, count: files.length, includeOriginals });
         timelineStudioLogic.handleImagesUpload(files);
         addToast(`${files.length} image(s) imported to Timeline Studio.`, 'success');
-    });
+    };
+
+    // Ask user if they want to include original images
+    if (originalImages.length > 0) {
+        setConfirmAction({
+            title: "Include Original Images?",
+            message: `Do you want to include the original source image(s) (${originalImages.length}) along with the generated images (${sourceImages.length})?`,
+            confirmText: "Yes, Include Originals",
+            cancelText: "No, Generated Only",
+            onConfirm: () => performImport(true),
+            onCancel: () => performImport(false),
+        });
+    } else {
+        performImport(false);
+    }
   };
   
   const adClonerImageCount = useMemo(() => {
