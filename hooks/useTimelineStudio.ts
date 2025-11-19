@@ -5,7 +5,7 @@ import { translateTextToEnglish, generateTimelineTransitionPrompt, prepareAllTim
 import { dataUrlToBlob } from '../services/geminiClient';
 import { uploadImageFromDataUrl } from '../services/imageUploadService';
 import { generateAllVideos, generateSingleVideoForImage, VideoTask } from '../services/videoService';
-import { generateSetId, generateShortId, getTimestamp } from '../services/imageUtils';
+import { generateSetId, generateShortId, getTimestamp, getExtensionFromDataUrl } from '../services/imageUtils';
 import { stitchVideos } from '../services/videoStitcher';
 import { logUserAction } from '../services/loggingService';
 
@@ -540,10 +540,13 @@ export const useTimelineStudio = ({ addToast, setConfirmAction, setDownloadProgr
             try {
                 const zip = new JSZip();
                 
-                zip.file(`${baseName}_start.jpg`, startImage.src.split(',')[1], { base64: true });
+                const startExt = getExtensionFromDataUrl(startImage.src);
+                const endExt = getExtensionFromDataUrl(endImage.src);
+
+                zip.file(`${baseName}_start.${startExt}`, startImage.src.split(',')[1], { base64: true });
                 setDownloadProgress({ visible: true, message: 'Adding start image...', progress: 25 });
 
-                zip.file(`${baseName}_end.jpg`, endImage.src.split(',')[1], { base64: true });
+                zip.file(`${baseName}_end.${endExt}`, endImage.src.split(',')[1], { base64: true });
                 setDownloadProgress({ visible: true, message: 'Adding end image...', progress: 50 });
 
                 const videoBlob = await fetch(pair.videoSrc).then(res => res.blob());
@@ -608,8 +611,11 @@ export const useTimelineStudio = ({ addToast, setConfirmAction, setDownloadProgr
                     filesProcessed++;
                     setDownloadProgress({ visible: true, message: `Zipping: Transition ${index + 1}`, progress: (filesProcessed / totalFiles) * 100 });
 
-                    zip.file(`${pairName}_start.jpg`, startImage.src.split(',')[1], { base64: true });
-                    zip.file(`${pairName}_end.jpg`, endImage.src.split(',')[1], { base64: true });
+                    const startExt = getExtensionFromDataUrl(startImage.src);
+                    const endExt = getExtensionFromDataUrl(endImage.src);
+
+                    zip.file(`${pairName}_start.${startExt}`, startImage.src.split(',')[1], { base64: true });
+                    zip.file(`${pairName}_end.${endExt}`, endImage.src.split(',')[1], { base64: true });
                     
                     if(pair.videoSrc) {
                         const videoBlob = await fetch(pair.videoSrc).then(res => res.blob());

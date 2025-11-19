@@ -15,7 +15,7 @@ import {
 } from '../services/videoService';
 import { dataUrlToBlob } from '../services/geminiClient';
 import { uploadImageFromDataUrl } from '../services/imageUploadService';
-import { generateSetId, generateShortId, getTimestamp } from '../services/imageUtils';
+import { generateSetId, generateShortId, getTimestamp, getExtensionFromDataUrl } from '../services/imageUtils';
 import { logUserAction } from '../services/loggingService';
 import { processWithConcurrency } from '../services/apiUtils';
 
@@ -358,13 +358,14 @@ export const useVideoStudio = ({ addToast, setConfirmAction, setDownloadProgress
                 addToast("Could not find image to download.", "error");
                 return;
             }
-            
+
             const baseName = image.filename.substring(0, image.filename.lastIndexOf('.'));
+            const imageExt = getExtensionFromDataUrl(image.src);
             setDownloadProgress({ visible: true, message: `Preparing: ${baseName}.zip`, progress: 0 });
 
             try {
                 const zip = new JSZip();
-                zip.file(`${baseName}.jpg`, image.src.split(',')[1], { base64: true });
+                zip.file(`${baseName}.${imageExt}`, image.src.split(',')[1], { base64: true });
                 setDownloadProgress({ visible: true, message: 'Adding image...', progress: 33 });
 
                 if (image.videoSrc) {
@@ -410,7 +411,8 @@ export const useVideoStudio = ({ addToast, setConfirmAction, setDownloadProgress
                 
                 for (const image of studioImages) {
                     const baseName = image.filename.substring(0, image.filename.lastIndexOf('.'));
-                    zip.file(`${baseName}.jpg`, image.src.split(',')[1], { base64: true });
+                    const imageExt = getExtensionFromDataUrl(image.src);
+                    zip.file(`${baseName}.${imageExt}`, image.src.split(',')[1], { base64: true });
 
                     if (image.videoSrc) {
                         const videoBlob = await fetch(image.videoSrc).then(res => res.blob());

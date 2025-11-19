@@ -33,6 +33,25 @@ export const dataURLtoFile = (dataurl: string, filename: string): File => {
 }
 
 /**
+ * Extracts the file extension from a data URL based on its MIME type.
+ * @param dataUrl - Data URL string (e.g., "data:image/png;base64,...")
+ * @returns File extension ('png', 'jpg', 'webp', etc.)
+ */
+export const getExtensionFromDataUrl = (dataUrl: string): string => {
+    const mimeMatch = dataUrl.match(/data:image\/(.*?);/);
+    if (!mimeMatch) return 'jpg'; // Default fallback
+
+    const format = mimeMatch[1].toLowerCase();
+    // Handle common formats
+    if (format === 'jpeg') return 'jpg';
+    if (format === 'png') return 'png';
+    if (format === 'webp') return 'webp';
+    if (format === 'gif') return 'gif';
+
+    return 'jpg'; // Default fallback
+};
+
+/**
  * Sanitizes a filename by removing only filesystem-reserved characters while preserving Unicode.
  *
  * **Unicode-Friendly**: Preserves non-Latin characters (Arabic, Chinese, Cyrillic, etc.)
