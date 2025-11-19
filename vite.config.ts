@@ -7,6 +7,15 @@ export default defineConfig(({ mode }) => {
       plugins: [react()],
       define: {
         'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY || 'PLACEHOLDER'),
-      }
+      },
+      server: {
+        proxy: {
+          // Proxy Plainly API requests to Express server
+          '/plainly-proxy': {
+            target: 'http://localhost:3000',
+            changeOrigin: true,
+          },
+        },
+      },
     };
 });
