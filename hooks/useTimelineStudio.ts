@@ -16,9 +16,10 @@ type TimelineStudioHookProps = {
     setConfirmAction: (action: any) => void;
     setDownloadProgress: (progress: { visible: boolean; message: string; progress: number }) => void;
     withMultiDownloadWarning: (action: () => void) => void;
+    downloadSettings: { includeMetadataFiles: boolean };
 };
 
-export const useTimelineStudio = ({ addToast, setConfirmAction, setDownloadProgress, withMultiDownloadWarning }: TimelineStudioHookProps) => {
+export const useTimelineStudio = ({ addToast, setConfirmAction, setDownloadProgress, withMultiDownloadWarning, downloadSettings }: TimelineStudioHookProps) => {
     const [timelineImages, setTimelineImages] = useState<StudioImage[]>([]);
     const [timelinePairs, setTimelinePairs] = useState<TimelinePair[]>([]);
     const [timelineAspectRatio, setTimelineAspectRatio] = useState<number>(4 / 5);
@@ -553,16 +554,18 @@ export const useTimelineStudio = ({ addToast, setConfirmAction, setDownloadProgr
                 zip.file(`${baseName}.mp4`, videoBlob);
                 setDownloadProgress({ visible: true, message: 'Adding video...', progress: 75 });
                 
-                const info = {
-                    pair_index: index + 1,
-                    start_image_filename: startImage.filename,
-                    end_image_filename: endImage.filename,
-                    video_prompt: pair.videoPrompt,
-                    general_instruction: generalPrompt,
-                    session_id: sessionId,
-                    timestamp: timestamp,
-                };
-                zip.file(`${baseName}.txt`, JSON.stringify(info, null, 2));
+                if (downloadSettings.includeMetadataFiles) {
+                    const info = {
+                        pair_index: index + 1,
+                        start_image_filename: startImage.filename,
+                        end_image_filename: endImage.filename,
+                        video_prompt: pair.videoPrompt,
+                        general_instruction: generalPrompt,
+                        session_id: sessionId,
+                        timestamp: timestamp,
+                    };
+                    zip.file(`${baseName}.txt`, JSON.stringify(info, null, 2));
+                }
                 setDownloadProgress({ visible: true, message: 'Compressing...', progress: 90 });
                 
                 const content = await zip.generateAsync({ type: 'blob' });
@@ -622,16 +625,18 @@ export const useTimelineStudio = ({ addToast, setConfirmAction, setDownloadProgr
                         zip.file(`${pairName}.mp4`, videoBlob);
                     }
 
-                    const info = {
-                        pair_index: index + 1,
-                        start_image_filename: startImage.filename,
-                        end_image_filename: endImage.filename,
-                        video_prompt: pair.videoPrompt,
-                        general_instruction: generalPrompt,
-                        session_id: sessionId,
-                        timestamp: timestamp,
-                    };
-                    zip.file(`${pairName}.txt`, JSON.stringify(info, null, 2));
+                    if (downloadSettings.includeMetadataFiles) {
+                        const info = {
+                            pair_index: index + 1,
+                            start_image_filename: startImage.filename,
+                            end_image_filename: endImage.filename,
+                            video_prompt: pair.videoPrompt,
+                            general_instruction: generalPrompt,
+                            session_id: sessionId,
+                            timestamp: timestamp,
+                        };
+                        zip.file(`${pairName}.txt`, JSON.stringify(info, null, 2));
+                    }
                 }
 
                 setDownloadProgress({ visible: true, message: 'Compressing ZIP...', progress: 99 });

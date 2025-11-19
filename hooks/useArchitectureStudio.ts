@@ -1122,7 +1122,7 @@ export const useArchitectureStudio = ({
                     videoUrl: originalImage.videoSrc,
                     videoFilename: `${baseName}.mp4`,
                     depthMapUrl: originalImage.depthMapSrc,
-                    depthMapFilename: `depth_map_${baseName}.png`,
+                    depthMapFilename: `${baseName}.png`,
                     embedInImage: false,
                     includeMetadataFile: downloadSettings.includeMetadataFiles,
                 });
@@ -1162,7 +1162,7 @@ export const useArchitectureStudio = ({
                     videoUrl: image.videoSrc,
                     videoFilename: `${baseName}.mp4`,
                     depthMapUrl: image.depthMapSrc,
-                    depthMapFilename: `depth_map_${baseName}.png`,
+                    depthMapFilename: `${baseName}.png`,
                     embedInImage: false,
                     includeMetadataFile: downloadSettings.includeMetadataFiles,
                 });
@@ -1200,7 +1200,7 @@ export const useArchitectureStudio = ({
                         videoUrl: originalImage.videoSrc,
                         videoFilename: `${baseName}.mp4`,
                         depthMapUrl: originalImage.depthMapSrc,
-                        depthMapFilename: `depth_map_${baseName}.png`,
+                        depthMapFilename: `${baseName}.png`,
                     });
                 }
 
@@ -1223,7 +1223,7 @@ export const useArchitectureStudio = ({
                             videoUrl: transformed.videoSrc,
                             videoFilename: `${baseName}.mp4`,
                             depthMapUrl: transformed.depthMapSrc,
-                            depthMapFilename: `depth_map_${baseName}.png`,
+                            depthMapFilename: `${baseName}.png`,
                         });
                     }
                 });
@@ -1473,7 +1473,7 @@ export const useArchitectureStudio = ({
                     videoUrl: targetImage.videoSrc,
                     videoFilename: `${baseName}.mp4`,
                     depthMapUrl: targetImage.depthMapSrc,
-                    depthMapFilename: `depth_map_${baseName}.png`,
+                    depthMapFilename: `${baseName}.png`,
                     embedInImage: false,
                     includeMetadataFile: downloadSettings.includeMetadataFiles,
                 });

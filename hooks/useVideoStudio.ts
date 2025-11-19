@@ -26,9 +26,10 @@ type VideoStudioHookProps = {
     setConfirmAction: (action: any) => void;
     setDownloadProgress: (progress: { visible: boolean; message: string; progress: number }) => void;
     withMultiDownloadWarning: (action: () => void) => void;
+    downloadSettings: { includeMetadataFiles: boolean };
 };
 
-export const useVideoStudio = ({ addToast, setConfirmAction, setDownloadProgress, withMultiDownloadWarning }: VideoStudioHookProps) => {
+export const useVideoStudio = ({ addToast, setConfirmAction, setDownloadProgress, withMultiDownloadWarning, downloadSettings }: VideoStudioHookProps) => {
     const [studioImages, setStudioImages] = useState<StudioImage[]>([]);
     const [sessionId, setSessionId] = useState<string | null>(null);
     const [isPreparing, setIsPreparing] = useState(false);
@@ -374,8 +375,10 @@ export const useVideoStudio = ({ addToast, setConfirmAction, setDownloadProgress
                     setDownloadProgress({ visible: true, message: 'Adding video...', progress: 66 });
                 }
 
-                const info = { type: "video_studio_image", video_prompt: image.videoPrompt };
-                zip.file(`${baseName}.txt`, JSON.stringify(info, null, 2));
+                if (downloadSettings.includeMetadataFiles) {
+                    const info = { type: "video_studio_image", video_prompt: image.videoPrompt };
+                    zip.file(`${baseName}.txt`, JSON.stringify(info, null, 2));
+                }
                 setDownloadProgress({ visible: true, message: 'Compressing...', progress: 90 });
 
                 const content = await zip.generateAsync({ type: 'blob' });
@@ -419,9 +422,11 @@ export const useVideoStudio = ({ addToast, setConfirmAction, setDownloadProgress
                         zip.file(`${baseName}.mp4`, videoBlob);
                     }
 
-                    const info = { type: "video_studio_image", video_prompt: image.videoPrompt };
-                    zip.file(`${baseName}.txt`, JSON.stringify(info, null, 2));
-                    
+                    if (downloadSettings.includeMetadataFiles) {
+                        const info = { type: "video_studio_image", video_prompt: image.videoPrompt };
+                        zip.file(`${baseName}.txt`, JSON.stringify(info, null, 2));
+                    }
+
                     filesProcessed++;
                     setDownloadProgress({ 
                         visible: true, 
