@@ -642,11 +642,11 @@ export const generateArchitecturalVideoPrompt = async (
   const { ai } = await import('./geminiClient');
   const { GenerateContentResponse } = await import('@google/genai');
 
-  let prompt = `Analyze this architectural scene and create a short, descriptive video prompt (around 25-35 words) for an AI video generator that will animate this static image. Focus on slow, cinematic camera movements that reveal architectural details. The camera should use subtle movements like:
-- Slow horizontal pan (left to right or right to left)
-- Gentle vertical tilt (up or down)
-- Subtle dolly movement (slowly moving forward or backward)
-- Slight tracking shot along architectural features
+  let prompt = `Analyze this architectural scene and create a short, descriptive video prompt (around 25-35 words) for an AI video generator that will animate this static image. Focus on slow, cinematic camera movements that reveal architectural details. PRIORITIZE these camera movements:
+- Dolly movement (slowly moving forward into the space) - PRIMARY MOVEMENT
+- Slow rotation around a central point or architectural feature - PREFERRED
+- Gentle vertical tilt (up or down) - SECONDARY
+- Avoid horizontal pans unless absolutely necessary - they create static, uninteresting videos
 
 Also consider subtle environmental elements like:
 - Changing natural light and shadows moving across surfaces
@@ -659,7 +659,7 @@ Do NOT mention people, facial expressions, or human movements. This is purely an
     prompt += ` IMPORTANT: The prompt must also adhere to this high-level instruction: "${guidance}".`;
   }
 
-  prompt += ` Example: 'A modern living room with natural light streaming through large windows, camera slowly pans right revealing the full space, soft shadows move across the hardwood floor.'`;
+  prompt += ` Example: 'A modern living room with natural light streaming through large windows, camera slowly moves forward into the space while gently rotating right, revealing architectural details and depth, soft shadows move across the hardwood floor.'`;
 
   const response = await ai.models.generateContent({
     model: Constance.models.text.flash,

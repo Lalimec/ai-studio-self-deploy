@@ -325,6 +325,7 @@ export const useVideoStudio = ({ addToast, setConfirmAction, setDownloadProgress
             onConfirm: async () => {
                 logUserAction('REWRITE_VIDEO_PROMPTS_VIDEOSTUDIO', { count: toRewrite.length, generalPrompt, sessionId });
                 setIsPreparing(true);
+                setStudioImages(prev => prev.map(img => toRewrite.some(r => r.id === img.id) ? { ...img, isPreparing: true } : img));
                 addToast(`Rewriting ${toRewrite.length} prompts...`, 'info');
 
                 const processRewrite = async (image: StudioImage) => {
@@ -332,16 +333,20 @@ export const useVideoStudio = ({ addToast, setConfirmAction, setDownloadProgress
                     try {
                         const imageBlob = dataUrlToBlob(image.src);
                         const newPrompt = await rewriteVideoPromptForImage(imageBlob, image.videoPrompt, generalPrompt);
-                        setStudioImages(prev => prev.map(img => img.id === image.id ? { ...img, videoPrompt: newPrompt } : img));
+                        setStudioImages(prev => prev.map(img => img.id === image.id ? { ...img, videoPrompt: newPrompt, isPreparing: false } : img));
                     } catch (err) {
                         addToast(`Failed to rewrite prompt for ${image.filename}: ${err instanceof Error ? err.message : 'Unknown error'}`, 'error');
+                        setStudioImages(prev => prev.map(img => img.id === image.id ? { ...img, isPreparing: false } : img));
                     }
                 };
 
-                await processWithConcurrency(toRewrite, processRewrite, 6);
-
-                setIsPreparing(false);
-                addToast("All prompts have been rewritten.", "success");
+                try {
+                    await processWithConcurrency(toRewrite, processRewrite, 6);
+                    addToast("All prompts have been rewritten.", "success");
+                } finally {
+                    setIsPreparing(false);
+                    setStudioImages(prev => prev.map(img => img.isPreparing ? { ...img, isPreparing: false } : img));
+                }
             }
         });
     };
