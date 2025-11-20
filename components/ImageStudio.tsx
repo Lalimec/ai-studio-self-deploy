@@ -260,7 +260,7 @@ const ImageStudio: React.FC<ImageStudioProps> = ({ logic, onImageClick, onShowHe
                                 </button>
                             )}
                              <label className="flex items-center gap-2 bg-[var(--color-bg-muted)] hover:bg-[var(--color-bg-muted-hover)] text-[var(--color-text-main)] font-bold py-2 px-4 rounded-lg transition-colors text-sm cursor-pointer">
-                                <input 
+                                <input
                                     type="checkbox"
                                     checked={logic.includeOriginals}
                                     onChange={(e) => logic.setIncludeOriginals(e.target.checked)}
@@ -268,6 +268,14 @@ const ImageStudio: React.FC<ImageStudioProps> = ({ logic, onImageClick, onShowHe
                                 />
                                 <span>Include originals</span>
                             </label>
+                            <button
+                                onClick={logic.handleDownloadAll}
+                                disabled={logic.isLoading || logic.generationResults.length === 0}
+                                className="flex items-center gap-2 bg-[var(--color-secondary)] hover:bg-[var(--color-secondary-hover)] text-[var(--color-text-on-primary)] font-bold py-2 px-4 rounded-lg transition-colors disabled:bg-[var(--color-bg-muted)] disabled:text-[var(--color-text-dimmer)] text-sm"
+                            >
+                                <PiDownloadSimpleIcon className="w-4 h-4" />
+                                Download All
+                            </button>
                         </div>
                     </div>
 
