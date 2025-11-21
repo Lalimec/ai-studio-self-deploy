@@ -7,7 +7,9 @@ import {
     OriginalImageState,
     TransformedVersionsState,
     ActiveVersionType,
-    TransformationType
+    TransformationType,
+    NanoBananaModel,
+    NanoBananaResolution
 } from '../types';
 import {
     generateArchitecturalStyles,
@@ -90,6 +92,8 @@ export const useArchitectureStudio = ({
     const [isPreparing, setIsPreparing] = useState(false);
     const [isGeneratingVideos, setIsGeneratingVideos] = useState(false);
     const [isGeneratingDepthMaps, setIsGeneratingDepthMaps] = useState(false);
+    const [model, setModel] = useState<NanoBananaModel>('nano-banana');
+    const [resolution, setResolution] = useState<NanoBananaResolution>('1K');
 
     const isBusy = isPreparing || isGeneratingVideos || isGeneratingDepthMaps || pendingImageCount > 0 || originalImage.isPreparing || originalImage.isGeneratingVideo || originalImage.isGeneratingDepthMap;
 
@@ -229,7 +233,9 @@ export const useArchitectureStudio = ({
                 'auto',
                 useNanoBananaWebhook,
                 sessionId,
-                originalFile?.name || 'image'
+                originalFile?.name || 'image',
+                model,
+                resolution
             );
 
             setTransformedVersions(prev => ({
@@ -325,6 +331,8 @@ export const useArchitectureStudio = ({
             timestamp,
             sessionId,
             useNanoBananaWebhook,
+            model,
+            resolution,
             (newImage) => {
                 setGeneratedImages((prev) => [{
                     src: newImage.imageUrl,
@@ -375,6 +383,8 @@ export const useArchitectureStudio = ({
             timestamp,
             sessionId,
             useNanoBananaWebhook,
+            model,
+            resolution,
             (newImage) => {
                 setGeneratedImages((prev) => [{
                     src: newImage.imageUrl,
@@ -447,7 +457,9 @@ export const useArchitectureStudio = ({
                 originalFile.name,
                 newTimestamp,
                 sessionId,
-                useNanoBananaWebhook
+                useNanoBananaWebhook,
+                model,
+                resolution
             );
             setGeneratedImages(prev => prev.map(img =>
                 img.filename === filename ? {
@@ -1530,5 +1542,9 @@ export const useArchitectureStudio = ({
         handleGenerateVersionVideo,
         handleGenerateVersionDepthMap,
         handleDownloadVersion,
+        model,
+        setModel,
+        resolution,
+        setResolution,
     };
 };

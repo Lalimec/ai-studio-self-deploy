@@ -27,6 +27,10 @@ export enum AdornmentOption {
 export const ASPECT_RATIOS = ['auto', '1:1', '2:3', '3:2', '3:4', '4:3', '4:5', '5:4', '9:16', '16:9', '21:9'] as const;
 export type AspectRatio = typeof ASPECT_RATIOS[number];
 
+// Nano Banana model selection types (used by Hair, Baby, Architecture Studios)
+export type NanoBananaModel = 'nano-banana' | 'nano-banana-pro';
+export type NanoBananaResolution = '1K' | '2K' | '4K';
+
 export type Hairstyle = {
   id: string;
   name: string;

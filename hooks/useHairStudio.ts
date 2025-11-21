@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import {
-    GenerationOptions, Gender, PoseStyle, ColorOption, GeneratedImage, Toast as ToastType, AdornmentOption, DownloadSettings, OriginalImageState
+    GenerationOptions, Gender, PoseStyle, ColorOption, GeneratedImage, Toast as ToastType, AdornmentOption, DownloadSettings, OriginalImageState, NanoBananaModel, NanoBananaResolution
 } from '../types';
 import {
     generateHairstyles, regenerateSingleHairstyle
@@ -66,6 +66,8 @@ export const useHairStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
     const [generationTimestamp, setGenerationTimestamp] = useState<string>('');
     const [isPreparing, setIsPreparing] = useState(false);
     const [isGeneratingVideos, setIsGeneratingVideos] = useState(false);
+    const [model, setModel] = useState<NanoBananaModel>('nano-banana');
+    const [resolution, setResolution] = useState<NanoBananaResolution>('1K');
 
     const isBusy = isPreparing || isGeneratingVideos || pendingImageCount > 0 || originalImage.isPreparing || originalImage.isGeneratingVideo;
     const isGenerateDisabled = !croppedImage;
@@ -148,16 +150,16 @@ export const useHairStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
 
     const handleGenerate = () => {
         if (!croppedImage || !originalFile || !sessionId) return;
-        
+
         const currentOptions = { ...options };
-        logUserAction('GENERATE_HAIRSTYLES', { options: currentOptions, sessionId });
+        logUserAction('GENERATE_HAIRSTYLES', { options: currentOptions, sessionId, model, resolution });
         const batchSize = currentOptions.imageCount;
         setPendingImageCount(prev => prev + batchSize);
         const timestamp = getTimestamp();
         setGenerationTimestamp(timestamp);
 
         generateHairstyles(
-            croppedImage, currentOptions, originalFile.name, timestamp, sessionId, useNanoBananaWebhook,
+            croppedImage, currentOptions, originalFile.name, timestamp, sessionId, useNanoBananaWebhook, model, resolution,
             (newImage) => {
                 setGeneratedImages((prev) => [{
                     src: newImage.imageUrl,
@@ -214,7 +216,7 @@ export const useHairStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
 
         try {
             const newTimestamp = getTimestamp();
-            const newImage = await regenerateSingleHairstyle(croppedImage, options, originalFile.name, newTimestamp, sessionId, useNanoBananaWebhook);
+            const newImage = await regenerateSingleHairstyle(croppedImage, options, originalFile.name, newTimestamp, sessionId, useNanoBananaWebhook, model, resolution);
             setGeneratedImages(prev => prev.map(img =>
                 img.filename === filename ? {
                     src: newImage.imageUrl,
@@ -655,6 +657,8 @@ export const useHairStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
         isGeneratingVideos,
         isBusy,
         isGenerateDisabled,
+        model, setModel,
+        resolution, setResolution,
         onCropConfirm,
         handleClearImageAndResults,
         handleGenerate,

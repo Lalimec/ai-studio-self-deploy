@@ -123,48 +123,40 @@ export const JustifiedGallery: React.FC<JustifiedGalleryProps> = ({
 
 /**
  * Hook to load image dimensions and calculate aspect ratios
+ * OPTIMIZED: Caches results, updates incrementally, doesn't wait for all to load
  */
 export const useImageDimensions = (urls: string[]): Map<string, number> => {
     const [aspectRatios, setAspectRatios] = useState<Map<string, number>>(new Map());
 
     useEffect(() => {
-        const newRatios = new Map<string, number>();
-        let loadedCount = 0;
+        // Only load URLs that aren't already cached
+        const urlsToLoad = urls.filter(url => !aspectRatios.has(url));
 
-        urls.forEach((url) => {
-            // Check if already loaded
-            if (aspectRatios.has(url)) {
-                newRatios.set(url, aspectRatios.get(url)!);
-                loadedCount++;
-                if (loadedCount === urls.length) {
-                    setAspectRatios(newRatios);
-                }
-                return;
-            }
+        if (urlsToLoad.length === 0) return;
 
+        urlsToLoad.forEach((url) => {
             // Load image to get dimensions
             const img = new Image();
             img.onload = () => {
                 const ratio = img.width / img.height;
-                newRatios.set(url, ratio);
-                loadedCount++;
-
-                if (loadedCount === urls.length) {
-                    setAspectRatios(newRatios);
-                }
+                // Update state incrementally for each loaded image
+                setAspectRatios(prev => {
+                    const next = new Map(prev);
+                    next.set(url, ratio);
+                    return next;
+                });
             };
             img.onerror = () => {
                 // Default to 4:5 if image fails to load
-                newRatios.set(url, 4 / 5);
-                loadedCount++;
-
-                if (loadedCount === urls.length) {
-                    setAspectRatios(newRatios);
-                }
+                setAspectRatios(prev => {
+                    const next = new Map(prev);
+                    next.set(url, 4 / 5);
+                    return next;
+                });
             };
             img.src = url;
         });
-    }, [urls.join(',')]); // Only re-run if URLs change
+    }, [urls.join(','), aspectRatios]); // Re-run when URLs change
 
     return aspectRatios;
 };

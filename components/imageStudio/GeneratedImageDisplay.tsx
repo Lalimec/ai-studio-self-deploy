@@ -105,7 +105,7 @@ export const GeneratedImageDisplay: React.FC<GeneratedImageDisplayProps> = ({
             {/* Results Gallery */}
             <div ref={containerRef} className="flex-grow w-full overflow-y-auto overflow-x-hidden p-2 min-h-0 custom-scrollbar">
                 {/* Justified Gallery for Successful Images + Pending Placeholders */}
-                {(successfulImages.length > 0 || pendingResults.length > 0) && containerWidth > 0 && aspectRatios.size === successfulImages.length && (
+                {(successfulImages.length > 0 || pendingResults.length > 0) && containerWidth > 0 && (
                     <JustifiedGallery
                         images={[
                             // Pending results FIRST (at top of gallery)
@@ -115,7 +115,7 @@ export const GeneratedImageDisplay: React.FC<GeneratedImageDisplayProps> = ({
                                 aspectRatio: pendingAspectRatio, // Use selected aspect ratio
                                 key: result.key
                             })),
-                            // Successful images with loaded aspect ratios
+                            // Successful images - use loaded aspect ratio or fallback to pending ratio
                             ...successfulImages.map(result => ({
                                 url: result.url!,
                                 aspectRatio: aspectRatios.get(result.url!) || pendingAspectRatio,

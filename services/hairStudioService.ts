@@ -1,5 +1,5 @@
 import { GoogleGenAI, Modality, GenerateContentResponse } from '@google/genai';
-import { GenerationOptions, Gender, PoseStyle, Hairstyle, ColorOption, Beard, Accessory, AspectRatio, AdornmentOption } from '../types';
+import { GenerationOptions, Gender, PoseStyle, Hairstyle, ColorOption, Beard, Accessory, AspectRatio, AdornmentOption, NanoBananaModel, NanoBananaResolution } from '../types';
 import { 
     POSE_PROMPTS, 
     HAIR_COLORS, 
@@ -162,7 +162,9 @@ const generateSingleImage = async (
   imageSource: { base64: string; mimeType: string },
   task: Omit<GenerationTask, 'filename'>,
   options: { gender: Gender; aspectRatio: AspectRatio },
-  useNanoBananaWebhook: boolean
+  useNanoBananaWebhook: boolean,
+  model: NanoBananaModel = 'nano-banana',
+  resolution: NanoBananaResolution = '1K'
 ): Promise<{ imageUrl: string, promptText: string }> => {
   let promptText = '';
   const additionalInstructions: string[] = [];
@@ -210,14 +212,25 @@ const generateSingleImage = async (
   if (!promptText.trim()) {
       promptText = 'Return the original image exactly as it is, without any changes or modifications.';
   }
-  
-  const imageUrl = await generateFigureImage(
-      Constance.models.image.nanoBanana,
+
+  // Select the appropriate model based on the model and resolution settings
+  const selectedModel = model === 'nano-banana-pro'
+      ? Constance.models.image.nanoBananaPro
+      : Constance.models.image.nanoBanana;
+
+  const result = await generateFigureImage(
+      selectedModel,
       promptText,
       [imageSource],
-      { aspectRatio: options.aspectRatio !== 'auto' ? options.aspectRatio : undefined },
+      {
+          aspectRatio: options.aspectRatio !== 'auto' ? options.aspectRatio : undefined,
+          resolution: model === 'nano-banana-pro' ? resolution : undefined
+      },
       useNanoBananaWebhook
   );
+
+  // generateFigureImage can return string or string[] - extract first image if array
+  const imageUrl = Array.isArray(result) ? result[0] : result;
 
   return { imageUrl, promptText };
 };
@@ -229,6 +242,8 @@ export const generateHairstyles = async (
   timestamp: string,
   sessionId: string,
   useNanoBananaWebhook: boolean,
+  model: NanoBananaModel = 'nano-banana',
+  resolution: NanoBananaResolution = '1K',
   onImageGenerated: (result: { imageUrl: string; hairstyle: Hairstyle; color: string; filename: string, imageGenerationPrompt: string }) => void,
   onError: (errorMessage: string) => void,
   onTaskComplete: () => void
@@ -246,7 +261,7 @@ export const generateHairstyles = async (
 
   const processSingleTask = async (task: GenerationTask) => {
     try {
-      const { imageUrl, promptText } = await generateSingleImage(imageSource, task, { gender: options.gender, aspectRatio: options.aspectRatio }, useNanoBananaWebhook);
+      const { imageUrl, promptText } = await generateSingleImage(imageSource, task, { gender: options.gender, aspectRatio: options.aspectRatio }, useNanoBananaWebhook, model, resolution);
       onImageGenerated({ imageUrl, hairstyle: task.hairstyle, color: task.color || 'original', filename: task.filename, imageGenerationPrompt: promptText });
     } catch (error) {
       console.error(`Failed to generate hairstyle "${task.hairstyle.name}" with color "${task.color}":`, error);
@@ -266,16 +281,18 @@ export const regenerateSingleHairstyle = async (
   originalFilename: string,
   timestamp: string,
   sessionId: string,
-  useNanoBananaWebhook: boolean
+  useNanoBananaWebhook: boolean,
+  model: NanoBananaModel = 'nano-banana',
+  resolution: NanoBananaResolution = '1K'
 ): Promise<{ imageUrl: string; hairstyle: Hairstyle; color: string, filename: string, imageGenerationPrompt: string }> => {
   const [task] = createGenerationTasks({ ...options, imageCount: 1 }, originalFilename, sessionId, timestamp);
-  
+
   if (!task) {
     throw new Error('Could not create a new generation task from the selected filters.');
   }
 
   const imageSource = dataUrlToBlob(croppedImageDataUrl);
 
-  const { imageUrl, promptText } = await generateSingleImage(imageSource, task, { gender: options.gender, aspectRatio: options.aspectRatio }, useNanoBananaWebhook);
+  const { imageUrl, promptText } = await generateSingleImage(imageSource, task, { gender: options.gender, aspectRatio: options.aspectRatio }, useNanoBananaWebhook, model, resolution);
   return { imageUrl, hairstyle: task.hairstyle, color: task.color || 'original', filename: task.filename, imageGenerationPrompt: promptText };
 };

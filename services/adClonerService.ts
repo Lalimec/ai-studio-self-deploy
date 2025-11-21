@@ -154,13 +154,16 @@ export const generateAdVariationImage = async (options: {
 }): Promise<string> => {
     const { imageSources, instructionalPrompt, imageModel: model, aspectRatio, useNanoBananaWebhook } = options;
 
-    return generateFigureImage(
+    const result = await generateFigureImage(
         'nano-banana', // This service is specific to Nano Banana for now
         instructionalPrompt,
         imageSources,
         { aspectRatio: aspectRatio || undefined },
         useNanoBananaWebhook
     );
+
+    // generateFigureImage can return string or string[] - extract first image if array
+    return Array.isArray(result) ? result[0] : result;
 };
 
 export const refineAdImage = async (options: {
@@ -170,12 +173,15 @@ export const refineAdImage = async (options: {
     useNanoBananaWebhook: boolean;
 }): Promise<string> => {
     const { imageSources, refineText, aspectRatio, useNanoBananaWebhook } = options;
-    
-    return generateFigureImage(
+
+    const result = await generateFigureImage(
         'nano-banana',
         refineText,
         imageSources,
         { aspectRatio: aspectRatio || undefined },
         useNanoBananaWebhook
     );
+
+    // generateFigureImage can return string or string[] - extract first image if array
+    return Array.isArray(result) ? result[0] : result;
 };

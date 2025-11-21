@@ -48,6 +48,15 @@ export type GenerationToolbarConfig = {
     isActive?: boolean;
   }>;
 
+  // Style Mode Selection Buttons with icons (for Architecture Studio)
+  styleModeButtons?: Array<{
+    key: string;
+    icon: React.ReactNode;
+    label: string;
+    onClick: () => void;
+    isActive?: boolean;
+  }>;
+
   // Additional Buttons (left side of generate button)
   additionalButtons?: Array<{
     key: string;
@@ -121,6 +130,7 @@ const GenerationToolbar: React.FC<GenerationToolbarConfig> = ({
 
   modeButtons = [],
   modelButtons = [],
+  styleModeButtons = [],
   additionalButtons = [],
 
   studioMode,
@@ -297,6 +307,30 @@ const GenerationToolbar: React.FC<GenerationToolbarConfig> = ({
                     >
                       {btn.icon}
                       <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-[var(--color-primary-accent)] text-white text-xs font-semibold rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-100 pointer-events-none shadow-lg z-50">
+                        {btn.label}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+                <div className="w-px h-8 bg-[var(--color-border-muted)]"></div>
+              </>
+            )}
+            {styleModeButtons.length > 0 && (
+              <>
+                <div className="flex items-center gap-2">
+                  {styleModeButtons.map((btn) => (
+                    <button
+                      key={btn.key}
+                      onClick={btn.onClick}
+                      title={btn.label}
+                      className={`group relative p-2.5 rounded-lg transition-all ${
+                        btn.isActive
+                          ? 'bg-[var(--color-primary)] text-[var(--color-text-on-primary)] shadow-lg scale-110'
+                          : 'bg-[var(--color-bg-muted)] text-[var(--color-text-dim)] hover:bg-[var(--color-bg-muted-hover)] hover:scale-105'
+                      }`}
+                    >
+                      {btn.icon}
+                      <span className="absolute bottom-full left-1\2 -translate-x-1\2 mb-2 px-3 py-1.5 bg-[var(--color-primary-accent)] text-white text-xs font-semibold rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-100 pointer-events-none shadow-lg z-50">
                         {btn.label}
                       </span>
                     </button>

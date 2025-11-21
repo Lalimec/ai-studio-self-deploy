@@ -5,7 +5,7 @@ import ImageUploader from '../ImageUploader';
 import HairOptionsPanel from './HairOptionsPanel';
 import ImageGrid from '../ImageGrid';
 import GenerationToolbar from '../GenerationToolbar';
-import { TrashIcon, HelpIcon, DownloadIcon, PrepareMagicIcon, VideoIcon, AlertCircleIcon, CheckCircleIcon } from '../Icons';
+import { TrashIcon, HelpIcon, DownloadIcon, PrepareMagicIcon, VideoIcon, AlertCircleIcon, CheckCircleIcon, BananaIcon } from '../Icons';
 import { useHairStudio } from '../../hooks/useHairStudio';
 
 type HairStudioProps = {
@@ -123,6 +123,8 @@ const HairStudio: React.FC<HairStudioProps> = ({
         handleDownloadOriginal,
         handleDownloadAll,
         handleDownloadSingle,
+        model, setModel,
+        resolution, setResolution,
     } = logic;
 
     const areGlobalActionsDisabled = isPreparing || isGeneratingVideos || pendingImageCount > 0 || generatedImages.length === 0;
@@ -202,6 +204,32 @@ const HairStudio: React.FC<HairStudioProps> = ({
             onStartOver={handleStartOver}
             startOverDisabled={isBusy}
             studioMode="hair"
+            modelButtons={[
+                {
+                    key: 'nano-banana',
+                    icon: <BananaIcon className="w-5 h-5" />,
+                    label: 'Nano Banana',
+                    onClick: () => setModel('nano-banana'),
+                    isActive: model === 'nano-banana'
+                },
+                {
+                    key: 'nano-banana-pro',
+                    icon: (
+                        <div className="relative">
+                            <BananaIcon className="w-5 h-5" />
+                            <span className="absolute -bottom-2 -right-2 text-[8px] font-bold leading-none">PRO</span>
+                        </div>
+                    ),
+                    label: 'Nano Banana Pro',
+                    onClick: () => setModel('nano-banana-pro'),
+                    isActive: model === 'nano-banana-pro'
+                },
+            ]}
+            modeButtons={model === 'nano-banana-pro' ? [
+                { key: '1K', text: '1K', onClick: () => setResolution('1K'), isActive: resolution === '1K', tooltip: '1024x1024 resolution' },
+                { key: '2K', text: '2K', onClick: () => setResolution('2K'), isActive: resolution === '2K', tooltip: '2048x2048 resolution' },
+                { key: '4K', text: '4K', onClick: () => setResolution('4K'), isActive: resolution === '4K', tooltip: '4096x4096 resolution' }
+            ] : undefined}
         />
         </>
     );

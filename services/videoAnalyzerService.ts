@@ -317,13 +317,16 @@ export const generateImage = async (
     const mappedModel = mapModelId(modelId);
 
     // Use the main repo's unified generation function
-    const resultDataUrl = await generateFigureImage(
+    const result = await generateFigureImage(
         mappedModel,
         prompt,
         imageSources,
         { aspectRatio },
         useNanoBananaWebhook
     );
+
+    // generateFigureImage can return string or string[] - extract first image if array
+    const resultDataUrl = Array.isArray(result) ? result[0] : result;
 
     // Extract base64 from data URL
     const base64Match = resultDataUrl.match(/^data:image\/[a-z]+;base64,(.+)$/);

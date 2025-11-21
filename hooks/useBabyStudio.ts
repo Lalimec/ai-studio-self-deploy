@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import {
-    BabyGenerationOptions, BabyAge, BabyGender, GeneratedBabyImage, Toast as ToastType, ParentImageState, ImageForVideoProcessing, DownloadSettings
+    BabyGenerationOptions, BabyAge, BabyGender, GeneratedBabyImage, Toast as ToastType, ParentImageState, ImageForVideoProcessing, DownloadSettings, NanoBananaModel, NanoBananaResolution
 } from '../types';
 import {
     generateBabyImages, prepareBabyVideoPrompts, generateVideoPromptForBabyImage
@@ -41,6 +41,8 @@ export const useBabyStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
     const [sessionId, setSessionId] = useState<string | null>(null);
     const [isPreparing, setIsPreparing] = useState(false);
     const [isGeneratingVideos, setIsGeneratingVideos] = useState(false);
+    const [model, setModel] = useState<NanoBananaModel>('nano-banana');
+    const [resolution, setResolution] = useState<NanoBananaResolution>('1K');
 
     const isBusy = pendingImageCount > 0 || isPreparing || isGeneratingVideos || parent1.isPreparing || parent1.isGeneratingVideo || parent2.isPreparing || parent2.isGeneratingVideo;
 
@@ -120,7 +122,7 @@ export const useBabyStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
 
         generateBabyImages(
             parent1.croppedSrc, parent2.croppedSrc, parent1.file, parent2.file,
-            currentOptions, sessionId, timestamp, useNanoBananaWebhook,
+            currentOptions, sessionId, timestamp, useNanoBananaWebhook, model, resolution,
             (newImage) => {
                 setGeneratedImages(prev => [newImage, ...prev]);
                 setPendingImageCount(prev => Math.max(0, prev - 1));
@@ -643,5 +645,7 @@ export const useBabyStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
         handleDownloadParent,
         handleDownloadSingle,
         handleDownloadAll,
+        model, setModel,
+        resolution, setResolution,
     };
 };

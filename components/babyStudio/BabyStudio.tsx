@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { BabyGenerationOptions, GeneratedBabyImage, Toast as ToastType, ParentImageState } from '../../types';
-import { UploadIcon, TrashIcon, PrepareMagicIcon, VideoIcon, DownloadIcon, HelpIcon, AlertCircleIcon, CheckCircleIcon } from '../Icons';
+import { UploadIcon, TrashIcon, PrepareMagicIcon, VideoIcon, DownloadIcon, HelpIcon, AlertCircleIcon, CheckCircleIcon, BananaIcon } from '../Icons';
 import BabyOptionsPanel from './BabyOptionsPanel';
 import ImageGrid from '../ImageGrid';
 import GenerationToolbar from '../GenerationToolbar';
@@ -127,7 +127,8 @@ const BabyStudio: React.FC<BabyStudioProps> = ({
     pendingImageCount, handleRemoveGeneratedImage, handlePrepareAll,
     handleGenerateAllVideos, isPreparing, isGeneratingVideos, sessionId,
     handlePrepareSingle, handleGenerateSingleVideo,
-    handlePrepareParent, handleGenerateVideoForParent, handleDownloadParent, handleDownloadAll
+    handlePrepareParent, handleGenerateVideoForParent, handleDownloadParent, handleDownloadAll,
+    model, setModel, resolution, setResolution,
   } = logic;
 
   const isGenerateDisabled = !parent1.croppedSrc || !parent2.croppedSrc;
@@ -219,6 +220,32 @@ const BabyStudio: React.FC<BabyStudioProps> = ({
         onStartOver={handleStartOver}
         startOverDisabled={pendingImageCount > 0 || isPreparing || isGeneratingVideos}
         studioMode="baby"
+        modelButtons={[
+            {
+                key: 'nano-banana',
+                icon: <BananaIcon className="w-5 h-5" />,
+                label: 'Nano Banana',
+                onClick: () => setModel('nano-banana'),
+                isActive: model === 'nano-banana'
+            },
+            {
+                key: 'nano-banana-pro',
+                icon: (
+                    <div className="relative">
+                        <BananaIcon className="w-5 h-5" />
+                        <span className="absolute -bottom-2 -right-2 text-[8px] font-bold leading-none">PRO</span>
+                    </div>
+                ),
+                label: 'Nano Banana Pro',
+                onClick: () => setModel('nano-banana-pro'),
+                isActive: model === 'nano-banana-pro'
+            },
+        ]}
+        modeButtons={model === 'nano-banana-pro' ? [
+            { key: '1K', text: '1K', onClick: () => setResolution('1K'), isActive: resolution === '1K', tooltip: '1024x1024 resolution' },
+            { key: '2K', text: '2K', onClick: () => setResolution('2K'), isActive: resolution === '2K', tooltip: '2048x2048 resolution' },
+            { key: '4K', text: '4K', onClick: () => setResolution('4K'), isActive: resolution === '4K', tooltip: '4096x4096 resolution' }
+        ] : undefined}
     />
     </>
   );

@@ -1,4 +1,4 @@
-import { ArchitectureGenerationOptions, AspectRatio, GeneratedArchitectureImage } from '../types';
+import { ArchitectureGenerationOptions, AspectRatio, GeneratedArchitectureImage, NanoBananaModel, NanoBananaResolution } from '../types';
 import {
     ARCHITECTURE_SCOPES,
     INTERIOR_STYLES,
@@ -219,7 +219,9 @@ const generateSingleImage = async (
   imageSource: { base64: string; mimeType: string },
   task: Omit<GenerationTask, 'filename'>,
   options: { aspectRatio: AspectRatio },
-  useNanoBananaWebhook: boolean
+  useNanoBananaWebhook: boolean,
+  model: NanoBananaModel = 'nano-banana',
+  resolution: NanoBananaResolution = '1K'
 ): Promise<{ imageUrl: string, promptText: string }> => {
   const {
     styleName,
@@ -316,13 +318,23 @@ const generateSingleImage = async (
     promptText = 'Return the original architectural image exactly as it is, without any changes or modifications.';
   }
 
-  const imageUrl = await generateFigureImage(
-      Constance.models.image.nanoBanana,
+  const selectedModel = model === 'nano-banana-pro'
+      ? Constance.models.image.nanoBananaPro
+      : Constance.models.image.nanoBanana;
+
+  const result = await generateFigureImage(
+      selectedModel,
       promptText,
       [imageSource],
-      { aspectRatio: options.aspectRatio !== 'auto' ? options.aspectRatio : undefined },
+      {
+        aspectRatio: options.aspectRatio !== 'auto' ? options.aspectRatio : undefined,
+        resolution: model === 'nano-banana-pro' ? resolution : undefined
+      },
       useNanoBananaWebhook
   );
+
+  // generateFigureImage can return string or string[] - extract first image if array
+  const imageUrl = Array.isArray(result) ? result[0] : result;
 
   return { imageUrl, promptText };
 };
@@ -334,6 +346,8 @@ export const generateArchitecturalStyles = async (
   timestamp: string,
   sessionId: string,
   useNanoBananaWebhook: boolean,
+  model: NanoBananaModel = 'nano-banana',
+  resolution: NanoBananaResolution = '1K',
   onImageGenerated: (result: {
     imageUrl: string;
     style: string;
@@ -359,7 +373,9 @@ export const generateArchitecturalStyles = async (
         imageSource,
         task,
         { aspectRatio: options.aspectRatio },
-        useNanoBananaWebhook
+        useNanoBananaWebhook,
+        model,
+        resolution
       );
 
       // Get time and theme names for display
@@ -392,7 +408,9 @@ export const regenerateSingleArchitecturalStyle = async (
   originalFilename: string,
   timestamp: string,
   sessionId: string,
-  useNanoBananaWebhook: boolean
+  useNanoBananaWebhook: boolean,
+  model: NanoBananaModel = 'nano-banana',
+  resolution: NanoBananaResolution = '1K'
 ): Promise<{
   imageUrl: string;
   style: string;
@@ -413,7 +431,9 @@ export const regenerateSingleArchitecturalStyle = async (
     imageSource,
     task,
     { aspectRatio: options.aspectRatio },
-    useNanoBananaWebhook
+    useNanoBananaWebhook,
+    model,
+    resolution
   );
 
   // Get time and theme names for display
@@ -532,7 +552,9 @@ export const generateImageTransformation = async (
   aspectRatio: AspectRatio,
   useNanoBananaWebhook: boolean,
   sessionId: string,
-  originalFilename: string = 'image'
+  originalFilename: string = 'image',
+  model: NanoBananaModel = 'nano-banana',
+  resolution: NanoBananaResolution = '1K'
 ): Promise<{ imageUrl: string; promptText: string; filename: string }> => {
   const imageSource = dataUrlToBlob(sourceImageDataUrl);
 
@@ -633,13 +655,23 @@ This is a lived-in transformation showing realistic daily use. Add clutter and s
 Maintain photorealistic quality and architectural accuracy. Ensure all architectural elements are harmonious and professionally designed.`;
 
   // Generate the transformed image using the existing pipeline
-  const imageUrl = await generateFigureImage(
-    Constance.models.image.nanoBanana,
+  const selectedModel = model === 'nano-banana-pro'
+    ? Constance.models.image.nanoBananaPro
+    : Constance.models.image.nanoBanana;
+
+  const result = await generateFigureImage(
+    selectedModel,
     fullPrompt,
     [imageSource],
-    { aspectRatio: aspectRatio !== 'auto' ? aspectRatio : undefined },
+    {
+      aspectRatio: aspectRatio !== 'auto' ? aspectRatio : undefined,
+      resolution: model === 'nano-banana-pro' ? resolution : undefined
+    },
     useNanoBananaWebhook
   );
+
+  // generateFigureImage can return string or string[] - extract first image if array
+  const imageUrl = Array.isArray(result) ? result[0] : result;
 
   // Generate filename
   const timestamp = new Date().getTime().toString();

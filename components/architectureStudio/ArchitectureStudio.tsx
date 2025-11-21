@@ -5,7 +5,7 @@ import ImageUploader from '../ImageUploader';
 import ArchitectureOptionsPanel from './ArchitectureOptionsPanel';
 import ImageGrid from '../ImageGrid';
 import GenerationToolbar from '../GenerationToolbar';
-import { TrashIcon, HelpIcon, DownloadIcon, PrepareMagicIcon, VideoIcon, DepthMapIcon, AlertCircleIcon, CheckCircleIcon } from '../Icons';
+import { TrashIcon, HelpIcon, DownloadIcon, PrepareMagicIcon, VideoIcon, DepthMapIcon, AlertCircleIcon, CheckCircleIcon, BananaIcon, ListChecksIcon, DicesIcon } from '../Icons';
 import { useArchitectureStudio } from '../../hooks/useArchitectureStudio';
 
 type ArchitectureStudioProps = {
@@ -281,6 +281,10 @@ const ArchitectureStudio: React.FC<ArchitectureStudioProps> = ({
         handleGenerateVersionVideo,
         handleGenerateVersionDepthMap,
         handleDownloadVersion,
+        model,
+        setModel,
+        resolution,
+        setResolution,
     } = logic;
 
     const areGlobalActionsDisabled = isPreparing || isGeneratingVideos || pendingImageCount > 0 || generatedImages.length === 0;
@@ -366,24 +370,48 @@ const ArchitectureStudio: React.FC<ArchitectureStudioProps> = ({
             onGenerate={handleGenerate}
             generateDisabled={isGenerateDisabled}
             pendingCount={pendingImageCount}
-            modeButtons={[
+            modelButtons={[
+                {
+                    key: 'nano-banana',
+                    icon: <BananaIcon className="w-5 h-5" />,
+                    label: 'Nano Banana',
+                    onClick: () => setModel('nano-banana'),
+                    isActive: model === 'nano-banana'
+                },
+                {
+                    key: 'nano-banana-pro',
+                    icon: (
+                        <div className="relative">
+                            <BananaIcon className="w-5 h-5" />
+                            <span className="absolute -bottom-2 -right-2 text-[8px] font-bold leading-none">PRO</span>
+                        </div>
+                    ),
+                    label: 'Nano Banana Pro',
+                    onClick: () => setModel('nano-banana-pro'),
+                    isActive: model === 'nano-banana-pro'
+                },
+            ]}
+            styleModeButtons={[
                 {
                     key: 'selected',
-                    text: 'Selected',
+                    icon: <ListChecksIcon className="w-5 h-5" />,
+                    label: 'Selected - Generate one image for each selected style',
                     onClick: () => setOptions(prev => ({ ...prev, styleSelectionMode: 'selected', imageCount: 1 })),
-                    disabled: false,
                     isActive: options.styleSelectionMode === 'selected',
-                    tooltip: 'Generate one image for each selected style',
                 },
                 {
                     key: 'random',
-                    text: 'Random',
+                    icon: <DicesIcon className="w-5 h-5" />,
+                    label: 'Random - Randomly pick styles from selected or all',
                     onClick: () => setOptions(prev => ({ ...prev, styleSelectionMode: 'random' })),
-                    disabled: false,
                     isActive: options.styleSelectionMode === 'random',
-                    tooltip: 'Randomly pick styles from selected or all styles',
                 },
             ]}
+            modeButtons={model === 'nano-banana-pro' ? [
+                { key: '1K', text: '1K', onClick: () => setResolution('1K'), isActive: resolution === '1K', tooltip: '1024x1024 resolution' },
+                { key: '2K', text: '2K', onClick: () => setResolution('2K'), isActive: resolution === '2K', tooltip: '2048x2048 resolution' },
+                { key: '4K', text: '4K', onClick: () => setResolution('4K'), isActive: resolution === '4K', tooltip: '4096x4096 resolution' }
+            ] : undefined}
             startOverButtonText="Clear"
             onStartOver={handleStartOver}
             startOverDisabled={isBusy}

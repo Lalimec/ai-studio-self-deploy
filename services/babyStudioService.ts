@@ -1,5 +1,5 @@
 import { GoogleGenAI, Modality, GenerateContentResponse } from '@google/genai';
-import { BabyGenerationOptions, GeneratedBabyImage, BabyGender, AspectRatio } from '../types';
+import { BabyGenerationOptions, GeneratedBabyImage, BabyGender, AspectRatio, NanoBananaModel, NanoBananaResolution } from '../types';
 import { 
     BABY_AGES,
     BABY_COMPOSITIONS,
@@ -153,15 +153,27 @@ export const generateBabyImage = async (
     imageSources: Array<{ base64: string; mimeType: string }>,
     prompt: string,
     aspectRatio: AspectRatio,
-    useNanoBananaWebhook: boolean
+    useNanoBananaWebhook: boolean,
+    model: NanoBananaModel = 'nano-banana',
+    resolution: NanoBananaResolution = '1K'
 ): Promise<string> => {
-    return generateFigureImage(
-        Constance.models.image.nanoBanana,
+    const selectedModel = model === 'nano-banana-pro'
+        ? Constance.models.image.nanoBananaPro
+        : Constance.models.image.nanoBanana;
+
+    const result = await generateFigureImage(
+        selectedModel,
         prompt,
         imageSources,
-        { aspectRatio: aspectRatio !== 'auto' ? aspectRatio : undefined },
+        {
+            aspectRatio: aspectRatio !== 'auto' ? aspectRatio : undefined,
+            resolution: model === 'nano-banana-pro' ? resolution : undefined
+        },
         useNanoBananaWebhook
     );
+
+    // generateFigureImage can return string or string[] - extract first image if array
+    return Array.isArray(result) ? result[0] : result;
 };
 
 export const generateBabyImages = async (
@@ -173,6 +185,8 @@ export const generateBabyImages = async (
   sessionId: string,
   timestamp: string,
   useNanoBananaWebhook: boolean,
+  model: NanoBananaModel = 'nano-banana',
+  resolution: NanoBananaResolution = '1K',
   onImageGenerated: (result: Omit<GeneratedBabyImage, 'videoPrompt' | 'isPreparing' | 'videoSrc' | 'isGeneratingVideo' | 'isRegenerating'>) => void,
   onError: (errorMessage: string) => void
 ): Promise<void> => {
@@ -186,7 +200,7 @@ export const generateBabyImages = async (
 
   const processSingleTask = async (task: BabyGenerationTask) => {
     try {
-      const imageUrl = await generateBabyImage(imageSources, task.prompt, options.aspectRatio, useNanoBananaWebhook);
+      const imageUrl = await generateBabyImage(imageSources, task.prompt, options.aspectRatio, useNanoBananaWebhook, model, resolution);
       onImageGenerated({ 
         src: imageUrl,
         description: task.description,
