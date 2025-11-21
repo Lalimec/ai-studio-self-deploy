@@ -657,7 +657,7 @@ export const CROP_RATIOS = [
 ];
 
 export const NANO_BANANA_RATIOS = [
-  '1:1', '4:5', '3:4', '2:3', '9:16', '5:4', '4:3', '3:2', '16:9', '21:9'
+  'auto', '1:1', '4:5', '3:4', '2:3', '9:16', '5:4', '4:3', '3:2', '16:9', '21:9'
 ];
 
 export const FLUX_KONTEXT_PRO_RATIOS = [

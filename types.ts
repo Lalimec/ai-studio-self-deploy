@@ -212,6 +212,7 @@ export type TransformedVersionsState = {
 export interface AppFile {
   file: File;
   id: string;
+  publicUrl?: string; // Cached Google Cloud Storage URL (to avoid redundant uploads)
 }
 
 export interface PromptPreset {

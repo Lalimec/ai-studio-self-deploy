@@ -8,6 +8,7 @@ import {
     CheckCircleIcon,
     ImageStudioIcon,
     AdClonerIcon,
+    BananaIcon,
     AlertCircleIcon
 } from '../Icons';
 import { useVideoStudio } from '../../hooks/useVideoStudio';
@@ -18,9 +19,10 @@ interface VideoStudioProps {
   babyImages: GeneratedBabyImage[];
   architectureImages: GeneratedArchitectureImage[];
   imageStudioImages: ImageStudioResultImage[];
+  nanoBananaProStudioImages: ImageStudioResultImage[];
   adClonerImageCount: number;
   showBetaFeatures: boolean;
-  onImport: (source: 'hair' | 'baby' | 'architecture' | 'imageStudio' | 'adCloner') => void;
+  onImport: (source: 'hair' | 'baby' | 'architecture' | 'imageStudio' | 'nanoBananaProStudio' | 'adCloner') => void;
   onImageClick: (id: string) => void;
 }
 
@@ -127,7 +129,7 @@ const SourceButton: React.FC<{
 
 const VideoStudio: React.FC<VideoStudioProps> = (props) => {
     const {
-        logic, hairImages, babyImages, architectureImages, imageStudioImages, adClonerImageCount, showBetaFeatures, onImport, 
+        logic, hairImages, babyImages, architectureImages, imageStudioImages, nanoBananaProStudioImages, adClonerImageCount, showBetaFeatures, onImport,
         onImageClick
     } = props;
     
@@ -211,6 +213,14 @@ const VideoStudio: React.FC<VideoStudioProps> = (props) => {
                             onClick={() => onImport('imageStudio')}
                             disabled={imageStudioImages.length === 0 || isBusy}
                         />
+                        <SourceButton
+                            icon={<BananaIcon className="w-12 h-12 text-[var(--color-primary-accent)]" />}
+                            title="Import from Pro Studio"
+                            description="Use your pro quality images."
+                            count={nanoBananaProStudioImages.length}
+                            onClick={() => onImport('nanoBananaProStudio')}
+                            disabled={nanoBananaProStudioImages.length === 0 || isBusy}
+                        />
                         {showBetaFeatures && (
                              <SourceButton
                                 icon={<AdClonerIcon className="w-12 h-12 text-[var(--color-primary-accent)]" />}
@@ -269,6 +279,9 @@ const VideoStudio: React.FC<VideoStudioProps> = (props) => {
                     </button>
                      <button onClick={() => onImport('imageStudio')} disabled={isBusy || imageStudioImages.length === 0} className="flex items-center gap-2 bg-[var(--color-bg-muted-hover)] hover:bg-[var(--color-border-default)] text-[var(--color-text-main)] font-bold py-2 px-4 rounded-lg transition-colors disabled:bg-[var(--color-bg-surface-light)] disabled:text-[var(--color-text-dimmer)] text-sm" title="Import images from Image Studio">
                         <ImageStudioIcon className="w-4 h-4" /> Import from Image
+                    </button>
+                     <button onClick={() => onImport('nanoBananaProStudio')} disabled={isBusy || nanoBananaProStudioImages.length === 0} className="flex items-center gap-2 bg-[var(--color-bg-muted-hover)] hover:bg-[var(--color-border-default)] text-[var(--color-text-main)] font-bold py-2 px-4 rounded-lg transition-colors disabled:bg-[var(--color-bg-surface-light)] disabled:text-[var(--color-text-dimmer)] text-sm" title="Import images from Pro Studio">
+                        <BananaIcon className="w-4 h-4" /> Import from Pro
                     </button>
                 </div>
 

@@ -8,6 +8,7 @@ import { runConcurrentTasks } from '../services/apiUtils';
 import { logUserAction } from '../services/loggingService';
 import { downloadImageWithMetadata, downloadBulkImages } from '../services/downloadService';
 import { NANO_BANANA_RATIOS, FLUX_KONTEXT_PRO_RATIOS, ASPECT_RATIO_PRESETS_2K, ASPECT_RATIO_PRESETS_4K } from '../constants';
+import { Constance } from '../services/endpoints';
 
 declare const JSZip: any;
 
@@ -40,7 +41,8 @@ export const useImageStudioLogic = (
 
     const [isAdvancedOpen, setIsAdvancedOpen] = useState<boolean>(false);
     const [model, setModel] = useState<string>('nano-banana');
-    const [aspectRatio, setAspectRatio] = useState<string | null>(null);
+    const [aspectRatio, setAspectRatio] = useState<string | null>('auto');
+    const [resolution, setResolution] = useState<string>('2K'); // For nano-banana-pro
     const [imageSizePreset, setImageSizePreset] = useState<string>('auto_4K');
     const [customWidth, setCustomWidth] = useState<number>(1024);
     const [customHeight, setCustomHeight] = useState<number>(1024);
@@ -363,6 +365,8 @@ export const useImageStudioLogic = (
     const handleClearGallery = useCallback(() => {
         setGenerationResults([]);
         setProgress({ completed: 0, total: 0 });
+        setImageFiles([]);
+        setSetId('');
     }, []);
 
     const handleRemoveGeneratedImage = useCallback((key: string) => {
@@ -522,39 +526,34 @@ export const useImageStudioLogic = (
                         metadata: undefined, // No metadata files in Image Studio bulk download
                     }));
 
-                // Add original files if requested
+                // Add ALL original files if requested (not just those used in generation)
                 if (includeOriginals) {
-                    const addedOriginals = new Set<number>();
-                    for (const result of successfulResults) {
-                        if (!addedOriginals.has(result.originalImageIndex)) {
-                            const appFile = imageFiles[result.originalImageIndex];
-                            if (appFile) {
-                                const originalFile = appFile.file;
-                                const shortId = appFile.id;
-                                let baseName = originalFile.name.substring(0, originalFile.name.lastIndexOf('.'));
-                                const extension = originalFile.name.substring(originalFile.name.lastIndexOf('.') + 1) || 'png';
-                                if (baseName.startsWith('cropped_')) baseName = baseName.substring(8);
-                                const sanitizedBaseName = sanitizeFilename(baseName);
-                                const originalZipFilename = `${setId}_${sanitizedBaseName}_${shortId}_before.${extension}`;
+                    for (let i = 0; i < imageFiles.length; i++) {
+                        const appFile = imageFiles[i];
+                        if (appFile) {
+                            const originalFile = appFile.file;
+                            const shortId = appFile.id;
+                            let baseName = originalFile.name.substring(0, originalFile.name.lastIndexOf('.'));
+                            const extension = originalFile.name.substring(originalFile.name.lastIndexOf('.') + 1) || 'png';
+                            if (baseName.startsWith('cropped_')) baseName = baseName.substring(8);
+                            const sanitizedBaseName = sanitizeFilename(baseName);
+                            const originalZipFilename = `${setId}_${sanitizedBaseName}_${shortId}_before.${extension}`;
 
-                                // Convert File to base64 data URL
-                                const reader = new FileReader();
-                                const base64Data = await new Promise<string>((resolve, reject) => {
-                                    reader.onload = () => resolve(reader.result as string);
-                                    reader.onerror = reject;
-                                    reader.readAsDataURL(originalFile);
-                                });
+                            // Convert File to base64 data URL
+                            const reader = new FileReader();
+                            const base64Data = await new Promise<string>((resolve, reject) => {
+                                reader.onload = () => resolve(reader.result as string);
+                                reader.onerror = reject;
+                                reader.readAsDataURL(originalFile);
+                            });
 
-                                images.push({
-                                    imageUrl: undefined as any,
-                                    imageBase64: base64Data,
-                                    filename: originalZipFilename,
-                                    prompt: undefined,
-                                    metadata: undefined,
-                                });
-
-                                addedOriginals.add(result.originalImageIndex);
-                            }
+                            images.push({
+                                imageUrl: undefined as any,
+                                imageBase64: base64Data,
+                                filename: originalZipFilename,
+                                prompt: undefined,
+                                metadata: undefined,
+                            });
                         }
                     }
                 }
@@ -600,24 +599,62 @@ export const useImageStudioLogic = (
             }
         }
     }, []);
-    
+
+    // Helper to ensure files have cached publicUrls (avoids redundant uploads)
+    const ensurePublicUrls = useCallback(async (): Promise<void> => {
+        const filesToUpload = imageFiles.filter(f => !f.publicUrl);
+        if (filesToUpload.length === 0) return; // All files already have cached URLs
+
+        await Promise.all(filesToUpload.map(async (appFile) => {
+            const base64 = await fileToBase64(appFile.file);
+            const dataUrl = `data:${appFile.file.type};base64,${base64}`;
+            const publicUrl = await uploadImageFromDataUrl(dataUrl, appFile.file.name);
+
+            // Update state with cached URL
+            setImageFiles(prev => prev.map(f =>
+                f.id === appFile.id ? { ...f, publicUrl } : f
+            ));
+        }));
+    }, [imageFiles]);
+
     const createGenerationTask = useCallback((imageIndex: number, promptIndex: number, prompts: string[], timestamp: number) => {
         return async (): Promise<ImageStudioRunResult> => {
             const file = imageFiles[imageIndex].file;
+            const appFile = imageFiles[imageIndex];
             const prompt = prompts[promptIndex];
             const finalPrompt = [prependPrompt, prompt, appendPrompt].filter(Boolean).join(' ').trim();
-            
+
             try {
                 const base64 = await fileToBase64(file);
-                const imageSource = { base64, mimeType: file.type };
+                const imageSource = { base64, mimeType: file.type, publicUrl: appFile.publicUrl };
 
-                const imageUrl = await generateFigureImage(
-                    model, 
-                    finalPrompt, 
-                    [imageSource],
-                    { width, height, imageSizePreset, aspectRatio: aspectRatio || undefined },
-                    useNanoBananaWebhook
-                );
+                let imageUrl: string;
+
+                if (model === 'nano-banana-pro') {
+                    // Use generateFigureImage for Pro model (consolidated)
+                    const result = await generateFigureImage(
+                        Constance.models.image.nanoBananaPro,
+                        finalPrompt,
+                        [imageSource],
+                        {
+                            num_images: 1,
+                            aspectRatio: aspectRatio || 'auto',
+                            output_format: 'png',
+                            resolution: resolution,
+                        }
+                    );
+                    const imageUrls = result as string[];
+                    imageUrl = imageUrls[0]; // Take first image from array
+                } else {
+                    imageUrl = await generateFigureImage(
+                        model,
+                        finalPrompt,
+                        [imageSource],
+                        { width, height, imageSizePreset, aspectRatio: aspectRatio || undefined },
+                        useNanoBananaWebhook
+                    );
+                }
+
                 return { url: imageUrl, originalImageIndex: imageIndex, originalPromptIndex: promptIndex, prompt: finalPrompt, batchTimestamp: timestamp };
             } catch (error) {
                  const contextualError = error instanceof Error ? error : new Error("Unknown error during generation");
@@ -625,7 +662,7 @@ export const useImageStudioLogic = (
                  throw contextualError;
             }
         };
-    }, [imageFiles, prependPrompt, appendPrompt, model, width, height, imageSizePreset, aspectRatio, useNanoBananaWebhook]);
+    }, [imageFiles, prependPrompt, appendPrompt, model, width, height, imageSizePreset, aspectRatio, resolution, useNanoBananaWebhook]);
     
     const runGenerations = useCallback(async (tasks: (() => Promise<ImageStudioRunResult>)[]) => {
         if (tasks.length === 0) return;
@@ -645,6 +682,15 @@ export const useImageStudioLogic = (
             return;
         }
         logUserAction('GENERATE_IMAGES_IMAGESTUDIO', { imageCount: imageFiles.length, promptCount: prompts.length, totalGenerations: imageFiles.length * prompts.length, setId });
+
+        // Ensure all files have cached publicUrls before generating (avoids redundant uploads)
+        try {
+            await ensurePublicUrls();
+        } catch (error) {
+            addToast(`Failed to upload images: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
+            return;
+        }
+
         const timestamp = Date.now();
         setBatchTimestamp(timestamp);
         const newResults: ImageStudioGenerationResult[] = imageFiles.flatMap((_, imgIdx) => prompts.map((_, prmptIdx) => ({
@@ -653,36 +699,54 @@ export const useImageStudioLogic = (
         setGenerationResults(prev => [...newResults, ...prev]);
         const tasks = imageFiles.flatMap((_, imgIdx) => prompts.map((_, prmptIdx) => createGenerationTask(imgIdx, prmptIdx, prompts, timestamp)));
         await runGenerations(tasks);
-    }, [imageFiles, getActivePrompts, jsonPrompts, jsonError, createGenerationTask, runGenerations, addToast, setId]);
+    }, [imageFiles, getActivePrompts, jsonPrompts, jsonError, createGenerationTask, runGenerations, addToast, setId, ensurePublicUrls]);
 
     const handleRetryAll = useCallback(async () => {
         if (isLoading) return;
         const failed = generationResults.filter(r => r.status === 'error' || r.status === 'warning');
         if (failed.length === 0) return;
         logUserAction('RETRY_ALL_IMAGES_IMAGESTUDIO', { failedCount: failed.length, setId });
+
+        // Ensure files have cached publicUrls before retrying
+        try {
+            await ensurePublicUrls();
+        } catch (error) {
+            addToast(`Failed to upload images: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
+            return;
+        }
+
         setGenerationResults(prev => prev.map(r => (r.status === 'error' || r.status === 'warning') ? { ...r, status: 'pending', error: undefined, modelResponse: undefined } : r));
         const prompts = getActivePrompts();
         const tasks = failed.map(r => createGenerationTask(r.originalImageIndex, r.originalPromptIndex, prompts, r.batchTimestamp));
         await runGenerations(tasks);
-    }, [isLoading, generationResults, getActivePrompts, createGenerationTask, runGenerations, setId]);
+    }, [isLoading, generationResults, getActivePrompts, createGenerationTask, runGenerations, setId, ensurePublicUrls, addToast]);
     
     const handleRetryOne = useCallback(async (key: string) => {
         const toRetry = generationResults.find(r => r.key === key);
         if (!toRetry || toRetry.status === 'pending') return;
-    
+
         logUserAction('RETRY_ONE_IMAGE_IMAGESTUDIO', { key, setId });
         setGenerationResults(prev => prev.map(r => r.key === key ? { ...r, status: 'pending', error: undefined, modelResponse: undefined } : r));
-        
+
+        // Ensure files have cached publicUrls before retrying
+        try {
+            await ensurePublicUrls();
+        } catch (error) {
+            addToast(`Failed to upload images: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
+            setGenerationResults(prev => prev.map(r => r.key === key ? { ...r, status: 'error', error: error instanceof Error ? error.message : 'Upload failed' } : r));
+            return;
+        }
+
         const prompts = getActivePrompts();
         const task = createGenerationTask(toRetry.originalImageIndex, toRetry.originalPromptIndex, prompts, toRetry.batchTimestamp);
-        
+
         try {
             const result = await task();
             handleSuccess(result);
         } catch (error) {
             handleFail(error);
         }
-    }, [generationResults, getActivePrompts, createGenerationTask, handleSuccess, handleFail, setId]);
+    }, [generationResults, getActivePrompts, createGenerationTask, handleSuccess, handleFail, setId, ensurePublicUrls, addToast]);
 
 
     const isSeedreamAspectRatioInvalid = useMemo(() => {
@@ -699,7 +763,7 @@ export const useImageStudioLogic = (
     return {
         numberOfVersions, setNumberOfVersions, promptContents, setPromptContents, imageFiles, setImageFiles, generationResults, setGenerationResults, isLoading, setIsLoading,
         includeOriginals, setIncludeOriginals, batchTimestamp, setBatchTimestamp,
-        progress, setProgress, translatingIndices, setTranslatingIndices, generatingVariationIndices, setGeneratingVariationIndices, enhancingIndices, setEnhancingIndices, 
+        progress, setProgress, translatingIndices, setTranslatingIndices, generatingVariationIndices, setGeneratingVariationIndices, enhancingIndices, setEnhancingIndices,
         pendingFiles, setPendingFiles, setId, setSetId, showCropChoiceModal, setShowCropChoiceModal, filesAwaitingCropChoice, setFilesAwaitingCropChoice, croppingFiles, setCroppingFiles,
         isAdvancedOpen, setIsAdvancedOpen, model, setModel, imageSizePreset, setImageSizePreset, customWidth, setCustomWidth, customHeight, setCustomHeight, prependPrompt, setPrependPrompt,
         appendPrompt, setAppendPrompt, jsonPrompts, setJsonPrompts, jsonError, setJsonError, filenameTemplate, setFilenameTemplate, promptGenerationInstructions, setPromptGenerationInstructions,
@@ -711,6 +775,7 @@ export const useImageStudioLogic = (
         handleCancelUpload, handleSuccess, handleFail, createGenerationTask, runGenerations, handleGenerate, handleRetryAll, handleRetryOne, isGenerateDisabled, handleDownloadSingle,
         aspectRatio, setAspectRatio, getDownloadFilename, handleRemoveAllUploadedImages,
         isSeedreamAspectRatioInvalid,
-        inputImageWarnings
+        inputImageWarnings,
+        resolution, setResolution
     };
 };

@@ -71,7 +71,7 @@ const ImageCard: React.FC<Omit<ImageGridProps, 'images' | 'pendingCount' | 'plac
       
   return (
     <div
-      className="group relative bg-[var(--color-bg-surface)] rounded-lg overflow-hidden shadow-lg shadow-color-[var(--color-shadow-primary)]/10 animate-fade-in"
+      className="group relative bg-[var(--color-bg-surface)] rounded-lg overflow-hidden shadow-lg shadow-color-[var(--color-shadow-primary)]/10 animate-fade-in aspect-[4/5]"
       onMouseEnter={() => videoSrc && setIsHovering(true)}
       onMouseLeave={() => videoSrc && setIsHovering(false)}
     >
@@ -79,7 +79,7 @@ const ImageCard: React.FC<Omit<ImageGridProps, 'images' | 'pendingCount' | 'plac
         <img
           src={src}
           alt={`Generated image: ${title}`}
-          className="w-full h-auto object-cover block"
+          className="w-full h-full object-cover block"
         />
         {videoSrc && isHovering && (
           <div className="absolute inset-0">
@@ -254,19 +254,33 @@ const ImageGrid: React.FC<ImageGridProps> = ({
       return <EmptyState />;
   }
 
+  // Interleave images and placeholders for proper gallery integration
+  const allItems = [
+    ...images.map(img => ({ type: 'image' as const, data: img })),
+    ...placeholders.map((_, idx) => ({ type: 'placeholder' as const, index: idx }))
+  ];
+
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 gap-4 items-start">
-      {placeholders.map((_, index) => (
-         <div key={`placeholder-${index}`} className="w-full bg-[var(--color-bg-muted)] rounded-lg shadow-lg animate-pulse" style={{ aspectRatio: placeholderAspectRatio }}></div>
-      ))}
-      {images.map((image) => (
-        <ImageCard 
-            key={'id' in image ? image.id : image.filename}
-            image={image}
+      {allItems.map((item, idx) => {
+        if (item.type === 'placeholder') {
+          return (
+            <div
+              key={`placeholder-${item.index}`}
+              className="w-full bg-[var(--color-bg-muted)] rounded-lg shadow-lg animate-pulse"
+              style={{ aspectRatio: placeholderAspectRatio }}
+            />
+          );
+        }
+        return (
+          <ImageCard
+            key={'id' in item.data ? item.data.id : item.data.filename}
+            image={item.data}
             mode={mode}
             {...props}
-        />
-      ))}
+          />
+        );
+      })}
     </div>
   );
 };

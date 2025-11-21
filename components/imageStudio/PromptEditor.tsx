@@ -16,7 +16,7 @@ interface PromptEditorProps {
 }
 
 export const PromptEditor: React.FC<PromptEditorProps> = ({
-    numberOfVersions, onNumberOfVersionsChange, promptContents, onPromptContentChange, 
+    numberOfVersions, onNumberOfVersionsChange, promptContents, onPromptContentChange,
     onTranslate, translatingIndices,
     onGenerateVariation, generatingVariationIndices,
     onEnhance, enhancingIndices
@@ -24,14 +24,13 @@ export const PromptEditor: React.FC<PromptEditorProps> = ({
     return (
         <div className="w-full flex flex-col gap-4">
             <div>
-                <label htmlFor="prompt-select" className="block text-sm font-medium text-[var(--color-text-light)] mb-2">3. Write Your Prompts</label>
-                <div className="flex items-center gap-3 text-sm font-medium text-[var(--color-text-dim)] mt-2">
+                <div className="flex items-center gap-3 text-sm font-medium text-[var(--color-text-dim)]">
                     <label htmlFor="versions-slider">Versions per image:</label>
                     <input
                         id="versions-slider"
                         type="range"
                         min="1"
-                        max="5"
+                        max="10"
                         value={numberOfVersions}
                         onChange={(e) => onNumberOfVersionsChange(parseInt(e.target.value, 10))}
                         className="w-full h-2 bg-[var(--color-border-default)] rounded-lg appearance-none cursor-pointer accent-[var(--color-primary)]"

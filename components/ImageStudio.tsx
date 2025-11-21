@@ -24,6 +24,72 @@ interface ImageStudioProps {
 const ImageStudio: React.FC<ImageStudioProps> = ({ logic, onImageClick, onShowHelp }) => {
     const failedCount = logic.generationResults.filter(r => r.status === 'error' || r.status === 'warning').length;
 
+    // Get aspect ratio options based on selected model
+    const getAspectRatioOptions = () => {
+        if (logic.model === 'nano-banana' || logic.model === 'nano-banana-pro') {
+            return NANO_BANANA_RATIOS.map(ratio => ({
+                label: ratio === 'auto' ? 'Auto' : ratio,
+                value: ratio as AspectRatio
+            }));
+        } else if (logic.model === 'flux-kontext-pro') {
+            return FLUX_KONTEXT_PRO_RATIOS.map(ratio => ({ label: ratio, value: ratio as AspectRatio }));
+        } else if (logic.model === 'seedream') {
+            // Seedream uses presets, show basic ratios
+            return ASPECT_RATIO_PRESETS.map(preset => ({ label: preset.label, value: preset.label as AspectRatio }));
+        } else {
+            // Qwen or other models - use default ratios
+            return [
+                { label: '1:1', value: '1:1' as AspectRatio },
+                { label: '4:5', value: '4:5' as AspectRatio },
+                { label: '3:4', value: '3:4' as AspectRatio },
+                { label: '16:9', value: '16:9' as AspectRatio }
+            ];
+        }
+    };
+
+    const modelButtons = [
+        {
+            key: 'nano-banana',
+            icon: <BananaIcon className="w-5 h-5" />,
+            label: 'Nano Banana',
+            onClick: () => logic.setModel('nano-banana'),
+            isActive: logic.model === 'nano-banana'
+        },
+        {
+            key: 'nano-banana-pro',
+            icon: (
+                <div className="relative">
+                    <BananaIcon className="w-5 h-5" />
+                    <span className="absolute -bottom-2 -right-2 text-[8px] font-bold leading-none">PRO</span>
+                </div>
+            ),
+            label: 'Nano Banana Pro',
+            onClick: () => logic.setModel('nano-banana-pro'),
+            isActive: logic.model === 'nano-banana-pro'
+        },
+        {
+            key: 'seedream',
+            icon: <WavesIcon className="w-5 h-5" />,
+            label: 'Seedream Edit',
+            onClick: () => logic.setModel('seedream'),
+            isActive: logic.model === 'seedream'
+        },
+        {
+            key: 'flux-kontext-pro',
+            icon: <ZapIcon className="w-5 h-5" />,
+            label: 'Flux Kontext Pro',
+            onClick: () => logic.setModel('flux-kontext-pro'),
+            isActive: logic.model === 'flux-kontext-pro'
+        },
+        {
+            key: 'qwen',
+            icon: <FlowerIcon className="w-5 h-5" />,
+            label: 'Qwen Image Edit',
+            onClick: () => logic.setModel('qwen'),
+            isActive: logic.model === 'qwen'
+        }
+    ];
+
     if (logic.croppingFiles) {
         return (
             <MultiCropView
@@ -47,172 +113,6 @@ const ImageStudio: React.FC<ImageStudioProps> = ({ logic, onImageClick, onShowHe
                         imageFiles={logic.imageFiles}
                         inputImageWarnings={logic.inputImageWarnings}
                     />
-
-                    <div className="w-full flex flex-col gap-4">
-                        <div>
-                            <label className="block text-sm font-medium text-[var(--color-text-light)] mb-2">2. Configure Model & Size</label>
-                            <div className="flex justify-center gap-3 p-1">
-                                <button
-                                    onClick={() => logic.setModel('nano-banana')}
-                                    className={`group relative p-3 rounded-lg transition-all ${logic.model === 'nano-banana' ? 'bg-[var(--color-primary)] text-[var(--color-text-on-primary)] shadow-lg scale-110' : 'bg-[var(--color-bg-muted)] text-[var(--color-text-dim)] hover:bg-[var(--color-bg-muted-hover)] hover:scale-105'}`}
-                                    aria-label="Select Nano Banana model"
-                                >
-                                    <BananaIcon className="w-6 h-6" />
-                                    <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-[var(--color-primary-accent)] text-white text-xs font-semibold rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-100 pointer-events-none shadow-lg z-50">
-                                        Nano Banana
-                                    </span>
-                                </button>
-                                <button
-                                    onClick={() => logic.setModel('seedream')}
-                                    className={`group relative p-3 rounded-lg transition-all ${logic.model === 'seedream' ? 'bg-[var(--color-primary)] text-[var(--color-text-on-primary)] shadow-lg scale-110' : 'bg-[var(--color-bg-muted)] text-[var(--color-text-dim)] hover:bg-[var(--color-bg-muted-hover)] hover:scale-105'}`}
-                                    aria-label="Select Seedream Edit model"
-                                >
-                                    <WavesIcon className="w-6 h-6" />
-                                    <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-[var(--color-primary-accent)] text-white text-xs font-semibold rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-100 pointer-events-none shadow-lg z-50">
-                                        Seedream Edit
-                                    </span>
-                                </button>
-                                <button
-                                    onClick={() => logic.setModel('flux-kontext-pro')}
-                                    className={`group relative p-3 rounded-lg transition-all ${logic.model === 'flux-kontext-pro' ? 'bg-[var(--color-primary)] text-[var(--color-text-on-primary)] shadow-lg scale-110' : 'bg-[var(--color-bg-muted)] text-[var(--color-text-dim)] hover:bg-[var(--color-bg-muted-hover)] hover:scale-105'}`}
-                                    aria-label="Select Flux Kontext Pro model"
-                                >
-                                    <ZapIcon className="w-6 h-6" />
-                                    <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-[var(--color-primary-accent)] text-white text-xs font-semibold rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-100 pointer-events-none shadow-lg z-50">
-                                        Flux Kontext Pro
-                                    </span>
-                                </button>
-                                <button
-                                    onClick={() => logic.setModel('qwen')}
-                                    className={`group relative p-3 rounded-lg transition-all ${logic.model === 'qwen' ? 'bg-[var(--color-primary)] text-[var(--color-text-on-primary)] shadow-lg scale-110' : 'bg-[var(--color-bg-muted)] text-[var(--color-text-dim)] hover:bg-[var(--color-bg-muted-hover)] hover:scale-105'}`}
-                                    aria-label="Select Qwen Image Edit model"
-                                >
-                                    <FlowerIcon className="w-6 h-6" />
-                                    <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-[var(--color-primary-accent)] text-white text-xs font-semibold rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-100 pointer-events-none shadow-lg z-50">
-                                        Qwen Image Edit
-                                    </span>
-                                </button>
-                            </div>
-                        </div>
-                        
-                        {logic.model === 'nano-banana' && (
-                            <div>
-                                <label className="block text-xs font-medium text-[var(--color-text-dim)] mb-2">Aspect Ratio (Optional)</label>
-                                <div className="grid grid-cols-5 gap-2">
-                                    {NANO_BANANA_RATIOS.map(ratio => (
-                                        <button
-                                            key={ratio}
-                                            onClick={() => logic.setAspectRatio(logic.aspectRatio === ratio ? null : ratio)}
-                                            className={`py-2 text-xs font-semibold rounded-md transition-colors ${logic.aspectRatio === ratio ? 'bg-[var(--color-primary)] text-[var(--color-text-on-primary)]' : 'bg-[var(--color-bg-muted)] text-[var(--color-text-light)] hover:bg-[var(--color-bg-muted-hover)]'}`}
-                                        >
-                                            {ratio}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        {logic.model === 'flux-kontext-pro' && (
-                            <div>
-                                <label className="block text-xs font-medium text-[var(--color-text-dim)] mb-2">Aspect Ratio (Optional)</label>
-                                <div className="grid grid-cols-5 gap-2">
-                                    {FLUX_KONTEXT_PRO_RATIOS.map(ratio => (
-                                        <button
-                                            key={ratio}
-                                            onClick={() => logic.setAspectRatio(logic.aspectRatio === ratio ? null : ratio)}
-                                            className={`py-2 text-xs font-semibold rounded-md transition-colors ${logic.aspectRatio === ratio ? 'bg-[var(--color-primary)] text-[var(--color-text-on-primary)]' : 'bg-[var(--color-bg-muted)] text-[var(--color-text-light)] hover:bg-[var(--color-bg-muted-hover)]'}`}
-                                        >
-                                            {ratio}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        {logic.model === 'seedream' && (
-                            <div>
-                                <label htmlFor="image-size-preset" className="block text-sm font-medium text-[var(--color-text-light)] mb-1">
-                                    Image Size
-                                </label>
-                                <div className="flex items-center gap-2">
-                                    <select
-                                        id="image-size-preset"
-                                        value={logic.imageSizePreset}
-                                        onChange={(e) => logic.setImageSizePreset(e.target.value)}
-                                        className="block flex-1 min-w-0 rounded-md border-0 bg-[var(--color-bg-base)] py-2 px-3 text-[var(--color-text-light)] shadow-sm ring-1 ring-inset ring-[var(--color-border-default)] focus:ring-2 focus:ring-inset focus:ring-[var(--color-primary-ring)] sm:text-sm"
-                                    >
-                                        {Object.keys(logic.imageSizePresets).map((key) => (
-                                            <option key={key} value={key}>{logic.imageSizePresets[key].name}</option>
-                                        ))}
-                                    </select>
-                                    <input
-                                        type="number"
-                                        value={logic.imageSizePreset.startsWith('auto') ? '' : logic.customWidth}
-                                        placeholder={logic.imageSizePreset.startsWith('auto') ? '?' : undefined}
-                                        onChange={(e) => logic.setCustomWidth(Math.max(1024, Math.min(4096, parseInt(e.target.value, 10) || 1024)))}
-                                        disabled={logic.imageSizePreset !== 'custom'}
-                                        readOnly={logic.imageSizePreset === 'custom_4K' || logic.imageSizePreset === 'custom_2K'}
-                                        className="block w-12 rounded-md border-0 bg-[var(--color-bg-base)] py-2 px-2 text-[var(--color-text-light)] shadow-sm ring-1 ring-inset ring-[var(--color-border-default)] focus:ring-2 focus:ring-inset focus:ring-[var(--color-primary-ring)] sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed read-only:opacity-70 read-only:cursor-default [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                        aria-label="Width"
-                                        min="1024"
-                                        max="4096"
-                                    />
-                                    <span className="text-[var(--color-text-dimmer)]">×</span>
-                                    <input
-                                        type="number"
-                                        value={logic.imageSizePreset.startsWith('auto') ? '' : logic.customHeight}
-                                        placeholder={logic.imageSizePreset.startsWith('auto') ? '?' : undefined}
-                                        onChange={(e) => logic.setCustomHeight(Math.max(1024, Math.min(4096, parseInt(e.target.value, 10) || 1024)))}
-                                        disabled={logic.imageSizePreset !== 'custom'}
-                                        readOnly={logic.imageSizePreset === 'custom_4K' || logic.imageSizePreset === 'custom_2K'}
-                                        className="block w-12 rounded-md border-0 bg-[var(--color-bg-base)] py-2 px-2 text-[var(--color-text-light)] shadow-sm ring-1 ring-inset ring-[var(--color-border-default)] focus:ring-2 focus:ring-inset focus:ring-[var(--color-primary-ring)] sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed read-only:opacity-70 read-only:cursor-default [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                        aria-label="Height"
-                                        min="1024"
-                                        max="4096"
-                                    />
-                                </div>
-                                {(logic.imageSizePreset === 'custom' || logic.imageSizePreset === 'custom_4K' || logic.imageSizePreset === 'custom_2K') && (
-                                    <div className="mt-2 flex flex-wrap gap-2">
-                                        {ASPECT_RATIO_PRESETS.map(preset => {
-                                            // For custom mode, check width/height match
-                                            // For custom_4K/custom_2K, check aspectRatio label match
-                                            const isActive = logic.imageSizePreset === 'custom'
-                                                ? preset.width === logic.customWidth && preset.height === logic.customHeight
-                                                : logic.aspectRatio === preset.label;
-                                            return (
-                                                <button
-                                                    key={preset.label}
-                                                    type="button"
-                                                    onClick={() => {
-                                                        if (logic.imageSizePreset === 'custom') {
-                                                            // For custom mode, directly set width/height
-                                                            logic.setCustomWidth(preset.width);
-                                                            logic.setCustomHeight(preset.height);
-                                                        } else if (logic.imageSizePreset === 'custom_4K' || logic.imageSizePreset === 'custom_2K') {
-                                                            // For custom_4K/custom_2K, set aspect ratio which triggers recalculation
-                                                            logic.setAspectRatio(preset.label);
-                                                        }
-                                                    }}
-                                                    className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
-                                                        isActive
-                                                            ? 'bg-[var(--color-primary)] text-[var(--color-text-on-primary)] ring-2 ring-offset-1 ring-offset-[var(--color-bg-surface)] ring-[var(--color-primary-ring)]'
-                                                            : 'bg-[var(--color-bg-muted)] text-[var(--color-text-light)] hover:bg-[var(--color-bg-muted-hover)]'
-                                                    }`}
-                                                >
-                                                    {preset.label}
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
-                                )}
-                                {logic.isSeedreamAspectRatioInvalid && (
-                                    <p className="mt-2 text-xs text-[var(--color-warning-accent)]">
-                                        Warning: Seedream aspect ratio (width/height) should be between 0.333 and 3.
-                                    </p>
-                                )}
-                            </div>
-                        )}
-                    </div>
 
                     <div className="w-full relative">
                         <PromptEditor
@@ -326,12 +226,37 @@ const ImageStudio: React.FC<ImageStudioProps> = ({ logic, onImageClick, onShowHe
         </div>
 
         <GenerationToolbar
-            aspectRatio={'1:1' as AspectRatio}
-            onAspectRatioChange={() => {}}
-            showAspectRatio={false}
+            aspectRatio={(logic.aspectRatio || '1:1') as AspectRatio}
+            onAspectRatioChange={(ratio) => logic.setAspectRatio(ratio)}
+            aspectRatioOptions={getAspectRatioOptions()}
+            showAspectRatio={logic.model !== 'seedream'}
             showImageCount={false}
             imageCount={1}
             onImageCountChange={() => {}}
+            modelButtons={modelButtons}
+            modeButtons={logic.model === 'nano-banana-pro' ? [
+                {
+                    key: '1K',
+                    text: '1K',
+                    onClick: () => logic.setResolution('1K'),
+                    isActive: logic.resolution === '1K',
+                    tooltip: '1024x1024 resolution'
+                },
+                {
+                    key: '2K',
+                    text: '2K',
+                    onClick: () => logic.setResolution('2K'),
+                    isActive: logic.resolution === '2K',
+                    tooltip: '2048x2048 resolution'
+                },
+                {
+                    key: '4K',
+                    text: '4K',
+                    onClick: () => logic.setResolution('4K'),
+                    isActive: logic.resolution === '4K',
+                    tooltip: '4096x4096 resolution'
+                }
+            ] : undefined}
             generateButtonText="Generate"
             onGenerate={logic.handleGenerate}
             generateDisabled={logic.isGenerateDisabled}
@@ -340,6 +265,26 @@ const ImageStudio: React.FC<ImageStudioProps> = ({ logic, onImageClick, onShowHe
             onStartOver={logic.handleClearGallery}
             startOverDisabled={logic.isLoading || logic.generationResults.length === 0}
             studioMode="image"
+            seedreamSettings={logic.model === 'seedream' ? {
+                imageSizePreset: logic.imageSizePreset,
+                onImageSizePresetChange: logic.setImageSizePreset,
+                imageSizePresets: logic.imageSizePresets,
+                customWidth: logic.customWidth,
+                customHeight: logic.customHeight,
+                onCustomWidthChange: logic.setCustomWidth,
+                onCustomHeightChange: logic.setCustomHeight,
+                aspectRatioPresets: ASPECT_RATIO_PRESETS,
+                currentAspectRatio: logic.aspectRatio,
+                onAspectRatioPresetClick: (preset) => {
+                    if (logic.imageSizePreset === 'custom') {
+                        logic.setCustomWidth(preset.width);
+                        logic.setCustomHeight(preset.height);
+                    } else if (logic.imageSizePreset === 'custom_4K' || logic.imageSizePreset === 'custom_2K') {
+                        logic.setAspectRatio(preset.label);
+                    }
+                },
+                isSeedreamAspectRatioInvalid: logic.isSeedreamAspectRatioInvalid
+            } : undefined}
         />
         </>
     );

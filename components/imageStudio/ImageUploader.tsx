@@ -54,8 +54,8 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageSelect, ima
 
     return (
         <div className="w-full">
-            <div 
-                className={`flex justify-center items-center rounded-lg border-2 border-dashed px-4 py-4 transition-colors duration-300 relative ${numImages === 0 ? 'aspect-[8/5]' : ''} ${isDraggingOver ? 'border-[var(--color-primary-accent)] bg-[var(--color-bg-surface-light)]' : 'border-[var(--color-border-default)] hover:border-[var(--color-primary)]'}`}
+            <div
+                className={`flex justify-center ${numImages > 0 ? 'items-start' : 'items-center'} rounded-lg border-2 border-dashed px-4 py-4 transition-colors duration-300 relative aspect-[4/5] overflow-y-auto overflow-x-hidden custom-scrollbar ${isDraggingOver ? 'border-[var(--color-primary-accent)] bg-[var(--color-bg-surface-light)]' : 'border-[var(--color-border-default)] hover:border-[var(--color-primary)]'}`}
                 onDragEnter={handleDragEnter}
                 onDragLeave={handleDragLeave}
                 onDragOver={handleDragEvent}

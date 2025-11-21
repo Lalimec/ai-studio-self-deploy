@@ -477,12 +477,34 @@ export const generateDepthMap = async (
     if (result && Array.isArray(result.images) && result.images.length > 0 && typeof result.images[0] === 'string') {
       const imageString = result.images[0];
 
-      // Check if it's already a data URL
+      // Check if response is a URL (depth map now returns URLs instead of base64)
+      if (imageString.startsWith('http://') || imageString.startsWith('https://')) {
+        // Fetch the image and convert to data URL
+        const response = await fetch(imageString);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch depth map from URL: ${response.status}`);
+        }
+
+        const blob = await response.blob();
+        const finalMimeType = blob.type || 'image/png';
+
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            const dataUrl = reader.result as string;
+            resolve(dataUrl);
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+      }
+
+      // Check if it's already a data URL (legacy support)
       if (imageString.startsWith('data:')) {
         return imageString;
       }
 
-      // Otherwise assume it's base64 and add the data URL prefix
+      // Otherwise assume it's base64 and add the data URL prefix (legacy support)
       return `data:image/png;base64,${imageString}`;
     }
 

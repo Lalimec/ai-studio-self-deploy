@@ -16,6 +16,7 @@ export const models = {
     flash: 'gemini-2.5-flash-image',
     // The following are identifiers used in the UI
     nanoBanana: 'nano-banana',
+    nanoBananaPro: 'nano-banana-pro',
     seedream: 'seedream',
     flux: 'flux-kontext-pro',
     qwen: 'qwen',
@@ -29,7 +30,7 @@ export const endpoints = {
 
   // Video Stitching (ffmpeg)
   videoStitcher: 'https://n8n.cemil.al/webhook/5533f0bb-064a-4757-adcb-56793505fdf3/ffmpeg/stitch',
-  
+
   // Image Upload
   imageUpload: 'https://n8n.cemil.al/webhook/fbe9280c-07a6-451c-abdd-cf261c501856/ai-studio/image-upload-google-bucket',
 
@@ -42,6 +43,7 @@ export const endpoints = {
     flux: 'https://n8n.cemil.al/webhook/3bd7adc2-c5ef-4e89-b43e-b0b0c063f199/fal/edit-flux-kontext',
     // Placeholder for a third-party Gemini Flash Image provider
     nanoBanana: 'https://n8n.cemil.al/webhook/7c6e2f5c-24aa-4650-9152-3d718bd69f8c/higgsfield/edit-nano-banana',
+    nanoBananaPro: 'https://n8n.cemil.al/webhook/7c6e2f5c-24aa-4650-9152-3d718bd69f8c/higgsfield/edit-nano-banana-pro', // Placeholder
     qwen: 'https://n8n.cemil.al/webhook/5533f0bb-064a-4757-adcb-56793505fdf3/fal/edit-qwen',
     depthMap: 'https://n8n.cemil.al/webhook/3bd7adc2-c5ef-4e89-b43e-b0b0c063f199/fal/marigold-depth',
   }
@@ -157,44 +159,44 @@ export const schemas = {
     },
     nanoBanana: {
       request: {
-          prompt: 'string',
-          image_urls: 'string[] (public URLs)',
-          aspect_ratio: 'string (e.g., "16:9", "auto")',
+        prompt: 'string',
+        image_urls: 'string[] (public URLs)',
+        aspect_ratio: 'string (e.g., "16:9", "auto")',
       },
       response: {
-          success: {
-              images: ['string (base64 encoded image data)'],
-          }
+        success: {
+          images: ['string (base64 encoded image data)'],
+        }
       }
     },
     qwen: {
       request: {
-          prompt: 'string',
-          image_url: 'string (public URL)',
-          num_inference_steps: 'number (default: 30)',
-          guidance_scale: 'number (default: 4)',
-          num_images: 'number (default: 1)',
-          enable_safety_checker: 'boolean (default: false)',
-          output_format: 'string (default: "png")',
-          negative_prompt: 'string (default: "blurry, ugly")',
-          acceleration: 'string (default: "regular")',
+        prompt: 'string',
+        image_url: 'string (public URL)',
+        num_inference_steps: 'number (default: 30)',
+        guidance_scale: 'number (default: 4)',
+        num_images: 'number (default: 1)',
+        enable_safety_checker: 'boolean (default: false)',
+        output_format: 'string (default: "png")',
+        negative_prompt: 'string (default: "blurry, ugly")',
+        acceleration: 'string (default: "regular")',
       },
       response: {
-          success: {
-              images: ['string (base64 encoded image data)'],
-          }
+        success: {
+          images: ['string (base64 encoded image data)'],
+        }
       }
     },
     depthMap: {
       request: {
-          image_url: 'string (public URL)',
-          num_inference_steps: 'number (default: 5)',
-          ensemble_size: 'number (default: 5)',
+        image_url: 'string (public URL)',
+        num_inference_steps: 'number (default: 5)',
+        ensemble_size: 'number (default: 5)',
       },
       response: {
-          success: {
-              images: ['string (base64 encoded image data)'],
-          }
+        success: {
+          images: ['string (base64 encoded image data)'],
+        }
       }
     }
   },
@@ -203,7 +205,7 @@ export const schemas = {
 
 // Alias for easier access and semantic grouping
 export const Constance = {
-    models,
-    endpoints,
-    schemas,
+  models,
+  endpoints,
+  schemas,
 };

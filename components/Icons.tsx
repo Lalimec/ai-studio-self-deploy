@@ -67,6 +67,7 @@ export const BabyIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <LuB
 export const ArchitectureStudioIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <LuBuilding2 {...props} />;
 export const AlertCircleIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <LuCircleAlert {...props} />;
 export const TranslateIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <LuLanguages {...props} />;
+export const ImageIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <LuImage {...props} />;
 export const ImageStudioIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <LuImage {...props} />;
 export const GridIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <LuLayoutGrid {...props} />;
 export const TimelineIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <LuGalleryHorizontal {...props} />;
