@@ -42,15 +42,15 @@ const ParentUploader = React.memo<{ onImageUpload: (file: File) => void }>(({ on
     );
 });
 
-const CroppedParentImage = React.memo<{ 
-    parent: ParentImageState, 
-    onRecrop: () => void, 
-    onClear: () => void, 
+const CroppedParentImage = React.memo<{
+    parent: ParentImageState,
+    onRecrop: () => void,
+    onClear: () => void,
     isParentDataLocked: boolean,
     onPrepare: () => void,
     onGenerateVideo: () => void,
     onDownload: () => void
-}> = ({ parent, onRecrop, onClear, isParentDataLocked, onPrepare, onGenerateVideo, onDownload }) => {
+}>(({ parent, onRecrop, onClear, isParentDataLocked, onPrepare, onGenerateVideo, onDownload }) => {
     const { croppedSrc, isPreparing, isGeneratingVideo, videoSrc, videoPrompt, videoGenerationFailed } = parent;
     const isThisParentBusy = isPreparing || isGeneratingVideo;
     const [isHovering, setIsHovering] = useState(false);
