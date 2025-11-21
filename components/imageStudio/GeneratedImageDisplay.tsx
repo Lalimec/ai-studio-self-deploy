@@ -188,7 +188,7 @@ export const GeneratedImageDisplay: React.FC<GeneratedImageDisplayProps> = ({
                     if (result.status === 'warning') {
                         const isExpanded = expandedWarnings.has(result.key);
                         return (
-                            <div key={result.key} className="group relative aspect-[4/5]">
+                            <div key={result.key} className="group relative" style={{ aspectRatio: pendingAspectRatio }}>
                                 <div
                                     className="h-full p-4 bg-[var(--color-warning-bg)] border border-[var(--color-warning-border)] rounded-lg flex flex-col items-center justify-center text-center overflow-y-auto custom-scrollbar"
                                 >
@@ -225,7 +225,7 @@ export const GeneratedImageDisplay: React.FC<GeneratedImageDisplayProps> = ({
                     }
                     if (result.status === 'error') {
                         return (
-                            <div key={result.key} className="group relative aspect-[4/5]">
+                            <div key={result.key} className="group relative" style={{ aspectRatio: pendingAspectRatio }}>
                                 <div className="h-full p-4 bg-red-900/30 border border-[var(--color-destructive)] rounded-lg flex flex-col items-center justify-center text-center overflow-y-auto custom-scrollbar">
                                 <PiWarningIcon className="w-8 h-8 text-[var(--color-destructive)] mb-2" />
                                 <p className="text-sm font-semibold text-[var(--color-text-light)]">Image Failed</p>

@@ -694,6 +694,8 @@ export const useImageStudioLogic = (
             key: `${timestamp}-${imgIdx}-${prmptIdx}`, status: 'pending', originalImageIndex: imgIdx, originalPromptIndex: prmptIdx, batchTimestamp: timestamp
         })));
         setGenerationResults(prev => [...newResults, ...prev]);
+        // Set progress immediately so progress bar shows during upload phase
+        setProgress({ completed: 0, total: newResults.length });
         setIsLoading(true);
 
         // Ensure all files have cached publicUrls before generating (avoids redundant uploads)
@@ -719,6 +721,8 @@ export const useImageStudioLogic = (
 
         // Set pending status FIRST so placeholders appear immediately
         setGenerationResults(prev => prev.map(r => (r.status === 'error' || r.status === 'warning') ? { ...r, status: 'pending', error: undefined, modelResponse: undefined } : r));
+        // Set progress immediately so progress bar shows during upload phase
+        setProgress({ completed: 0, total: failed.length });
         setIsLoading(true);
 
         // Ensure files have cached publicUrls before retrying

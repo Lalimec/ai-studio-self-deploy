@@ -16,7 +16,7 @@ interface ImageGridProps {
   mode?: 'hairStudio' | 'videoStudio' | 'babyStudio' | 'architectureStudio';
 }
 
-const ImageCard: React.FC<Omit<ImageGridProps, 'images' | 'pendingCount' | 'placeholderAspectRatio'> & { image: DisplayImage }> = ({
+const ImageCard: React.FC<Omit<ImageGridProps, 'images' | 'pendingCount'> & { image: DisplayImage }> = ({
   image,
   onImageClick,
   onRegenerate,
@@ -26,6 +26,7 @@ const ImageCard: React.FC<Omit<ImageGridProps, 'images' | 'pendingCount' | 'plac
   onGenerateSingleVideo,
   onGenerateDepthMap,
   mode = 'hairStudio',
+  placeholderAspectRatio,
 }) => {
   const [isHovering, setIsHovering] = useState(false);
   const [isVideoReady, setIsVideoReady] = useState(false);
@@ -71,7 +72,8 @@ const ImageCard: React.FC<Omit<ImageGridProps, 'images' | 'pendingCount' | 'plac
       
   return (
     <div
-      className="group relative bg-[var(--color-bg-surface)] rounded-lg overflow-hidden shadow-lg shadow-color-[var(--color-shadow-primary)]/10 animate-fade-in aspect-[4/5]"
+      className="group relative bg-[var(--color-bg-surface)] rounded-lg overflow-hidden shadow-lg shadow-color-[var(--color-shadow-primary)]/10 animate-fade-in"
+      style={{ aspectRatio: placeholderAspectRatio }}
       onMouseEnter={() => videoSrc && setIsHovering(true)}
       onMouseLeave={() => videoSrc && setIsHovering(false)}
     >
@@ -277,6 +279,7 @@ const ImageGrid: React.FC<ImageGridProps> = ({
             key={'id' in item.data ? item.data.id : item.data.filename}
             image={item.data}
             mode={mode}
+            placeholderAspectRatio={placeholderAspectRatio}
             {...props}
           />
         );
