@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import { generateFigureImage, translateToEnglish, generatePromptList, generatePromptVariation, enhancePrompt } from '../services/geminiService';
 import { AppFile, Toast, DownloadSettings } from '../types';
-import { fileToBase64, generateShortId, getTimestamp, sanitizeFilename } from '../services/imageUtils';
+import { fileToBase64, generateShortId, generateSetId, getTimestamp, sanitizeFilename } from '../services/imageUtils';
 import { logUserAction } from '../services/loggingService';
 import { downloadImageWithMetadata, downloadBulkImages } from '../services/downloadService';
 import { Constance } from '../services/endpoints';
@@ -131,7 +131,14 @@ export const useNanoBananaProStudio = (
                 file,
                 id: generateShortId(),
             }));
-            setImageFiles(prev => [...prev, ...newFiles]);
+            setImageFiles(prev => {
+                const updated = [...prev, ...newFiles];
+                // Generate setId when first files are added
+                if (prev.length === 0 && updated.length > 0) {
+                    setSetId(generateSetId());
+                }
+                return updated;
+            });
         }
         setShowCropChoiceModal(false);
         setFilesAwaitingCropChoice(null);
@@ -147,7 +154,14 @@ export const useNanoBananaProStudio = (
             file,
             id: generateShortId(),
         }));
-        setImageFiles(prev => [...prev, ...newFiles]);
+        setImageFiles(prev => {
+            const updated = [...prev, ...newFiles];
+            // Generate setId when first files are added
+            if (prev.length === 0 && updated.length > 0) {
+                setSetId(generateSetId());
+            }
+            return updated;
+        });
         setCroppingFiles(null);
     };
 
@@ -167,11 +181,19 @@ export const useNanoBananaProStudio = (
     }, []);
 
     const handleRemoveImage = useCallback((id: string) => {
-        setImageFiles(prev => prev.filter(f => f.id !== id));
+        setImageFiles(prev => {
+            const updated = prev.filter(f => f.id !== id);
+            // Clear setId when all images are removed
+            if (updated.length === 0) {
+                setSetId('');
+            }
+            return updated;
+        });
     }, []);
 
     const handleClearImages = useCallback(() => {
         setImageFiles([]);
+        setSetId('');
     }, []);
 
     // --- Prompt Logic ---
@@ -558,7 +580,7 @@ export const useNanoBananaProStudio = (
 
                 await downloadBulkImages({
                     images,
-                    zipFilename: `NanoBananaPro_Batch_${setId}_${getTimestamp()}.zip`,
+                    zipFilename: `AI_Studio_Image_Batch_${setId}_${getTimestamp()}.zip`,
                     progressCallback: setDownloadProgress,
                     embedPrompts: true,
                     includeMetadataFiles: downloadSettings.includeMetadataFiles,
