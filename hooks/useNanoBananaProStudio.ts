@@ -6,6 +6,7 @@ import { logUserAction } from '../services/loggingService';
 import { downloadImageWithMetadata, downloadBulkImages } from '../services/downloadService';
 import { Constance } from '../services/endpoints';
 import { uploadImageFromDataUrl } from '../services/imageUploadService';
+import { runConcurrentTasks } from '../services/apiUtils';
 
 export interface NanoBananaProGenerationResult {
     key: string;
@@ -392,22 +393,11 @@ export const useNanoBananaProStudio = (
 
         logUserAction('GENERATE_IMAGES_NANOBANANAPRO', { imageCount: imageFiles.length, promptCount: prompts.length, numImages, resolution });
 
-        setIsLoading(true);
-
-        // Ensure all files have cached publicUrls before generating (avoids redundant uploads)
-        try {
-            await ensurePublicUrls();
-        } catch (error) {
-            addToast(`Failed to upload images: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
-            setIsLoading(false);
-            return;
-        }
-
         const timestamp = Date.now();
 
-        // Create placeholders: For each prompt, we expect 'numImages' results
+        // Create placeholders IMMEDIATELY for instant UI feedback
         const newResults: NanoBananaProGenerationResult[] = [];
-        const tasks: (() => Promise<void>)[] = [];
+        const taskConfigs: { pIndex: number; prompt: string; keys: string[] }[] = [];
 
         prompts.forEach((prompt, pIndex) => {
             const finalPrompt = [prependPrompt, prompt, appendPrompt].filter(Boolean).join(' ').trim();
@@ -426,22 +416,44 @@ export const useNanoBananaProStudio = (
                 });
             }
 
-            tasks.push(createGenerationTask(pIndex, prompt, timestamp, keysForThisPrompt));
+            taskConfigs.push({ pIndex, prompt, keys: keysForThisPrompt });
         });
 
+        // Show placeholders immediately
         setGenerationResults(prev => [...newResults, ...prev]);
-        setProgress({ completed: 0, total: tasks.length });
+        setProgress({ completed: 0, total: taskConfigs.length });
+        setIsLoading(true);
 
-        let completed = 0;
-        for (const task of tasks) {
-            await task();
-            completed++;
-            setProgress({ completed, total: tasks.length });
+        // Ensure all files have cached publicUrls before generating (runs after placeholders shown)
+        try {
+            await ensurePublicUrls();
+        } catch (error) {
+            addToast(`Failed to upload images: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
+            // Mark all placeholders as error
+            setGenerationResults(prev => prev.map(r =>
+                newResults.some(nr => nr.key === r.key)
+                    ? { ...r, status: 'error', error: 'Image upload failed' }
+                    : r
+            ));
+            setIsLoading(false);
+            return;
         }
+
+        // Create tasks for parallel execution
+        const tasks = taskConfigs.map(config => createGenerationTask(config.pIndex, config.prompt, timestamp, config.keys));
+
+        // Run tasks in parallel with concurrency limit of 5
+        await runConcurrentTasks(
+            tasks,
+            5,
+            () => {}, // Success handled inside createGenerationTask
+            () => {}, // Failure handled inside createGenerationTask
+            (completed, total) => setProgress({ completed, total })
+        );
 
         setIsLoading(false);
 
-    }, [imageFiles, getActivePrompts, jsonPrompts, jsonError, createGenerationTask, addToast, prependPrompt, appendPrompt, numImages, resolution]);
+    }, [imageFiles, getActivePrompts, jsonPrompts, jsonError, createGenerationTask, addToast, prependPrompt, appendPrompt, numImages, resolution, ensurePublicUrls]);
 
     // --- Result Management ---
     const handleRemoveResult = useCallback((key: string) => {

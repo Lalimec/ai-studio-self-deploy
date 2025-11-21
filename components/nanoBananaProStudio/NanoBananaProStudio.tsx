@@ -152,8 +152,8 @@ export const NanoBananaProStudio: React.FC<NanoBananaProStudioProps> = ({
                     onImageCountChange={() => {}}
                     onGenerate={logic.handleGenerate}
                     generateButtonText="Generate"
-                    generateDisabled={logic.isLoading}
-                    pendingCount={logic.isLoading ? 1 : 0}
+                    generateDisabled={false}
+                    pendingCount={logic.generationResults.filter(r => r.status === 'pending').length}
                     showAspectRatio={true}
                     showImageCount={false}
                     modeButtons={[
