@@ -67,6 +67,7 @@ function App() {
     const [showHelpModal, setShowHelpModal] = useState(false);
     const [downloadProgress, setDownloadProgress] = useState({ visible: false, message: '', progress: 0 });
     const [showGlobalSettings, setShowGlobalSettings] = useState(false);
+    const [isReadingFile, setIsReadingFile] = useState(false);
     const [showBetaFeatures, setShowBetaFeatures] = useState(() => {
         try {
             const stored = localStorage.getItem('showBetaFeatures');
@@ -192,19 +193,21 @@ function App() {
     const nanoBananaProLogic = useNanoBananaProStudio(addToast, setConfirmAction, setDownloadProgress, withMultiDownloadWarning, downloadSettings);
 
     useEffect(() => {
-        const isModalOpen = isCropping || timelineStudioLogic.isCropping || lightboxIndex !== null || confirmAction || showHelpModal || downloadProgress.visible || timelineStudioLogic.showCropChoice || timelineStudioLogic.isLightboxOpen || !!imageStudioLogic.pendingFiles || imageStudioLogic.croppingFiles || adClonerLogic.settingsModalOpen || showGlobalSettings;
+        const isModalOpen = isCropping || timelineStudioLogic.isCropping || lightboxIndex !== null || confirmAction || showHelpModal || downloadProgress.visible || timelineStudioLogic.showCropChoice || timelineStudioLogic.isLightboxOpen || !!imageStudioLogic.pendingFiles || imageStudioLogic.croppingFiles || adClonerLogic.settingsModalOpen || showGlobalSettings || isReadingFile;
         if (isModalOpen) {
             document.body.style.overflow = 'hidden';
         } else {
             document.body.style.overflow = 'auto';
         }
         return () => { document.body.style.overflow = 'auto'; };
-    }, [isCropping, timelineStudioLogic.isCropping, lightboxIndex, confirmAction, showHelpModal, downloadProgress.visible, timelineStudioLogic.showCropChoice, timelineStudioLogic.isLightboxOpen, imageStudioLogic.pendingFiles, imageStudioLogic.croppingFiles, adClonerLogic.settingsModalOpen, showGlobalSettings]);
+    }, [isCropping, timelineStudioLogic.isCropping, lightboxIndex, confirmAction, showHelpModal, downloadProgress.visible, timelineStudioLogic.showCropChoice, timelineStudioLogic.isLightboxOpen, imageStudioLogic.pendingFiles, imageStudioLogic.croppingFiles, adClonerLogic.settingsModalOpen, showGlobalSettings, isReadingFile]);
 
     // --- Unified Cropping Logic ---
     const handleImageUpload = useCallback((file: File, cropper: NonNullable<ActiveCropper>) => {
+        setIsReadingFile(true);
         const reader = new FileReader();
         reader.onload = (e) => {
+            setIsReadingFile(false);
             const src = e.target?.result as string;
             setImageToCrop(src);
             setActiveCropper(cropper);
@@ -225,6 +228,9 @@ function App() {
             } else if (cropper?.type === 'adCloner-refine' && cropper.id) {
                 adClonerLogic.onRefineImageUpload(file, src, cropper.id);
             }
+        };
+        reader.onerror = () => {
+            setIsReadingFile(false);
         };
         reader.readAsDataURL(file);
     }, [hairStudioLogic, babyStudioLogic, adClonerLogic]);
@@ -748,6 +754,14 @@ function App() {
             )}
 
             {downloadProgress.visible && <DownloadProgressModal {...downloadProgress} />}
+            {isReadingFile && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-lg p-6 flex flex-col items-center gap-3">
+                        <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                        <p className="text-gray-700">Reading image...</p>
+                    </div>
+                </div>
+            )}
             {showHelpModal && <HelpModal
                 onClose={() => setShowHelpModal(false)}
                 maleCategories={MALE_HAIRSTYLES}

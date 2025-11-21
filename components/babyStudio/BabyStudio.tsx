@@ -15,7 +15,7 @@ interface BabyStudioProps {
     onDownloadSingle: (filename: string) => void;
 }
 
-const ParentUploader: React.FC<{ onImageUpload: (file: File) => void }> = ({ onImageUpload }) => {
+const ParentUploader = React.memo<{ onImageUpload: (file: File) => void }>(({ onImageUpload }) => {
     const [isDragging, setIsDragging] = useState(false);
     const handleFileChange = useCallback((file: File | null) => { if (file) onImageUpload(file); }, [onImageUpload]);
     const onDragEnter = useCallback((e: React.DragEvent<HTMLDivElement>) => { e.preventDefault(); e.stopPropagation(); setIsDragging(true); }, []);
@@ -40,9 +40,9 @@ const ParentUploader: React.FC<{ onImageUpload: (file: File) => void }> = ({ onI
             </div>
         </div>
     );
-};
+});
 
-const CroppedParentImage: React.FC<{ 
+const CroppedParentImage = React.memo<{ 
     parent: ParentImageState, 
     onRecrop: () => void, 
     onClear: () => void, 
@@ -117,7 +117,7 @@ const CroppedParentImage: React.FC<{
             </div>
         </div>
     );
-};
+});
 
 const BabyStudio: React.FC<BabyStudioProps> = ({
     logic, onImageUpload, onRecrop, onImageClick, onShowHelp, onDownloadSingle
