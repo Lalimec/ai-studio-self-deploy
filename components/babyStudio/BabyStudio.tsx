@@ -166,7 +166,7 @@ const BabyStudio: React.FC<BabyStudioProps> = ({
                     />
                 )}
             </div>
-            <BabyOptionsPanel options={options} setOptions={setOptions} disabled={logic.isBusy} />
+            <BabyOptionsPanel options={options} setOptions={setOptions} disabled={false} />
         </div>
         <div>
            <div className="flex justify-between items-center mb-4 gap-4 flex-wrap">
@@ -205,12 +205,12 @@ const BabyStudio: React.FC<BabyStudioProps> = ({
     <GenerationToolbar
         aspectRatio={options.aspectRatio}
         onAspectRatioChange={(ratio) => setOptions(prev => ({ ...prev, aspectRatio: ratio }))}
-        aspectRatioDisabled={logic.isBusy}
+        aspectRatioDisabled={false}
         imageCount={options.imageCount}
         onImageCountChange={(count) => setOptions(prev => ({ ...prev, imageCount: count }))}
         imageCountMin={1}
         imageCountMax={12}
-        imageCountDisabled={logic.isBusy}
+        imageCountDisabled={false}
         generateButtonText="Generate"
         onGenerate={handleGenerate}
         generateDisabled={isGenerateDisabled}
