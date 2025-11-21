@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useNanoBananaProStudio } from '../../hooks/useNanoBananaProStudio';
 import { ProStudioImageSlots } from './ProStudioImageSlots';
 import { PromptEditor } from '../imageStudio/PromptEditor';
@@ -9,6 +9,13 @@ import { PiDownloadSimpleIcon, PiTrashIcon, HelpIcon, PiSpinnerIcon, BananaIcon 
 import { MultiCropView } from '../imageStudio/MultiCropView';
 import { CropChoiceModal } from '../imageStudio/CropChoiceModal';
 import { ImageStudioConfirmationDialog } from '../imageStudio/ImageStudioConfirmationDialog';
+
+// Convert aspect ratio string (e.g., '4:5', '16:9') to numeric ratio (width/height)
+const aspectRatioToNumeric = (ratio: string): number => {
+    if (ratio === 'auto' || !ratio.includes(':')) return 1; // Default to square
+    const [w, h] = ratio.split(':').map(Number);
+    return w / h;
+};
 
 interface NanoBananaProStudioProps {
     logic: ReturnType<typeof useNanoBananaProStudio>;
@@ -21,6 +28,10 @@ export const NanoBananaProStudio: React.FC<NanoBananaProStudioProps> = ({
     onShowHelp,
     onImageClick
 }) => {
+    // Calculate aspect ratio for pending placeholders
+    const pendingAspectRatio = useMemo(() => {
+        return aspectRatioToNumeric(logic.aspectRatio);
+    }, [logic.aspectRatio]);
 
     if (logic.croppingFiles) {
         return (
@@ -119,6 +130,7 @@ export const NanoBananaProStudio: React.FC<NanoBananaProStudioProps> = ({
                             onDownloadSingle={logic.handleDownloadResult}
                             progress={logic.progress}
                             emptyIcon={BananaIcon}
+                            pendingAspectRatio={pendingAspectRatio}
                         />
                     </div>
                 </div>

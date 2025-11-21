@@ -14,6 +14,7 @@ interface GeneratedImageDisplayProps {
     onDownloadSingle: (key: string) => void;
     progress: { completed: number; total: number; };
     emptyIcon?: React.ComponentType<React.SVGProps<SVGSVGElement>>;
+    pendingAspectRatio?: number; // Aspect ratio for pending placeholders (width/height)
 }
 
 export const GeneratedImageDisplay: React.FC<GeneratedImageDisplayProps> = ({
@@ -21,6 +22,7 @@ export const GeneratedImageDisplay: React.FC<GeneratedImageDisplayProps> = ({
     onRetryOne, onRemoveImage, onDownloadSingle,
     progress,
     emptyIcon: EmptyIcon,
+    pendingAspectRatio = 0.8, // Default to 4:5 portrait
 }) => {
     const [expandedWarnings, setExpandedWarnings] = useState<Set<string>>(new Set());
     const containerRef = useRef<HTMLDivElement>(null);
@@ -106,17 +108,17 @@ export const GeneratedImageDisplay: React.FC<GeneratedImageDisplayProps> = ({
                 {(successfulImages.length > 0 || pendingResults.length > 0) && containerWidth > 0 && aspectRatios.size === successfulImages.length && (
                     <JustifiedGallery
                         images={[
-                            // Successful images with loaded aspect ratios
-                            ...successfulImages.map(result => ({
-                                url: result.url!,
-                                aspectRatio: aspectRatios.get(result.url!) || 0.8,
-                                key: result.key
-                            })),
-                            // Pending results with estimated aspect ratio (4:5 = 0.8)
+                            // Pending results FIRST (at top of gallery)
                             // Use special URL prefix to identify pending items
                             ...pendingResults.map(result => ({
                                 url: `pending:${result.key}`, // Special prefix to identify pending
-                                aspectRatio: 0.8, // Estimated aspect ratio for pending
+                                aspectRatio: pendingAspectRatio, // Use selected aspect ratio
+                                key: result.key
+                            })),
+                            // Successful images with loaded aspect ratios
+                            ...successfulImages.map(result => ({
+                                url: result.url!,
+                                aspectRatio: aspectRatios.get(result.url!) || pendingAspectRatio,
                                 key: result.key
                             }))
                         ]}
