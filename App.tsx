@@ -54,7 +54,7 @@ export type ActiveCropper = {
 
 function App() {
   const [appMode, setAppMode] = useState<AppMode>('hairStudio');
-  
+
   // --- Shared State ---
   const [toasts, setToasts] = useState<ToastType[]>([]);
   const [isCropping, setIsCropping] = useState(false);
@@ -65,6 +65,7 @@ function App() {
   const [showHelpModal, setShowHelpModal] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState({ visible: false, message: '', progress: 0 });
   const [showGlobalSettings, setShowGlobalSettings] = useState(false);
+  const [isReadingFile, setIsReadingFile] = useState(false);
   const [showBetaFeatures, setShowBetaFeatures] = useState(() => {
     try {
         const stored = localStorage.getItem('showBetaFeatures');
@@ -189,42 +190,71 @@ function App() {
   const videoAnalyzerLogic = useVideoAnalyzerStudio({ addToast, setConfirmAction, setDownloadProgress, withMultiDownloadWarning, useNanoBananaWebhook: nanoBananaWebhookSettings.videoAnalyzer, downloadSettings });
   
   useEffect(() => {
-    const isModalOpen = isCropping || timelineStudioLogic.isCropping || lightboxIndex !== null || confirmAction || showHelpModal || downloadProgress.visible || timelineStudioLogic.showCropChoice || timelineStudioLogic.isLightboxOpen || !!imageStudioLogic.pendingFiles || imageStudioLogic.croppingFiles || adClonerLogic.settingsModalOpen || showGlobalSettings;
+    const isModalOpen = isCropping || timelineStudioLogic.isCropping || lightboxIndex !== null || confirmAction || showHelpModal || downloadProgress.visible || timelineStudioLogic.showCropChoice || timelineStudioLogic.isLightboxOpen || !!imageStudioLogic.pendingFiles || imageStudioLogic.croppingFiles || adClonerLogic.settingsModalOpen || showGlobalSettings || isReadingFile;
     if (isModalOpen) {
         document.body.style.overflow = 'hidden';
     } else {
         document.body.style.overflow = 'auto';
     }
     return () => { document.body.style.overflow = 'auto'; };
-  }, [isCropping, timelineStudioLogic.isCropping, lightboxIndex, confirmAction, showHelpModal, downloadProgress.visible, timelineStudioLogic.showCropChoice, timelineStudioLogic.isLightboxOpen, imageStudioLogic.pendingFiles, imageStudioLogic.croppingFiles, adClonerLogic.settingsModalOpen, showGlobalSettings]);
+  }, [isCropping, timelineStudioLogic.isCropping, lightboxIndex, confirmAction, showHelpModal, downloadProgress.visible, timelineStudioLogic.showCropChoice, timelineStudioLogic.isLightboxOpen, imageStudioLogic.pendingFiles, imageStudioLogic.croppingFiles, adClonerLogic.settingsModalOpen, showGlobalSettings, isReadingFile]);
 
   // --- Unified Cropping Logic ---
   const handleImageUpload = useCallback((file: File, cropper: NonNullable<ActiveCropper>) => {
+    setIsReadingFile(true);
+
     const reader = new FileReader();
     reader.onload = (e) => {
       const src = e.target?.result as string;
-      setImageToCrop(src);
-      setActiveCropper(cropper);
-      setIsCropping(true);
 
-      if (cropper?.type === 'hair') {
-        hairStudioLogic.setOriginalFile(file);
-      } else if (cropper?.type === 'parent1') {
-        babyStudioLogic.setParent1(p => ({ ...p, id: 'parent1', file, originalSrc: src, filename: file.name }));
-      } else if (cropper?.type === 'parent2') {
-        babyStudioLogic.setParent2(p => ({ ...p, id: 'parent2', file, originalSrc: src, filename: file.name }));
-      } else if (cropper?.type === 'architecture') {
-        architectureStudioLogic.setOriginalFile(file);
-      } else if (cropper?.type === 'adCloner-ad') {
-          adClonerLogic.setAdImage(p => ({ ...p, file, originalSrc: src }));
-      } else if (cropper?.type === 'adCloner-subject' && cropper.id) {
-          adClonerLogic.onSubjectUpload(file, src, cropper.id);
-      } else if (cropper?.type === 'adCloner-refine' && cropper.id) {
-          adClonerLogic.onRefineImageUpload(file, src, cropper.id);
+      // Use requestIdleCallback to yield to UI and reduce blocking
+      const processImage = () => {
+        setImageToCrop(src);
+        setActiveCropper(cropper);
+        setIsCropping(true);
+        setIsReadingFile(false);
+
+        if (cropper?.type === 'hair') {
+          hairStudioLogic.setOriginalFile(file);
+        } else if (cropper?.type === 'parent1') {
+          babyStudioLogic.setParent1(p => ({ ...p, id: 'parent1', file, originalSrc: src, filename: file.name }));
+        } else if (cropper?.type === 'parent2') {
+          babyStudioLogic.setParent2(p => ({ ...p, id: 'parent2', file, originalSrc: src, filename: file.name }));
+        } else if (cropper?.type === 'architecture') {
+          architectureStudioLogic.setOriginalFile(file);
+        } else if (cropper?.type === 'adCloner-ad') {
+            adClonerLogic.setAdImage(p => ({ ...p, file, originalSrc: src }));
+        } else if (cropper?.type === 'adCloner-subject' && cropper.id) {
+            adClonerLogic.onSubjectUpload(file, src, cropper.id);
+        } else if (cropper?.type === 'adCloner-refine' && cropper.id) {
+            adClonerLogic.onRefineImageUpload(file, src, cropper.id);
+        }
+      };
+
+      // Use requestIdleCallback with fallback to setTimeout
+      if ('requestIdleCallback' in window) {
+        requestIdleCallback(processImage);
+      } else {
+        setTimeout(processImage, 0);
       }
     };
+
+    reader.onerror = () => {
+      setIsReadingFile(false);
+      addToast('Failed to read image file', 'error');
+    };
+
     reader.readAsDataURL(file);
-  }, [hairStudioLogic, babyStudioLogic, adClonerLogic]);
+  }, [
+    hairStudioLogic.setOriginalFile,
+    babyStudioLogic.setParent1,
+    babyStudioLogic.setParent2,
+    architectureStudioLogic.setOriginalFile,
+    adClonerLogic.setAdImage,
+    adClonerLogic.onSubjectUpload,
+    adClonerLogic.onRefineImageUpload,
+    addToast
+  ]);
   
   const handleCropConfirm = (croppedImageDataUrl: string, aspectRatio: number) => {
     if (activeCropper?.type === 'hair') {
@@ -711,6 +741,16 @@ function App() {
       )}
       
       {downloadProgress.visible && <DownloadProgressModal {...downloadProgress} />}
+
+      {isReadingFile && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-[var(--color-bg-surface)] p-6 rounded-xl shadow-2xl flex flex-col items-center gap-3">
+            <div className="w-12 h-12 border-4 border-[var(--color-primary-accent)] border-t-transparent rounded-full animate-spin"></div>
+            <p className="text-[var(--color-text-main)] font-semibold">Reading image...</p>
+          </div>
+        </div>
+      )}
+
       {showHelpModal && <HelpModal 
           onClose={() => setShowHelpModal(false)} 
           maleCategories={MALE_HAIRSTYLES} 
