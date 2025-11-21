@@ -664,6 +664,7 @@ function App() {
                         babyImages={babyStudioLogic.generatedImages}
                         architectureImages={architectureStudioLogic.generatedImages}
                         imageStudioImages={imageStudioLogic.generationResults.filter(r => r.status === 'success').map(r => ({ src: r.url!, filename: imageStudioLogic.getDownloadFilename(r), imageGenerationPrompt: r.prompt! }))}
+                        nanoBananaProStudioImages={nanoBananaProLogic.generationResults.filter(r => r.status === 'success').map(r => ({ src: r.url!, filename: nanoBananaProLogic.getDownloadFilename(r), imageGenerationPrompt: r.prompt! }))}
                         adClonerImageCount={adClonerImageCount}
                         showBetaFeatures={showBetaFeatures}
                         onImport={handleImportToStudio}
@@ -676,6 +677,7 @@ function App() {
                         babyImages={babyStudioLogic.generatedImages}
                         architectureImages={architectureStudioLogic.generatedImages}
                         imageStudioImages={imageStudioLogic.generationResults.filter(r => r.status === 'success').map(r => ({ src: r.url!, filename: imageStudioLogic.getDownloadFilename(r), imageGenerationPrompt: r.prompt! }))}
+                        nanoBananaProStudioImages={nanoBananaProLogic.generationResults.filter(r => r.status === 'success').map(r => ({ src: r.url!, filename: nanoBananaProLogic.getDownloadFilename(r), imageGenerationPrompt: r.prompt! }))}
                         adClonerImageCount={adClonerImageCount}
                         showBetaFeatures={showBetaFeatures}
                         onImport={handleImportToTimelineStudio}
