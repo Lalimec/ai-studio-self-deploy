@@ -40,7 +40,7 @@ export const useNanoBananaProStudio = (
     const [promptGenerationInstructions, setPromptGenerationInstructions] = useState<string>('');
     const [isGeneratingPrompts, setIsGeneratingPrompts] = useState<boolean>(false);
     const [isTranslatingInstructions, setIsTranslatingInstructions] = useState<boolean>(false);
-    const [filenameTemplate, setFilenameTemplate] = useState<string>('{set_id}_{original_filename}_{short_id}_after_{timestamp}_{version_index}');
+    const [filenameTemplate, setFilenameTemplate] = useState<string>('{set_id}_{original_filename}_{timestamp}_{version_index}');
 
     // Async Operation States
     const [translatingIndices, setTranslatingIndices] = useState<Set<number>>(new Set());
@@ -500,10 +500,16 @@ export const useNanoBananaProStudio = (
         if (baseName.startsWith('cropped_')) baseName = baseName.substring(8);
         const sanitizedBaseName = sanitizeFilename(baseName);
 
+        // Conditional source reference: use original_filename for single image, source count for multiple
+        const sourceReference = imageFiles.length === 1
+            ? sanitizedBaseName
+            : `${imageFiles.length}src`;
+
         const filename = filenameTemplate
             .replace('{timestamp}', String(batchTimestamp))
             .replace('{set_id}', setId)
-            .replace('{original_filename}', sanitizedBaseName)
+            .replace('{original_filename}', sourceReference)
+            .replace('{source_count}', String(imageFiles.length))
             .replace('{version_index}', String(originalPromptIndex + 1))
             .replace('{short_id}', shortId);
 

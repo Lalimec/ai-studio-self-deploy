@@ -138,7 +138,10 @@ export const AdvancedOptions: React.FC<AdvancedOptionsProps> = (props) => {
                                 className="block w-full rounded-md border-0 bg-[var(--color-bg-base)] py-2 px-3 text-[var(--color-text-light)] shadow-sm ring-1 ring-inset ring-[var(--color-border-muted)] focus:ring-2 focus:ring-inset focus:ring-[var(--color-primary-ring)] sm:text-sm"
                             />
                             <p className="mt-1 text-xs text-[var(--color-text-dimmer)]">
-                                Placeholders: <code className="bg-[var(--color-bg-muted)] px-1 rounded">{'{original_filename}'}</code> <code className="bg-[var(--color-bg-muted)] px-1 rounded">{'{short_id}'}</code> <code className="bg-[var(--color-bg-muted)] px-1 rounded">{'{set_id}'}</code> <code className="bg-[var(--color-bg-muted)] px-1 rounded">{'{version_index}'}</code> <code className="bg-[var(--color-bg-muted)] px-1 rounded">{'{timestamp}'}</code>
+                                Placeholders: <code className="bg-[var(--color-bg-muted)] px-1 rounded">{'{original_filename}'}</code> <code className="bg-[var(--color-bg-muted)] px-1 rounded">{'{source_count}'}</code> <code className="bg-[var(--color-bg-muted)] px-1 rounded">{'{set_id}'}</code> <code className="bg-[var(--color-bg-muted)] px-1 rounded">{'{version_index}'}</code> <code className="bg-[var(--color-bg-muted)] px-1 rounded">{'{timestamp}'}</code>
+                            </p>
+                            <p className="mt-1 text-xs text-[var(--color-text-dimmer)]">
+                                <span className="italic">Pro Studio: </span><code className="bg-[var(--color-bg-muted)] px-1 rounded">{'{original_filename}'}</code> shows source filename for single image, or "Nsrc" (e.g., "3src") for multiple images.
                             </p>
                         </div>
                     </div>

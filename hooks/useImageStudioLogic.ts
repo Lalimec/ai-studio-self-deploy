@@ -472,6 +472,7 @@ export const useImageStudioLogic = (
             .replace('{timestamp}', String(batchTimestamp))
             .replace('{set_id}', setId)
             .replace('{original_filename}', sanitizedBaseName)
+            .replace('{source_count}', '1') // Image Studio always uses 1 source per generation
             .replace('{version_index}', String(originalPromptIndex + 1))
             .replace('{short_id}', shortId);
 
