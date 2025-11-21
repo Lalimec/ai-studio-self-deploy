@@ -363,6 +363,8 @@ export const useImageStudioLogic = (
     const handleClearGallery = useCallback(() => {
         setGenerationResults([]);
         setProgress({ completed: 0, total: 0 });
+        setImageFiles([]);
+        setSetId('');
     }, []);
 
     const handleRemoveGeneratedImage = useCallback((key: string) => {
