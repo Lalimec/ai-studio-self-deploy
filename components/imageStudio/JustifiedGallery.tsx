@@ -1,5 +1,5 @@
 /// <reference lib="dom" />
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 
 interface ImageItem {
     url: string;
@@ -127,14 +127,18 @@ export const JustifiedGallery: React.FC<JustifiedGalleryProps> = ({
  */
 export const useImageDimensions = (urls: string[]): Map<string, number> => {
     const [aspectRatios, setAspectRatios] = useState<Map<string, number>>(new Map());
+    // Use ref to track which URLs are already loading/loaded to avoid duplicate requests
+    const loadingUrlsRef = useRef<Set<string>>(new Set());
 
     useEffect(() => {
-        // Only load URLs that aren't already cached
-        const urlsToLoad = urls.filter(url => !aspectRatios.has(url));
+        // Load each URL that isn't already loading or loaded
+        urls.forEach((url) => {
+            // Skip if already loading or loaded
+            if (loadingUrlsRef.current.has(url)) return;
 
-        if (urlsToLoad.length === 0) return;
+            // Mark as loading
+            loadingUrlsRef.current.add(url);
 
-        urlsToLoad.forEach((url) => {
             // Load image to get dimensions
             const img = new Image();
             img.onload = () => {
@@ -156,7 +160,7 @@ export const useImageDimensions = (urls: string[]): Map<string, number> => {
             };
             img.src = url;
         });
-    }, [urls.join(','), aspectRatios]); // Re-run when URLs change
+    }, [urls.join(',')]); // Only re-run when URLs change
 
     return aspectRatios;
 };

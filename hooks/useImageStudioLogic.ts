@@ -665,8 +665,11 @@ export const useImageStudioLogic = (
     }, [imageFiles, prependPrompt, appendPrompt, model, width, height, imageSizePreset, aspectRatio, resolution, useNanoBananaWebhook]);
     
     const runGenerations = useCallback(async (tasks: (() => Promise<ImageStudioRunResult>)[]) => {
-        if (tasks.length === 0) return;
-        setIsLoading(true);
+        if (tasks.length === 0) {
+            setIsLoading(false);
+            return;
+        }
+        // Note: isLoading should already be true from caller (set before upload starts)
         await runConcurrentTasks(tasks, 10, handleSuccess, handleFail, (completed, total) => setProgress({ completed, total }));
         setIsLoading(false);
     }, [handleSuccess, handleFail]);
@@ -683,20 +686,26 @@ export const useImageStudioLogic = (
         }
         logUserAction('GENERATE_IMAGES_IMAGESTUDIO', { imageCount: imageFiles.length, promptCount: prompts.length, totalGenerations: imageFiles.length * prompts.length, setId });
 
-        // Ensure all files have cached publicUrls before generating (avoids redundant uploads)
-        try {
-            await ensurePublicUrls();
-        } catch (error) {
-            addToast(`Failed to upload images: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
-            return;
-        }
-
+        // Create pending results FIRST so placeholders appear immediately
         const timestamp = Date.now();
         setBatchTimestamp(timestamp);
         const newResults: ImageStudioGenerationResult[] = imageFiles.flatMap((_, imgIdx) => prompts.map((_, prmptIdx) => ({
             key: `${timestamp}-${imgIdx}-${prmptIdx}`, status: 'pending', originalImageIndex: imgIdx, originalPromptIndex: prmptIdx, batchTimestamp: timestamp
         })));
         setGenerationResults(prev => [...newResults, ...prev]);
+        setIsLoading(true);
+
+        // Ensure all files have cached publicUrls before generating (avoids redundant uploads)
+        try {
+            await ensurePublicUrls();
+        } catch (error) {
+            addToast(`Failed to upload images: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
+            // Mark all pending as error
+            setGenerationResults(prev => prev.map(r => r.batchTimestamp === timestamp ? { ...r, status: 'error', error: 'Upload failed' } : r));
+            setIsLoading(false);
+            return;
+        }
+
         const tasks = imageFiles.flatMap((_, imgIdx) => prompts.map((_, prmptIdx) => createGenerationTask(imgIdx, prmptIdx, prompts, timestamp)));
         await runGenerations(tasks);
     }, [imageFiles, getActivePrompts, jsonPrompts, jsonError, createGenerationTask, runGenerations, addToast, setId, ensurePublicUrls]);
@@ -707,15 +716,21 @@ export const useImageStudioLogic = (
         if (failed.length === 0) return;
         logUserAction('RETRY_ALL_IMAGES_IMAGESTUDIO', { failedCount: failed.length, setId });
 
+        // Set pending status FIRST so placeholders appear immediately
+        setGenerationResults(prev => prev.map(r => (r.status === 'error' || r.status === 'warning') ? { ...r, status: 'pending', error: undefined, modelResponse: undefined } : r));
+        setIsLoading(true);
+
         // Ensure files have cached publicUrls before retrying
         try {
             await ensurePublicUrls();
         } catch (error) {
             addToast(`Failed to upload images: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
+            // Mark all retrying as error
+            setGenerationResults(prev => prev.map(r => failed.some(f => f.key === r.key) && r.status === 'pending' ? { ...r, status: 'error', error: 'Upload failed' } : r));
+            setIsLoading(false);
             return;
         }
 
-        setGenerationResults(prev => prev.map(r => (r.status === 'error' || r.status === 'warning') ? { ...r, status: 'pending', error: undefined, modelResponse: undefined } : r));
         const prompts = getActivePrompts();
         const tasks = failed.map(r => createGenerationTask(r.originalImageIndex, r.originalPromptIndex, prompts, r.batchTimestamp));
         await runGenerations(tasks);
