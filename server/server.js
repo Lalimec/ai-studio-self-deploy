@@ -18,8 +18,10 @@ const app = express();
 const port = process.env.PORT || 3000;
 const externalApiBaseUrl = 'https://generativelanguage.googleapis.com';
 const externalWsBaseUrl = 'wss://generativelanguage.googleapis.com';
+const plainlyApiBaseUrl = 'https://api.plainlyvideos.com';
 // Support either API key env-var variant
 const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
+const plainlyApiKey = process.env.PLAINLY_API_KEY;
 
 const staticPath = path.join(__dirname,'dist');
 const publicPath = path.join(__dirname,'public');
@@ -53,6 +55,62 @@ const proxyLimiter = rateLimit({
 
 // Apply the rate limiter to the /api-proxy route before the main proxy logic
 app.use('/api-proxy', proxyLimiter);
+
+// Proxy route for Plainly Videos API calls (HTTP)
+app.use('/plainly-proxy', async (req, res) => {
+    // Handle OPTIONS request for CORS preflight
+    if (req.method === 'OPTIONS') {
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+        res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+        res.setHeader('Access-Control-Max-Age', '86400');
+        return res.sendStatus(200);
+    }
+
+    try {
+        // Construct the target URL
+        const targetPath = req.url.startsWith('/') ? req.url.substring(1) : req.url;
+        const apiUrl = `${plainlyApiBaseUrl}/${targetPath}`;
+        console.log(`Plainly Proxy: Forwarding request to ${apiUrl}`);
+
+        // Get API key from request (client-side provided) or server env
+        const clientApiKey = req.headers.authorization?.replace('Basic ', '');
+        const authKey = clientApiKey || plainlyApiKey;
+
+        if (!authKey) {
+            return res.status(401).json({ error: 'Plainly API key not provided' });
+        }
+
+        // Prepare headers
+        const outgoingHeaders = {
+            'Content-Type': 'application/json',
+            'Authorization': `Basic ${authKey}`,
+        };
+
+        // Make the request to Plainly API
+        const response = await axios({
+            method: req.method,
+            url: apiUrl,
+            headers: outgoingHeaders,
+            data: req.body,
+            validateStatus: () => true, // Don't throw on any status code
+        });
+
+        // Forward response headers
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        Object.entries(response.headers).forEach(([key, value]) => {
+            if (!['connection', 'transfer-encoding'].includes(key.toLowerCase())) {
+                res.setHeader(key, value);
+            }
+        });
+
+        // Send response
+        res.status(response.status).send(response.data);
+    } catch (error) {
+        console.error('Plainly proxy error:', error.message);
+        res.status(500).json({ error: 'Plainly proxy error', message: error.message });
+    }
+});
 
 // Proxy route for Gemini API calls (HTTP)
 app.use('/api-proxy', async (req, res, next) => {

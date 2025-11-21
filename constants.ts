@@ -712,3 +712,108 @@ export const analysisModels: { id: AnalysisModel; name: string }[] = [
     { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro' },
     { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash' },
 ];
+
+// --- AD CREATIVE STUDIO CONSTANTS ---
+
+import { PlainlyProject, PlainlyParameter } from './types';
+
+export const AD_CREATIVE_APP_CODES = [
+  { id: 'CFO', name: 'CFO' },
+  { id: 'TCO', name: 'TCO' },
+  { id: 'CHT', name: 'CHT' },
+  { id: 'ARC', name: 'ARC' },
+];
+
+export const AD_CREATIVE_DESIGNERS = [
+  { id: 'CA', name: 'CA' },
+  { id: 'AB', name: 'AB' },
+  { id: 'NA', name: 'NA' },
+  { id: 'MK', name: 'MK' },
+];
+
+// Default endcard URL for 4grid-and-slideshow-v2 project
+export const DEFAULT_ENDCARD_URL = 'https://d6ut7of78kezj.cloudfront.net/4grid-and-slideshow/other-assets/ortak-endcard.mp4';
+
+// Define parameter templates for the 4grid-and-slideshow-v2 project
+const GRID_SLIDESHOW_PARAMETERS: PlainlyParameter[] = [
+  { name: 'varEndcard', type: 'video', value: DEFAULT_ENDCARD_URL, displayName: 'Endcard' },
+  { name: 'varSpeach', type: 'speech', value: null, displayName: 'Speech' },
+  { name: 'varMusic', type: 'music', value: null, displayName: 'Music' },
+  { name: 'varCaptions', type: 'video', value: null, displayName: 'Captions' },
+  { name: 'varImage01', type: 'image', value: null, displayName: 'Image 01' },
+  { name: 'varImage02', type: 'image', value: null, displayName: 'Image 02' },
+  { name: 'varImage03', type: 'image', value: null, displayName: 'Image 03' },
+  { name: 'varImage04', type: 'image', value: null, displayName: 'Image 04' },
+  { name: 'varVideo1', type: 'video', value: null, displayName: 'Video 1' },
+  { name: 'varImage05', type: 'image', value: null, displayName: 'Image 05' },
+  { name: 'varImage06', type: 'image', value: null, displayName: 'Image 06' },
+  { name: 'varImage07', type: 'image', value: null, displayName: 'Image 07' },
+  { name: 'varImage08', type: 'image', value: null, displayName: 'Image 08' },
+  { name: 'varVideo2', type: 'video', value: null, displayName: 'Video 2' },
+  { name: 'varImage09', type: 'image', value: null, displayName: 'Image 09' },
+  { name: 'varImage10', type: 'image', value: null, displayName: 'Image 10' },
+  { name: 'varImage11', type: 'image', value: null, displayName: 'Image 11' },
+  { name: 'varImage12', type: 'image', value: null, displayName: 'Image 12' },
+  { name: 'varVideo3', type: 'video', value: null, displayName: 'Video 3' },
+  { name: 'varImage13', type: 'image', value: null, displayName: 'Image 13' },
+  { name: 'varImage14', type: 'image', value: null, displayName: 'Image 14' },
+  { name: 'varImage15', type: 'image', value: null, displayName: 'Image 15' },
+  { name: 'varImage16', type: 'image', value: null, displayName: 'Image 16' },
+  { name: 'varVideo4', type: 'video', value: null, displayName: 'Video 4' },
+  { name: 'varImageOriginal', type: 'image', value: null, displayName: 'Original Image' },
+];
+
+// Define parameter templates for the finger-snap-warp-slideshow project
+const FINGER_SNAP_PARAMETERS: PlainlyParameter[] = [
+  { name: 'var0Jpg', type: 'image', value: null, displayName: 'Image 0' },
+  { name: 'var1Jpg', type: 'image', value: null, displayName: 'Image 1' },
+  { name: 'var2Jpg', type: 'image', value: null, displayName: 'Image 2' },
+  { name: 'var3Jpg', type: 'image', value: null, displayName: 'Image 3' },
+  { name: 'var4Jpg', type: 'image', value: null, displayName: 'Image 4' },
+  { name: 'var5Jpg', type: 'image', value: null, displayName: 'Image 5' },
+  { name: 'var6Jpg', type: 'image', value: null, displayName: 'Image 6' },
+  { name: 'var7Jpg', type: 'image', value: null, displayName: 'Image 7' },
+  { name: 'var8Jpg', type: 'image', value: null, displayName: 'Image 8' },
+  { name: 'var9Jpg', type: 'image', value: null, displayName: 'Image 9' },
+  { name: 'var0DepthJpg', type: 'image', value: null, displayName: 'Depth Map 0' },
+  { name: 'var1DepthJpg', type: 'image', value: null, displayName: 'Depth Map 1' },
+  { name: 'var2DepthJpg', type: 'image', value: null, displayName: 'Depth Map 2' },
+  { name: 'var3DepthJpg', type: 'image', value: null, displayName: 'Depth Map 3' },
+  { name: 'var4DepthJpg', type: 'image', value: null, displayName: 'Depth Map 4' },
+  { name: 'var5DepthJpg', type: 'image', value: null, displayName: 'Depth Map 5' },
+  { name: 'var6DepthJpg', type: 'image', value: null, displayName: 'Depth Map 6' },
+  { name: 'var7DepthJpg', type: 'image', value: null, displayName: 'Depth Map 7' },
+  { name: 'var8DepthJpg', type: 'image', value: null, displayName: 'Depth Map 8' },
+  { name: 'var9DepthJpg', type: 'image', value: null, displayName: 'Depth Map 9' },
+  { name: 'varScanColor', type: 'text', value: null, displayName: 'Scan Color' },
+  { name: 'var0Mp4', type: 'video', value: null, displayName: 'Video 0' },
+  { name: 'var1Mp4', type: 'video', value: null, displayName: 'Video 1' },
+  { name: 'varEndcard', type: 'video', value: null, displayName: 'Endcard Video' },
+];
+
+export const AD_CREATIVE_PROJECTS: PlainlyProject[] = [
+  {
+    id: '7f42a3cc-0e43-464a-a15b-a7b317ba09b6',
+    name: '4Grid & Slideshow V2',
+    templateName: '4grid-and-slideshow-v2',
+    templates: [
+      { id: '9380aa07-a654-4527-807f-78318bbce87f', name: '4x5', aspectRatio: '4:5' },
+      { id: '531785b9-d4e5-4d02-a72a-3510a3dddf65', name: '16x9', aspectRatio: '16:9' },
+      { id: '002ca988-3152-4fc8-ba6e-6b99b8be84cd', name: '9x16', aspectRatio: '9:16' },
+      { id: 'd1c06c0e-8b04-429c-bdba-32ac95d3e42c', name: '1x1', aspectRatio: '1:1' },
+    ],
+    parameters: GRID_SLIDESHOW_PARAMETERS,
+  },
+  {
+    id: 'c94c74ac-e51a-4eaf-8479-e705790ea008',
+    name: 'Finger Snap Warp Slideshow',
+    templateName: 'finger-snap-warp-slideshow',
+    templates: [
+      { id: '1b59bad3-51e5-4baa-84f1-ae84a11efb8b', name: '4x5', aspectRatio: '4:5' },
+      { id: 'd07d8ce8-2ecc-4c76-908a-ee71c1e32a67', name: '1x1', aspectRatio: '1:1' },
+      { id: '94d9f0ce-c6be-45d6-b56d-55ee8ac3de8a', name: '16x9', aspectRatio: '16:9' },
+      { id: '28f8ff8a-4bba-492d-840c-ae35c7ca1bb6', name: '9x16', aspectRatio: '9:16' },
+    ],
+    parameters: FINGER_SNAP_PARAMETERS,
+  },
+];

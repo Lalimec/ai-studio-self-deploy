@@ -29,7 +29,7 @@ export const endpoints = {
 
   // Video Stitching (ffmpeg)
   videoStitcher: 'https://n8n.cemil.al/webhook/5533f0bb-064a-4757-adcb-56793505fdf3/ffmpeg/stitch',
-  
+
   // Image Upload
   imageUpload: 'https://n8n.cemil.al/webhook/fbe9280c-07a6-451c-abdd-cf261c501856/ai-studio/image-upload-google-bucket',
 
@@ -44,7 +44,10 @@ export const endpoints = {
     nanoBanana: 'https://n8n.cemil.al/webhook/7c6e2f5c-24aa-4650-9152-3d718bd69f8c/higgsfield/edit-nano-banana',
     qwen: 'https://n8n.cemil.al/webhook/5533f0bb-064a-4757-adcb-56793505fdf3/fal/edit-qwen',
     depthMap: 'https://n8n.cemil.al/webhook/3bd7adc2-c5ef-4e89-b43e-b0b0c063f199/fal/marigold-depth',
-  }
+  },
+
+  // Plainly Videos API (Ad Creative Studio)
+  plainlyRender: 'https://api.plainlyvideos.com/api/v2/renders',
 };
 
 /**

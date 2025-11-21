@@ -102,7 +102,7 @@ jobs:
             --platform managed \
             --region $REGION \
             --no-allow-unauthenticated \
-            --set-env-vars GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }} \
+            --set-env-vars GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }},PLAINLY_API_KEY=${{ secrets.PLAINLY_API_KEY }} \
             --memory 512Mi \
             --cpu 1 \
             --max-instances 10 \

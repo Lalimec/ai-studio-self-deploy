@@ -38,6 +38,7 @@ import {
   LuZap,
   LuFlower,
   LuLayers,
+  LuMonitor,
 } from 'react-icons/lu';
 import {
     PiCaretDown, PiSparkle, PiSpinner, PiTranslate, PiCheck,
@@ -107,4 +108,5 @@ export const BananaIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <L
 export const WavesIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <LuWaves {...props} />;
 export const ZapIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <LuZap {...props} />;
 export const FlowerIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <LuFlower {...props} />;
+export const AdCreativeIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <LuMonitor {...props} />;
 export const DepthMapIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <LuLayers {...props} />;
