@@ -3,10 +3,11 @@ import React, { useState, useEffect } from 'react';
 import { ArchitectureGenerationOptions, OriginalImageState } from '../../types';
 import ImageUploader from '../ImageUploader';
 import ArchitectureOptionsPanel from './ArchitectureOptionsPanel';
-import ImageGrid from '../ImageGrid';
+import JustifiedGalleryGrid from '../JustifiedGalleryGrid';
 import GenerationToolbar from '../GenerationToolbar';
-import { TrashIcon, HelpIcon, DownloadIcon, PrepareMagicIcon, VideoIcon, DepthMapIcon, AlertCircleIcon, CheckCircleIcon, BananaIcon, ListChecksIcon, DicesIcon } from '../Icons';
+import { TrashIcon, HelpIcon, DownloadIcon, PrepareMagicIcon, VideoIcon, DepthMapIcon, AlertCircleIcon, CheckCircleIcon, BananaIcon, ListChecksIcon, DicesIcon, ArchitectureStudioIcon } from '../Icons';
 import { useArchitectureStudio } from '../../hooks/useArchitectureStudio';
+import StudioLayout from '../StudioLayout';
 
 type ArchitectureStudioProps = {
     logic: ReturnType<typeof useArchitectureStudio>;
@@ -292,69 +293,66 @@ const ArchitectureStudio: React.FC<ArchitectureStudioProps> = ({
 
     return (
         <>
-        <div className="w-full max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-12 pb-28">
-            <div className="bg-[var(--color-bg-surface)] p-6 rounded-2xl shadow-lg border border-[var(--color-border-muted)] flex flex-col gap-6">
-                <div className="w-full">
-                    {!croppedImage ? (
-                        <ImageUploader onImageUpload={onUpload} />
-                    ) : (
-                        <OriginalImageCard
-                            originalImage={originalImage}
-                            transformedVersions={transformedVersions}
-                            selectedVersion={selectedVersion}
-                            onSelectVersion={setSelectedVersion}
-                            onRecrop={onRecrop}
-                            onClear={handleClearImageAndResults}
-                            isDataLocked={pendingImageCount > 0}
-                            onPrepare={handlePrepareVersion}
-                            onGenerateVideo={handleGenerateVersionVideo}
-                            onGenerateDepthMap={handleGenerateVersionDepthMap}
-                            onDownload={handleDownloadVersion}
-                            onGenerateTransformation={handleGenerateTransformation}
-                            onRemoveTransformation={handleRemoveTransformation}
-                            aspectRatio={croppedImageAspectRatio}
-                        />
-                    )}
+        <StudioLayout
+            sidebar={
+                <>
+                    <div className="w-full">
+                        {!croppedImage ? (
+                            <ImageUploader onImageUpload={onUpload} />
+                        ) : (
+                            <OriginalImageCard
+                                originalImage={originalImage}
+                                transformedVersions={transformedVersions}
+                                selectedVersion={selectedVersion}
+                                onSelectVersion={setSelectedVersion}
+                                onRecrop={onRecrop}
+                                onClear={handleClearImageAndResults}
+                                isDataLocked={pendingImageCount > 0}
+                                onPrepare={handlePrepareVersion}
+                                onGenerateVideo={handleGenerateVersionVideo}
+                                onGenerateDepthMap={handleGenerateVersionDepthMap}
+                                onDownload={handleDownloadVersion}
+                                onGenerateTransformation={handleGenerateTransformation}
+                                onRemoveTransformation={handleRemoveTransformation}
+                                aspectRatio={croppedImageAspectRatio}
+                            />
+                        )}
+                    </div>
+                    <div className="w-full">
+                        <ArchitectureOptionsPanel options={options} setOptions={setOptions} disabled={false} />
+                    </div>
+                </>
+            }
+        >
+            <div className="flex justify-between items-center mb-4 gap-4 flex-wrap">
+                <div className="flex items-center gap-2 flex-shrink-0">
+                    <button onClick={onShowHelp} className="p-2 bg-[var(--color-bg-muted)] hover:bg-[var(--color-bg-muted-hover)] rounded-lg text-[var(--color-text-main)] transition-colors" title="Help"><HelpIcon className="w-5 h-5" /></button>
                 </div>
-                <div className="w-full">
-                    <ArchitectureOptionsPanel options={options} setOptions={setOptions} disabled={false} />
+                {sessionId && <div className="inline-block bg-[var(--color-bg-muted)] text-[var(--color-text-light)] text-sm font-mono py-1.5 px-3 rounded-lg animate-fade-in truncate">Set ID: {sessionId}</div>}
+                <div className="flex items-center gap-2 flex-shrink-0">
+                    <button onClick={handlePrepareAll} disabled={areGlobalActionsDisabled || isPreparing} className="flex items-center gap-2 bg-[var(--color-action-prepare)] hover:bg-[var(--color-action-prepare-hover)] text-[var(--color-text-on-primary)] font-bold py-2 px-4 rounded-lg transition-colors disabled:bg-[var(--color-bg-muted)] disabled:text-[var(--color-text-dimmer)] text-sm"><PrepareMagicIcon className={`w-4 h-4 ${isPreparing ? 'animate-spin' : ''}`} />{isPreparing ? 'Preparing...' : 'Prepare All'}</button>
+                    <button onClick={handleGenerateAllVideos} disabled={areGlobalActionsDisabled || isGeneratingVideos} className="flex items-center gap-2 bg-[var(--color-action-generate)] hover:bg-[var(--color-action-generate-hover)] text-[var(--color-text-on-primary)] font-bold py-2 px-4 rounded-lg transition-colors disabled:bg-[var(--color-bg-muted)] disabled:text-[var(--color-text-dimmer)] text-sm"><VideoIcon className={`w-4 h-4 ${isGeneratingVideos ? 'animate-spin' : ''}`} />{isGeneratingVideos ? 'Generating...' : 'Generate Videos'}</button>
+                    <button onClick={handleGenerateAllDepthMaps} disabled={areDepthMapActionsDisabled || isGeneratingDepthMaps} className="flex items-center gap-2 bg-[var(--color-action-generate)] hover:bg-[var(--color-action-generate-hover)] text-[var(--color-text-on-primary)] font-bold py-2 px-4 rounded-lg transition-colors disabled:bg-[var(--color-bg-muted)] disabled:text-[var(--color-text-dimmer)] text-sm"><DepthMapIcon className={`w-4 h-4 ${isGeneratingDepthMaps ? 'animate-spin' : ''}`} />{isGeneratingDepthMaps ? 'Generating...' : 'Generate Depth Maps'}</button>
+                    <button onClick={handleDownloadAll} disabled={isBusy || generatedImages.length === 0} className="flex items-center gap-2 bg-[var(--color-secondary)] hover:bg-[var(--color-secondary-hover)] text-[var(--color-text-on-primary)] font-bold py-2 px-4 rounded-lg transition-colors disabled:bg-[var(--color-bg-muted)] disabled:text-[var(--color-text-dimmer)] text-sm"><DownloadIcon className="w-4 h-4" />Download All</button>
                 </div>
             </div>
-
-            <div>
-                <div className="flex justify-between items-center mb-4 gap-4 flex-wrap">
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                        <button onClick={onShowHelp} className="p-2 bg-[var(--color-bg-muted)] hover:bg-[var(--color-bg-muted-hover)] rounded-lg text-[var(--color-text-main)] transition-colors" title="Help"><HelpIcon className="w-5 h-5" /></button>
-                    </div>
-                    {sessionId && <div className="inline-block bg-[var(--color-bg-muted)] text-[var(--color-text-light)] text-sm font-mono py-1.5 px-3 rounded-lg animate-fade-in truncate">Set ID: {sessionId}</div>}
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                        <button onClick={handlePrepareAll} disabled={areGlobalActionsDisabled || isPreparing} className="flex items-center gap-2 bg-[var(--color-action-prepare)] hover:bg-[var(--color-action-prepare-hover)] text-[var(--color-text-on-primary)] font-bold py-2 px-4 rounded-lg transition-colors disabled:bg-[var(--color-bg-muted)] disabled:text-[var(--color-text-dimmer)] text-sm"><PrepareMagicIcon className={`w-4 h-4 ${isPreparing ? 'animate-spin' : ''}`} />{isPreparing ? 'Preparing...' : 'Prepare All'}</button>
-                        <button onClick={handleGenerateAllVideos} disabled={areGlobalActionsDisabled || isGeneratingVideos} className="flex items-center gap-2 bg-[var(--color-action-generate)] hover:bg-[var(--color-action-generate-hover)] text-[var(--color-text-on-primary)] font-bold py-2 px-4 rounded-lg transition-colors disabled:bg-[var(--color-bg-muted)] disabled:text-[var(--color-text-dimmer)] text-sm"><VideoIcon className={`w-4 h-4 ${isGeneratingVideos ? 'animate-spin' : ''}`} />{isGeneratingVideos ? 'Generating...' : 'Generate Videos'}</button>
-                        <button onClick={handleGenerateAllDepthMaps} disabled={areDepthMapActionsDisabled || isGeneratingDepthMaps} className="flex items-center gap-2 bg-[var(--color-action-generate)] hover:bg-[var(--color-action-generate-hover)] text-[var(--color-text-on-primary)] font-bold py-2 px-4 rounded-lg transition-colors disabled:bg-[var(--color-bg-muted)] disabled:text-[var(--color-text-dimmer)] text-sm"><DepthMapIcon className={`w-4 h-4 ${isGeneratingDepthMaps ? 'animate-spin' : ''}`} />{isGeneratingDepthMaps ? 'Generating...' : 'Generate Depth Maps'}</button>
-                        <button onClick={handleDownloadAll} disabled={isBusy || generatedImages.length === 0} className="flex items-center gap-2 bg-[var(--color-secondary)] hover:bg-[var(--color-secondary-hover)] text-[var(--color-text-on-primary)] font-bold py-2 px-4 rounded-lg transition-colors disabled:bg-[var(--color-bg-muted)] disabled:text-[var(--color-text-dimmer)] text-sm"><DownloadIcon className="w-4 h-4" />Download All</button>
-                    </div>
-                </div>
-                {pendingImageCount > 0 && (
-                    <div className="mb-4 flex items-center justify-center gap-3 p-3 bg-[var(--color-bg-surface-light)] rounded-lg text-sm text-[var(--color-text-light)]">
-                        <div className="w-5 h-5 border-2 border-dashed rounded-full animate-spin border-[var(--color-primary-accent)]"></div>
-                        <span>Generating {pendingImageCount} new image(s)... Your other actions are unlocked.</span>
-                    </div>
-                )}
-                <ImageGrid
-                    images={generatedImages}
-                    pendingCount={pendingImageCount}
-                    placeholderAspectRatio={croppedImageAspectRatio}
-                    onImageClick={onImageClick}
-                    onRegenerate={handleRegenerateSingle}
-                    onRemove={handleRemoveGeneratedImage}
-                    onReprepare={handlePrepareSingleImage}
-                    onDownloadSingle={handleDownloadSingle}
-                    onGenerateSingleVideo={handleGenerateSingleVideo}
-                    onGenerateDepthMap={handleGenerateSingleDepthMap}
-                    mode="architectureStudio"
-                />
-            </div>
-        </div>
+            <JustifiedGalleryGrid
+                images={generatedImages}
+                pendingCount={pendingImageCount}
+                pendingAspectRatio={options.aspectRatio}
+                onImageClick={onImageClick}
+                onRegenerate={handleRegenerateSingle}
+                onRemove={handleRemoveGeneratedImage}
+                onReprepare={handlePrepareSingleImage}
+                onDownloadSingle={handleDownloadSingle}
+                onGenerateSingleVideo={handleGenerateSingleVideo}
+                onGenerateDepthMap={handleGenerateSingleDepthMap}
+                emptyStateIcon={ArchitectureStudioIcon}
+                emptyStateTitle="Design Gallery Awaits"
+                emptyStateDescription="Use the panel on the left to generate architectural designs!"
+                showVideoActions={true}
+            />
+        </StudioLayout>
 
         <GenerationToolbar
             aspectRatio={options.aspectRatio}

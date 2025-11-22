@@ -3,19 +3,14 @@ import { useNanoBananaProStudio } from '../../hooks/useNanoBananaProStudio';
 import { ProStudioImageSlots } from './ProStudioImageSlots';
 import { PromptEditor } from '../imageStudio/PromptEditor';
 import { AdvancedOptions } from '../imageStudio/AdvancedOptions';
-import { GeneratedImageDisplay } from '../imageStudio/GeneratedImageDisplay';
+import JustifiedGalleryGrid from '../JustifiedGalleryGrid';
 import GenerationToolbar from '../GenerationToolbar';
 import { PiDownloadSimpleIcon, PiTrashIcon, HelpIcon, PiSpinnerIcon, BananaIcon } from '../Icons';
 import { MultiCropView } from '../imageStudio/MultiCropView';
 import { CropChoiceModal } from '../imageStudio/CropChoiceModal';
 import { ImageStudioConfirmationDialog } from '../imageStudio/ImageStudioConfirmationDialog';
-
-// Convert aspect ratio string (e.g., '4:5', '16:9') to numeric ratio (width/height)
-const aspectRatioToNumeric = (ratio: string): number => {
-    if (ratio === 'auto' || !ratio.includes(':')) return 1; // Default to square
-    const [w, h] = ratio.split(':').map(Number);
-    return w / h;
-};
+import { ImageStudioResultImage } from '../../types';
+import StudioLayout from '../StudioLayout';
 
 interface NanoBananaProStudioProps {
     logic: ReturnType<typeof useNanoBananaProStudio>;
@@ -28,10 +23,20 @@ export const NanoBananaProStudio: React.FC<NanoBananaProStudioProps> = ({
     onShowHelp,
     onImageClick
 }) => {
-    // Calculate aspect ratio for pending placeholders
-    const pendingAspectRatio = useMemo(() => {
-        return aspectRatioToNumeric(logic.aspectRatio);
-    }, [logic.aspectRatio]);
+    const pendingCount = logic.generationResults.filter(r => r.status === 'pending').length;
+
+    // Convert successful generation results to DisplayImage format for JustifiedGalleryGrid
+    const successfulImages: ImageStudioResultImage[] = logic.generationResults
+        .filter(r => r.status === 'success' && r.url)
+        .map(r => ({
+            src: r.url!,
+            filename: r.key,
+            imageGenerationPrompt: r.prompt || '',
+            isPreparing: false,
+            videoPrompt: undefined,
+            videoSrc: undefined,
+            isGeneratingVideo: false,
+        }));
 
     if (logic.croppingFiles) {
         return (
@@ -45,36 +50,35 @@ export const NanoBananaProStudio: React.FC<NanoBananaProStudioProps> = ({
 
     return (
         <>
-            <div className="w-full max-w-7xl mx-auto flex flex-col gap-6 pb-28">
-                <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-12">
-                    {/* Left Column: Configuration */}
-                    <div className="bg-[var(--color-bg-surface)] p-6 rounded-2xl shadow-lg border border-[var(--color-border-muted)] flex flex-col items-center gap-6">
-                        {/* 1. Image Upload Slots */}
-                        <ProStudioImageSlots
-                            imageFiles={logic.imageFiles}
-                            imagePreviewUrls={logic.imagePreviewUrls}
-                            onFilesSelected={logic.handleFilesSelected}
-                            onRemoveImage={logic.handleRemoveImage}
-                            maxImages={6}
-                        />
+            <div className="w-full max-w-screen-2xl mx-auto flex flex-col gap-6 pb-28">
+                <StudioLayout
+                    sidebar={
+                        <>
+                            {/* 1. Image Upload Slots */}
+                            <ProStudioImageSlots
+                                imageFiles={logic.imageFiles}
+                                imagePreviewUrls={logic.imagePreviewUrls}
+                                onFilesSelected={logic.handleFilesSelected}
+                                onRemoveImage={logic.handleRemoveImage}
+                                maxImages={6}
+                            />
 
-                        {/* Prompt Editor */}
-                        <PromptEditor
-                            numberOfVersions={logic.numberOfVersions}
-                            onNumberOfVersionsChange={logic.handleNumberOfVersionsChange}
-                            promptContents={logic.promptContents}
-                            onPromptContentChange={logic.handlePromptContentChange}
-                            onTranslate={logic.handleTranslatePrompt}
-                            translatingIndices={logic.translatingIndices}
-                            onGenerateVariation={logic.handleGenerateVariation}
-                            generatingVariationIndices={logic.generatingVariationIndices}
-                            onEnhance={logic.handleEnhancePrompt}
-                            enhancingIndices={logic.enhancingIndices}
-                        />
-                    </div>
-
-                    {/* Right Column: Results */}
-                    <div>
+                            {/* Prompt Editor */}
+                            <PromptEditor
+                                numberOfVersions={logic.numberOfVersions}
+                                onNumberOfVersionsChange={logic.handleNumberOfVersionsChange}
+                                promptContents={logic.promptContents}
+                                onPromptContentChange={logic.handlePromptContentChange}
+                                onTranslate={logic.handleTranslatePrompt}
+                                translatingIndices={logic.translatingIndices}
+                                onGenerateVariation={logic.handleGenerateVariation}
+                                generatingVariationIndices={logic.generatingVariationIndices}
+                                onEnhance={logic.handleEnhancePrompt}
+                                enhancingIndices={logic.enhancingIndices}
+                            />
+                        </>
+                    }
+                >
                         {/* Header Toolbar */}
                         <div className="flex justify-between items-center mb-4 gap-4 flex-wrap">
                             <div className="flex items-center gap-2 flex-shrink-0">
@@ -121,19 +125,25 @@ export const NanoBananaProStudio: React.FC<NanoBananaProStudioProps> = ({
                         </div>
 
                         {/* Results Gallery */}
-                        <GeneratedImageDisplay
-                            generationResults={logic.generationResults as any}
-                            isLoading={logic.isLoading}
-                            onImageClick={onImageClick}
-                            onRetryOne={logic.handleRetryOne}
-                            onRemoveImage={logic.handleRemoveResult}
+                        <JustifiedGalleryGrid
+                            images={successfulImages}
+                            pendingCount={pendingCount}
+                            pendingAspectRatio={logic.aspectRatio as string}
+                            progressCompleted={logic.progress.completed}
+                            progressTotal={logic.progress.total}
+                            onImageClick={(filename) => {
+                                const result = logic.generationResults.find(r => r.key === filename);
+                                if (result?.url) onImageClick(result.url);
+                            }}
+                            onRegenerate={logic.handleRetryOne}
+                            onRemove={logic.handleRemoveResult}
                             onDownloadSingle={logic.handleDownloadResult}
-                            progress={logic.progress}
-                            emptyIcon={BananaIcon}
-                            pendingAspectRatio={pendingAspectRatio}
+                            emptyStateIcon={BananaIcon}
+                            emptyStateTitle="Pro Gallery Awaits"
+                            emptyStateDescription="Upload images, configure prompts, and generate with Nano Banana Pro."
+                            showVideoActions={false}
                         />
-                    </div>
-                </div>
+                </StudioLayout>
 
                 {/* Bottom: Advanced Options */}
                 <AdvancedOptions
@@ -165,7 +175,7 @@ export const NanoBananaProStudio: React.FC<NanoBananaProStudioProps> = ({
                     onGenerate={logic.handleGenerate}
                     generateButtonText="Generate"
                     generateDisabled={false}
-                    pendingCount={logic.generationResults.filter(r => r.status === 'pending').length}
+                    pendingCount={pendingCount}
                     showAspectRatio={true}
                     showImageCount={false}
                     modeButtons={[

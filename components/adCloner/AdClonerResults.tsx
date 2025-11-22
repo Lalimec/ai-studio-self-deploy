@@ -11,8 +11,12 @@ type AdClonerResultsProps = {
     onShowHelp: () => void;
 };
 
-const SkeletonCard: React.FC = () => (
-    <div className="p-4 rounded-xl flex flex-col gap-4 animate-pulse">
+const SkeletonCard: React.FC<{ index: number }> = ({ index }) => (
+    <div
+        key={`skeleton-${index}`}
+        className="p-4 rounded-xl flex flex-col gap-4 animate-pulse"
+        style={{ animationDelay: `${index * 100}ms` }}
+    >
         <div className="h-10 bg-[var(--color-bg-muted)] rounded-md"></div>
         <div className="w-full flex items-center justify-center gap-2 bg-[var(--color-bg-muted)] h-12 rounded-lg"></div>
     </div>
@@ -68,8 +72,14 @@ const AdClonerResults: React.FC<AdClonerResultsProps> = ({ logic, onUpload, onSh
                 </div>
             ) : (
                 <div className="grid grid-cols-1 w-full gap-6">
-                    {isGeneratingPrompts && Array.from({ length: numVariations }).map((_, i) => <SkeletonCard key={i} />)}
-                    
+                    {isGeneratingPrompts && (
+                        <>
+                            {Array.from({ length: numVariations }, (_, i) => (
+                                <SkeletonCard key={`skeleton-${i}`} index={i} />
+                            ))}
+                        </>
+                    )}
+
                     {generationResult && (
                         <>
                             <div>

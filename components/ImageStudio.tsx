@@ -3,15 +3,16 @@ import React from 'react';
 import { useImageStudioLogic } from '../hooks/useImageStudioLogic';
 import { ImageUploader } from './imageStudio/ImageUploader';
 import { PromptEditor } from './imageStudio/PromptEditor';
-import { GeneratedImageDisplay } from './imageStudio/GeneratedImageDisplay';
+import JustifiedGalleryGrid from './JustifiedGalleryGrid';
 import { CropChoiceModal } from './imageStudio/CropChoiceModal';
 import { MultiCropView } from './imageStudio/MultiCropView';
 import { AdvancedOptions } from './imageStudio/AdvancedOptions';
 import GenerationToolbar from './GenerationToolbar';
 import { NANO_BANANA_RATIOS, FLUX_KONTEXT_PRO_RATIOS, ASPECT_RATIO_PRESETS } from '../constants';
-import { HelpIcon, PiSpinnerIcon, PiDownloadSimpleIcon, PiCloseIcon, BananaIcon, WavesIcon, ZapIcon, FlowerIcon } from './Icons';
+import { HelpIcon, PiSpinnerIcon, PiDownloadSimpleIcon, PiCubeIcon, BananaIcon, WavesIcon, ZapIcon, FlowerIcon } from './Icons';
 import { ImageStudioConfirmationDialog } from './imageStudio/ImageStudioConfirmationDialog';
-import { AspectRatio } from '../types';
+import { AspectRatio, ImageStudioResultImage } from '../types';
+import StudioLayout from './StudioLayout';
 
 
 interface ImageStudioProps {
@@ -23,6 +24,20 @@ interface ImageStudioProps {
 
 const ImageStudio: React.FC<ImageStudioProps> = ({ logic, onImageClick, onShowHelp }) => {
     const failedCount = logic.generationResults.filter(r => r.status === 'error' || r.status === 'warning').length;
+    const pendingCount = logic.generationResults.filter(r => r.status === 'pending').length;
+
+    // Convert successful generation results to DisplayImage format for JustifiedGalleryGrid
+    const successfulImages: ImageStudioResultImage[] = logic.generationResults
+        .filter(r => r.status === 'success' && r.url)
+        .map(r => ({
+            src: r.url!,
+            filename: r.key,
+            imageGenerationPrompt: r.prompt || '',
+            isPreparing: false,
+            videoPrompt: undefined,
+            videoSrc: undefined,
+            isGeneratingVideo: false,
+        }));
 
     // Get aspect ratio options based on selected model
     const getAspectRatioOptions = () => {
@@ -102,43 +117,44 @@ const ImageStudio: React.FC<ImageStudioProps> = ({ logic, onImageClick, onShowHe
 
     return (
         <>
-        <div className="w-full max-w-7xl mx-auto flex flex-col gap-6 pb-28">
-             <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-12">
-                <div className="bg-[var(--color-bg-surface)] p-6 rounded-2xl shadow-lg border border-[var(--color-border-muted)] flex flex-col items-center gap-6">
-                    <ImageUploader 
-                        onImageSelect={logic.handleNewImageUpload} 
-                        imagePreviewUrls={logic.imagePreviewUrls} 
-                        onRemoveImage={logic.handleRemoveUploadedImage}
-                        onRemoveAll={logic.handleRemoveAllUploadedImages}
-                        imageFiles={logic.imageFiles}
-                        inputImageWarnings={logic.inputImageWarnings}
-                    />
-
-                    <div className="w-full relative">
-                        <PromptEditor
-                            numberOfVersions={logic.numberOfVersions}
-                            onNumberOfVersionsChange={logic.handleNumberOfVersionsChange}
-                            promptContents={logic.promptContents}
-                            onPromptContentChange={logic.handlePromptContentChange}
-                            // FIX: Correct prop name from onEnhanceAndTranslate to onTranslate and handler
-                            onTranslate={logic.handleTranslatePrompt}
-                            translatingIndices={logic.translatingIndices}
-                            onGenerateVariation={logic.handleGenerateVariation}
-                            generatingVariationIndices={logic.generatingVariationIndices}
-                            onEnhance={logic.handleEnhancePrompt}
-                            enhancingIndices={logic.enhancingIndices}
+        <div className="w-full max-w-screen-2xl mx-auto flex flex-col gap-6 pb-28">
+             <StudioLayout
+                sidebar={
+                    <>
+                        <ImageUploader
+                            onImageSelect={logic.handleNewImageUpload}
+                            imagePreviewUrls={logic.imagePreviewUrls}
+                            onRemoveImage={logic.handleRemoveUploadedImage}
+                            onRemoveAll={logic.handleRemoveAllUploadedImages}
+                            imageFiles={logic.imageFiles}
+                            inputImageWarnings={logic.inputImageWarnings}
                         />
-                        {logic.jsonPrompts.trim() !== '' && !logic.jsonError && (
-                            <div className="absolute inset-0 bg-[var(--color-bg-muted)]/50 backdrop-blur-[2px] rounded-lg flex items-center justify-center text-center p-4">
-                                <p className="text-[var(--color-text-light)] font-semibold bg-[var(--color-bg-base)]/70 px-4 py-2 rounded-md shadow">
-                                    Using Bulk Prompts from Advanced Options
-                                </p>
-                            </div>
-                        )}
-                    </div>
-                </div>
-                
-                <div>
+
+                        <div className="w-full relative">
+                            <PromptEditor
+                                numberOfVersions={logic.numberOfVersions}
+                                onNumberOfVersionsChange={logic.handleNumberOfVersionsChange}
+                                promptContents={logic.promptContents}
+                                onPromptContentChange={logic.handlePromptContentChange}
+                                // FIX: Correct prop name from onEnhanceAndTranslate to onTranslate and handler
+                                onTranslate={logic.handleTranslatePrompt}
+                                translatingIndices={logic.translatingIndices}
+                                onGenerateVariation={logic.handleGenerateVariation}
+                                generatingVariationIndices={logic.generatingVariationIndices}
+                                onEnhance={logic.handleEnhancePrompt}
+                                enhancingIndices={logic.enhancingIndices}
+                            />
+                            {logic.jsonPrompts.trim() !== '' && !logic.jsonError && (
+                                <div className="absolute inset-0 bg-[var(--color-bg-muted)]/50 backdrop-blur-[2px] rounded-lg flex items-center justify-center text-center p-4">
+                                    <p className="text-[var(--color-text-light)] font-semibold bg-[var(--color-bg-base)]/70 px-4 py-2 rounded-md shadow">
+                                        Using Bulk Prompts from Advanced Options
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+                    </>
+                }
+            >
                      <div className="flex justify-between items-center mb-4 gap-4 flex-wrap">
                         <div className="flex items-center gap-2 flex-shrink-0">
                             <button onClick={onShowHelp} className="p-2 bg-[var(--color-bg-muted)] hover:bg-[var(--color-bg-muted-hover)] rounded-lg text-[var(--color-text-main)] transition-colors" title="Help">
@@ -179,17 +195,25 @@ const ImageStudio: React.FC<ImageStudioProps> = ({ logic, onImageClick, onShowHe
                         </div>
                     </div>
 
-                    <GeneratedImageDisplay 
-                        generationResults={logic.generationResults} 
-                        isLoading={logic.isLoading} 
-                        onImageClick={onImageClick}
-                        onRetryOne={logic.handleRetryOne}
-                        onRemoveImage={logic.handleRemoveGeneratedImage}
+                    <JustifiedGalleryGrid
+                        images={successfulImages}
+                        pendingCount={pendingCount}
+                        pendingAspectRatio={logic.aspectRatio || '1:1'}
+                        progressCompleted={logic.progress.completed}
+                        progressTotal={logic.progress.total}
+                        onImageClick={(filename) => {
+                            const result = logic.generationResults.find(r => r.key === filename);
+                            if (result?.url) onImageClick(result.url);
+                        }}
+                        onRegenerate={logic.handleRetryOne}
+                        onRemove={logic.handleRemoveGeneratedImage}
                         onDownloadSingle={logic.handleDownloadSingle}
-                        progress={logic.progress}
+                        emptyStateIcon={PiCubeIcon}
+                        emptyStateTitle="Your Images Await"
+                        emptyStateDescription="Upload images, choose a prompt, and click generate."
+                        showVideoActions={false}
                     />
-                </div>
-            </div>
+            </StudioLayout>
 
             <AdvancedOptions
                 isAdvancedOpen={logic.isAdvancedOpen}

@@ -363,7 +363,7 @@ const GenerationToolbar: React.FC<GenerationToolbarConfig> = ({
               disabled={generateDisabled}
               className="bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] disabled:bg-[var(--color-bg-muted)] disabled:cursor-not-allowed text-[var(--color-text-on-primary)] font-semibold py-2 px-4 rounded-lg transition-colors text-sm"
             >
-              {pendingCount > 0 ? `Generating... (${pendingCount} left)` : generateButtonText}
+              {generateButtonText}
             </button>
 
             {startOverButtonText && onStartOver && (
