@@ -286,7 +286,7 @@ const ImageStudio: React.FC<ImageStudioProps> = ({ logic, onImageClick, onShowHe
             generateDisabled={logic.isGenerateDisabled}
             pendingCount={logic.isLoading ? logic.progress.total - logic.progress.completed : 0}
             startOverButtonText="Clear"
-            onStartOver={logic.handleClearGallery}
+            onStartOver={logic.handleStartOver}
             startOverDisabled={logic.isLoading || logic.generationResults.length === 0}
             studioMode="image"
             seedreamSettings={logic.model === 'seedream' ? {

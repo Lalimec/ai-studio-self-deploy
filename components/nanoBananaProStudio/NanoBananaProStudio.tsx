@@ -202,7 +202,7 @@ export const NanoBananaProStudio: React.FC<NanoBananaProStudioProps> = ({
                         }
                     ]}
                     startOverButtonText="Clear"
-                    onStartOver={logic.handleClearGallery}
+                    onStartOver={logic.handleStartOver}
                     startOverDisabled={logic.isLoading || logic.generationResults.length === 0}
                 />
 

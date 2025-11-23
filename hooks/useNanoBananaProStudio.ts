@@ -181,20 +181,76 @@ export const useNanoBananaProStudio = (
     }, []);
 
     const handleRemoveImage = useCallback((id: string) => {
-        setImageFiles(prev => {
-            const updated = prev.filter(f => f.id !== id);
-            // Clear setId when all images are removed
-            if (updated.length === 0) {
-                setSetId('');
-            }
-            return updated;
-        });
-    }, []);
+        const hasGeneratedResults = generationResults.length > 0;
+
+        if (hasGeneratedResults) {
+            setConfirmAction({
+                title: "Clear Photo & Results?",
+                message: 'Removing this image will make the current results outdated. Would you like to clear the gallery?',
+                confirmText: "Clear & Continue",
+                cancelText: "Keep Results",
+                onConfirm: () => {
+                    logUserAction('CLEAR_IMAGE_AND_RESULTS_NANO_BANANA_PRO', { setId });
+                    setImageFiles(prev => {
+                        const updated = prev.filter(f => f.id !== id);
+                        if (updated.length === 0) {
+                            setSetId('');
+                        }
+                        return updated;
+                    });
+                    setGenerationResults([]);
+                    setProgress({ completed: 0, total: 0 });
+                },
+                onCancel: () => {
+                    setImageFiles(prev => {
+                        const updated = prev.filter(f => f.id !== id);
+                        if (updated.length === 0) {
+                            setSetId('');
+                        }
+                        return updated;
+                    });
+                },
+            });
+        } else {
+            setImageFiles(prev => {
+                const updated = prev.filter(f => f.id !== id);
+                if (updated.length === 0) {
+                    setSetId('');
+                }
+                return updated;
+            });
+        }
+    }, [generationResults.length, setConfirmAction, setId]);
 
     const handleClearImages = useCallback(() => {
-        setImageFiles([]);
-        setSetId('');
-    }, []);
+        const hasGeneratedResults = generationResults.length > 0;
+
+        if (hasGeneratedResults) {
+            setConfirmAction({
+                title: "Clear Photos & Results?",
+                message: 'This will remove all uploaded images and clear the gallery. This action cannot be undone.',
+                confirmText: "Clear All",
+                onConfirm: () => {
+                    logUserAction('CLEAR_ALL_IMAGES_AND_RESULTS_NANO_BANANA_PRO', { setId });
+                    setImageFiles([]);
+                    setSetId('');
+                    setGenerationResults([]);
+                    setProgress({ completed: 0, total: 0 });
+                }
+            });
+        } else {
+            setConfirmAction({
+                title: "Clear Uploaded Images?",
+                message: 'This will remove all images from the uploader. This action cannot be undone.',
+                confirmText: "Clear All",
+                onConfirm: () => {
+                    logUserAction('CLEAR_ALL_UPLOADED_IMAGES_NANO_BANANA_PRO', { setId });
+                    setImageFiles([]);
+                    setSetId('');
+                }
+            });
+        }
+    }, [generationResults.length, setConfirmAction, setId]);
 
     // --- Prompt Logic ---
     const handleNumberOfVersionsChange = (newVersionCount: number) => {
@@ -489,6 +545,17 @@ export const useNanoBananaProStudio = (
         setSetId('');
     }, []);
 
+    const handleStartOver = useCallback(() => {
+        setConfirmAction({
+            title: "Start Over?",
+            message: 'This will clear everything. Are you sure?',
+            onConfirm: () => {
+                logUserAction('START_OVER_NANO_BANANA_PRO', { setId });
+                handleClearGallery();
+            },
+        });
+    }, [setConfirmAction, handleClearGallery, setId]);
+
     const getDownloadFilename = useCallback((result: NanoBananaProGenerationResult): string => {
         const { originalImageIndex, originalPromptIndex, batchTimestamp } = result;
         const appFile = imageFiles[originalImageIndex];
@@ -671,7 +738,7 @@ export const useNanoBananaProStudio = (
         handleRemoveAllUploadedImages: handleClearImages,
 
         // Generation State & Handlers
-        generationResults, isLoading, progress, handleGenerate, handleRemoveResult, handleClearGallery,
+        generationResults, isLoading, progress, handleGenerate, handleRemoveResult, handleClearGallery, handleStartOver,
         handleDownloadResult, handleDownloadAll, handleRetryOne, handleRetryAll,
         handleDownloadSingle: handleDownloadResult,
         handleRemoveGeneratedImage: handleRemoveResult,

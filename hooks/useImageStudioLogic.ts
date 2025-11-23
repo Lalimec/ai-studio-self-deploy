@@ -369,6 +369,17 @@ export const useImageStudioLogic = (
         setSetId('');
     }, []);
 
+    const handleStartOver = useCallback(() => {
+        setConfirmAction({
+            title: "Start Over?",
+            message: 'This will clear everything. Are you sure?',
+            onConfirm: () => {
+                logUserAction('START_OVER_IMAGE_STUDIO', { setId });
+                handleClearGallery();
+            },
+        });
+    }, [setConfirmAction, handleClearGallery, setId]);
+
     const handleRemoveGeneratedImage = useCallback((key: string) => {
         setGenerationResults(currentResults => currentResults.filter(result => result.key !== key));
     }, []);
@@ -436,25 +447,72 @@ export const useImageStudioLogic = (
     const handleCropCancel = () => setCroppingFiles(null);
 
     const handleRemoveUploadedImage = useCallback((indexToRemove: number) => {
-        setImageFiles(currentFiles => {
-            const newFiles = currentFiles.filter((_, index) => index !== indexToRemove);
-            if (newFiles.length === 0) setSetId('');
-            return newFiles;
-        });
-    }, []);
-    
+        const hasGeneratedResults = generationResults.length > 0;
+
+        if (hasGeneratedResults) {
+            setConfirmAction({
+                title: "Clear Photo & Results?",
+                message: 'Removing this image will make the current results outdated. Would you like to clear the gallery?',
+                confirmText: "Clear & Continue",
+                cancelText: "Keep Results",
+                onConfirm: () => {
+                    logUserAction('CLEAR_IMAGE_AND_RESULTS', { setId });
+                    setImageFiles(currentFiles => {
+                        const newFiles = currentFiles.filter((_, index) => index !== indexToRemove);
+                        if (newFiles.length === 0) setSetId('');
+                        return newFiles;
+                    });
+                    setGenerationResults([]);
+                    setProgress({ completed: 0, total: 0 });
+                },
+                onCancel: () => {
+                    setImageFiles(currentFiles => {
+                        const newFiles = currentFiles.filter((_, index) => index !== indexToRemove);
+                        if (newFiles.length === 0) setSetId('');
+                        return newFiles;
+                    });
+                },
+            });
+        } else {
+            setImageFiles(currentFiles => {
+                const newFiles = currentFiles.filter((_, index) => index !== indexToRemove);
+                if (newFiles.length === 0) setSetId('');
+                return newFiles;
+            });
+        }
+    }, [generationResults.length, setConfirmAction, setId]);
+
     const handleRemoveAllUploadedImages = useCallback(() => {
         if (imageFiles.length === 0) return;
-        setConfirmAction({
-            title: "Clear Uploaded Images?",
-            message: 'This will remove all images from the uploader. This action cannot be undone.',
-            confirmText: "Clear All",
-            onConfirm: () => {
-                setImageFiles([]);
-                setSetId('');
-            }
-        });
-    }, [imageFiles.length, setConfirmAction]);
+
+        const hasGeneratedResults = generationResults.length > 0;
+
+        if (hasGeneratedResults) {
+            setConfirmAction({
+                title: "Clear Photos & Results?",
+                message: 'This will remove all uploaded images and clear the gallery. This action cannot be undone.',
+                confirmText: "Clear All",
+                onConfirm: () => {
+                    logUserAction('CLEAR_ALL_IMAGES_AND_RESULTS', { setId });
+                    setImageFiles([]);
+                    setSetId('');
+                    setGenerationResults([]);
+                    setProgress({ completed: 0, total: 0 });
+                }
+            });
+        } else {
+            setConfirmAction({
+                title: "Clear Uploaded Images?",
+                message: 'This will remove all images from the uploader. This action cannot be undone.',
+                confirmText: "Clear All",
+                onConfirm: () => {
+                    logUserAction('CLEAR_ALL_UPLOADED_IMAGES', { setId });
+                    setImageFiles([]);
+                    setSetId('');
+                }
+            });
+        }
+    }, [imageFiles.length, generationResults.length, setConfirmAction, setId]);
     
     const getDownloadFilename = useCallback((result: ImageStudioGenerationResult): string => {
         const { originalImageIndex, originalPromptIndex, batchTimestamp } = result;
@@ -790,7 +848,7 @@ export const useImageStudioLogic = (
         isGeneratingPrompts, setIsGeneratingPrompts, isTranslatingInstructions, setIsTranslatingInstructions, imageSizePresets,
         imagePreviewUrls,
         handleNumberOfVersionsChange, handlePromptContentChange, handleJsonPromptChange, getActivePrompts, handleTranslatePrompt,
-        handleGenerateVariation, handleEnhancePrompt, handleTranslateInstructions, handleGeneratePromptList, handleClearGallery, handleRemoveGeneratedImage, handleNewImageUpload, handleStartCropping,
+        handleGenerateVariation, handleEnhancePrompt, handleTranslateInstructions, handleGeneratePromptList, handleClearGallery, handleStartOver, handleRemoveGeneratedImage, handleNewImageUpload, handleStartCropping,
         handleUseOriginals, handleCancelCropChoice, handleCropConfirm, handleCropCancel, handleRemoveUploadedImage, handleDownloadAll, handleConfirmClearAndUpload,
         handleCancelUpload, handleSuccess, handleFail, createGenerationTask, runGenerations, handleGenerate, handleRetryAll, handleRetryOne, isGenerateDisabled, handleDownloadSingle,
         aspectRatio, setAspectRatio, getDownloadFilename, handleRemoveAllUploadedImages,
