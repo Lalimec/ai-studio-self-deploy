@@ -1,6 +1,5 @@
 /// <reference lib="dom" />
-import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { getAspectRatio, setAspectRatio as cacheAspectRatio, hasAspectRatio } from '../../services/imageAspectRatioCache';
+import React, { useMemo } from 'react';
 
 interface ImageItem {
     url: string;
@@ -178,75 +177,3 @@ export const JustifiedGallery: React.FC<JustifiedGalleryProps> = ({
     );
 };
 
-/**
- * Hook to load image dimensions and calculate aspect ratios
- * OPTIMIZED: Uses global cache to persist across component unmounts and tab switches
- */
-export const useImageDimensions = (urls: string[]): Map<string, number> => {
-    // Initialize state from global cache
-    const [aspectRatios, setAspectRatios] = useState<Map<string, number>>(() => {
-        const initial = new Map<string, number>();
-        urls.forEach(url => {
-            const cached = getAspectRatio(url);
-            if (cached !== undefined) {
-                initial.set(url, cached);
-            }
-        });
-        return initial;
-    });
-
-    // Use ref to track which URLs are already loading to avoid duplicate requests
-    const loadingUrlsRef = useRef<Set<string>>(new Set());
-
-    useEffect(() => {
-        // Load each URL that isn't already in global cache or currently loading
-        urls.forEach((url) => {
-            // Skip if already in global cache
-            if (hasAspectRatio(url)) {
-                // Update local state if not already present
-                setAspectRatios(prev => {
-                    if (!prev.has(url)) {
-                        const next = new Map(prev);
-                        next.set(url, getAspectRatio(url)!);
-                        return next;
-                    }
-                    return prev;
-                });
-                return;
-            }
-
-            // Skip if already loading
-            if (loadingUrlsRef.current.has(url)) return;
-
-            // Mark as loading
-            loadingUrlsRef.current.add(url);
-
-            // Load image to get dimensions
-            const img = new Image();
-            img.onload = () => {
-                const ratio = img.width / img.height;
-                // Store in global cache
-                cacheAspectRatio(url, ratio);
-                // Update local state
-                setAspectRatios(prev => {
-                    const next = new Map(prev);
-                    next.set(url, ratio);
-                    return next;
-                });
-            };
-            img.onerror = () => {
-                // Default to 4:5 if image fails to load
-                const defaultRatio = 4 / 5;
-                cacheAspectRatio(url, defaultRatio);
-                setAspectRatios(prev => {
-                    const next = new Map(prev);
-                    next.set(url, defaultRatio);
-                    return next;
-                });
-            };
-            img.src = url;
-        });
-    }, [urls.join(',')]); // Only re-run when URLs change
-
-    return aspectRatios;
-};

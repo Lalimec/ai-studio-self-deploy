@@ -1,7 +1,7 @@
 /// <reference lib="dom" />
 import React, { useState, useRef, useEffect } from 'react';
 import { DisplayImage } from '../types';
-import { JustifiedGallery, useImageDimensions } from './imageStudio/JustifiedGallery';
+import { JustifiedGallery } from './imageStudio/JustifiedGallery';
 import { GalleryErrorCard } from './GalleryErrorCard';
 import {
     DownloadIcon,
@@ -124,12 +124,6 @@ export const JustifiedGalleryGrid: React.FC<JustifiedGalleryGridProps> = ({
         };
     }, []);
 
-    // Extract image URLs and load aspect ratios
-    const imageUrls = images.map(img => img.src);
-    const aspectRatios = useImageDimensions(imageUrls);
-
-    // Check if all aspect ratios have loaded
-    const allAspectRatiosLoaded = imageUrls.length === 0 || imageUrls.every(url => aspectRatios.has(url));
 
     // Empty state
     if (images.length === 0 && pendingCount === 0 && (!errors || errors.length === 0)) {
@@ -160,13 +154,6 @@ export const JustifiedGalleryGrid: React.FC<JustifiedGalleryGridProps> = ({
                 </div>
             )}
 
-            {/* Loading Indicator for Aspect Ratios */}
-            {!allAspectRatiosLoaded && images.length > 0 && (
-                <div className="mb-4 flex items-center justify-center gap-3 p-3 bg-[var(--color-bg-surface-light)] rounded-lg text-sm text-[var(--color-text-light)]">
-                    <div className="w-5 h-5 border-2 border-dashed rounded-full animate-spin border-[var(--color-primary-accent)]"></div>
-                    <span>Preparing gallery...</span>
-                </div>
-            )}
 
             {/* Gallery */}
             <div
@@ -176,7 +163,7 @@ export const JustifiedGalleryGrid: React.FC<JustifiedGalleryGridProps> = ({
                 }}
                 className="w-full overflow-y-auto overflow-x-hidden min-h-0"
             >
-                {containerWidth !== null && containerWidth > 0 && allAspectRatiosLoaded && (
+                {containerWidth !== null && containerWidth > 0 && (
                     <JustifiedGallery
                         images={[
                             // Pending placeholders FIRST - use generation aspect ratio
@@ -194,7 +181,7 @@ export const JustifiedGalleryGrid: React.FC<JustifiedGalleryGridProps> = ({
                             // Actual images
                             ...images.map(img => ({
                                 url: img.src,
-                                aspectRatio: aspectRatios.get(img.src) || 4 / 5,
+                                aspectRatio: 4 / 5,
                                 key: 'id' in img ? img.id : img.filename
                             }))
                         ]}
