@@ -146,7 +146,7 @@ const GenerationToolbar: React.FC<GenerationToolbarConfig> = ({
   return (
     <div className="fixed bottom-0 left-0 right-0 h-[95px] bg-[var(--color-bg-surface)] border-t-2 border-[var(--color-border-muted)] shadow-lg z-50 overflow-visible">
       <div className="max-w-7xl mx-auto px-6 py-4 h-full">
-        <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="h-full flex flex-wrap items-center justify-between gap-4">
           {/* Left side: Aspect Ratio + Image Count + Seedream Settings */}
           <div className="flex flex-wrap items-center gap-6">
             {showAspectRatio && !seedreamSettings && (
