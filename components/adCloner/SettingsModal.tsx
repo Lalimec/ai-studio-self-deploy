@@ -15,8 +15,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ settings, onClose, onSave
         onSave(localSettings);
         onClose();
     };
-    
-    const RadioButton = ({ value, label, description, disabled = false }: {value: string, label: string, description: string, disabled?: boolean}) => (
+
+    const RadioButton = ({ value, label, description, disabled = false }: { value: string, label: string, description: string, disabled?: boolean }) => (
         <label className={`block p-4 border rounded-lg transition-colors ${disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'} ${localSettings.textModel === value ? 'bg-[var(--color-bg-surface-light)] border-[var(--color-primary)]' : 'bg-[var(--color-bg-surface)] border-[var(--color-border-default)] hover:bg-[var(--color-bg-muted)]'}`}>
             <div className="flex items-center">
                 <input
@@ -58,6 +58,68 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ settings, onClose, onSave
                                 description="More powerful. May yield more creative prompts."
                                 disabled={true}
                             />
+                        </div>
+                    </fieldset>
+
+                    <fieldset>
+                        <legend className="text-base font-semibold text-[var(--color-text-light)] mb-2">Image Generation Model</legend>
+                        <div className="space-y-3">
+                            <label className={`block p-4 border rounded-lg transition-colors cursor-pointer ${localSettings.imageModel === 'gemini-2.5-flash-image' ? 'bg-[var(--color-bg-surface-light)] border-[var(--color-primary)]' : 'bg-[var(--color-bg-surface)] border-[var(--color-border-default)] hover:bg-[var(--color-bg-muted)]'}`}>
+                                <div className="flex items-center">
+                                    <input
+                                        type="radio"
+                                        name="imageModel"
+                                        value="gemini-2.5-flash-image"
+                                        checked={localSettings.imageModel === 'gemini-2.5-flash-image'}
+                                        onChange={(e) => setLocalSettings(prev => ({ ...prev, imageModel: e.target.value as AdClonerSettings['imageModel'] }))}
+                                        className="h-4 w-4 text-[var(--color-primary)] bg-[var(--color-bg-base)] border-[var(--color-border-default)] focus:ring-[var(--color-primary-ring)]"
+                                    />
+                                    <div className="ml-3 text-sm">
+                                        <p className="font-medium text-[var(--color-text-main)]">Gemini 2.5 Flash Image</p>
+                                        <p className="text-[var(--color-text-dim)]">Fast generation. Good for quick concepts.</p>
+                                    </div>
+                                </div>
+                            </label>
+
+                            <label className={`block p-4 border rounded-lg transition-colors cursor-pointer ${localSettings.imageModel === 'nano-banana-pro' ? 'bg-[var(--color-bg-surface-light)] border-[var(--color-primary)]' : 'bg-[var(--color-bg-surface)] border-[var(--color-border-default)] hover:bg-[var(--color-bg-muted)]'}`}>
+                                <div className="flex items-center">
+                                    <input
+                                        type="radio"
+                                        name="imageModel"
+                                        value="nano-banana-pro"
+                                        checked={localSettings.imageModel === 'nano-banana-pro'}
+                                        onChange={(e) => setLocalSettings(prev => ({ ...prev, imageModel: e.target.value as AdClonerSettings['imageModel'] }))}
+                                        className="h-4 w-4 text-[var(--color-primary)] bg-[var(--color-bg-base)] border-[var(--color-border-default)] focus:ring-[var(--color-primary-ring)]"
+                                    />
+                                    <div className="ml-3 text-sm">
+                                        <p className="font-medium text-[var(--color-text-main)]">Nano Banana Pro</p>
+                                        <p className="text-[var(--color-text-dim)]">High quality, realistic images.</p>
+                                    </div>
+                                </div>
+
+                                {localSettings.imageModel === 'nano-banana-pro' && (
+                                    <div className="mt-3 ml-7 pl-3 border-l-2 border-[var(--color-border-muted)]">
+                                        <label className="block text-xs font-bold text-[var(--color-text-dim)] mb-2 uppercase tracking-wider">Resolution</label>
+                                        <div className="flex gap-2">
+                                            {(['1K', '2K', '4K'] as const).map((res) => (
+                                                <button
+                                                    key={res}
+                                                    onClick={(e) => {
+                                                        e.preventDefault();
+                                                        setLocalSettings(prev => ({ ...prev, resolution: res }));
+                                                    }}
+                                                    className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${localSettings.resolution === res
+                                                        ? 'bg-[var(--color-primary)] text-white shadow-sm'
+                                                        : 'bg-[var(--color-bg-muted)] text-[var(--color-text-main)] hover:bg-[var(--color-bg-muted-hover)]'
+                                                        }`}
+                                                >
+                                                    {res}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </label>
                         </div>
                     </fieldset>
                 </div>

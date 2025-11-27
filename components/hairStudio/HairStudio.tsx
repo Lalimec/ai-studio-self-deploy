@@ -126,109 +126,112 @@ const HairStudio: React.FC<HairStudioProps> = ({
         handleDownloadSingle,
         model, setModel,
         resolution, setResolution,
+        errors, handleRemoveError,
     } = logic;
 
     const areGlobalActionsDisabled = isPreparing || isGeneratingVideos || pendingImageCount > 0 || generatedImages.length === 0;
 
     return (
         <>
-        <StudioLayout
-            sidebar={
-                <>
-                    <div className="w-full">
-                        {!croppedImage ? (
-                            <ImageUploader onImageUpload={onUpload} />
-                        ) : (
-                            <OriginalImageCard
-                                originalImage={originalImage}
-                                onRecrop={onRecrop}
-                                onClear={handleClearImageAndResults}
-                                isDataLocked={pendingImageCount > 0}
-                                onPrepare={handlePrepareOriginal}
-                                onGenerateVideo={handleGenerateOriginalVideo}
-                                onDownload={handleDownloadOriginal}
-                                aspectRatio={croppedImageAspectRatio}
-                            />
-                        )}
-                    </div>
-                    <div className="w-full">
-                        <HairOptionsPanel options={options} setOptions={setOptions} disabled={false} />
-                    </div>
-                </>
-            }
-        >
-            <div className="flex justify-between items-center mb-4 gap-4 flex-wrap">
-                <div className="flex items-center gap-2 flex-shrink-0">
-                    <button onClick={onShowHelp} className="p-2 bg-[var(--color-bg-muted)] hover:bg-[var(--color-bg-muted-hover)] rounded-lg text-[var(--color-text-main)] transition-colors" title="Help"><HelpIcon className="w-5 h-5" /></button>
-                </div>
-                {sessionId && <div className="inline-block bg-[var(--color-bg-muted)] text-[var(--color-text-light)] text-sm font-mono py-1.5 px-3 rounded-lg animate-fade-in truncate">Set ID: {sessionId}</div>}
-                <div className="flex items-center gap-2 flex-shrink-0">
-                    <button onClick={handlePrepareAll} disabled={areGlobalActionsDisabled || isPreparing} className="flex items-center gap-2 bg-[var(--color-action-prepare)] hover:bg-[var(--color-action-prepare-hover)] text-[var(--color-text-on-primary)] font-bold py-2 px-4 rounded-lg transition-colors disabled:bg-[var(--color-bg-muted)] disabled:text-[var(--color-text-dimmer)] text-sm"><PrepareMagicIcon className={`w-4 h-4 ${isPreparing ? 'animate-spin' : ''}`} />{isPreparing ? 'Preparing...' : 'Prepare All'}</button>
-                    <button onClick={handleGenerateAllVideos} disabled={areGlobalActionsDisabled || isGeneratingVideos} className="flex items-center gap-2 bg-[var(--color-action-generate)] hover:bg-[var(--color-action-generate-hover)] text-[var(--color-text-on-primary)] font-bold py-2 px-4 rounded-lg transition-colors disabled:bg-[var(--color-bg-muted)] disabled:text-[var(--color-text-dimmer)] text-sm"><VideoIcon className={`w-4 h-4 ${isGeneratingVideos ? 'animate-spin' : ''}`} />{isGeneratingVideos ? 'Generating...' : 'Generate Videos'}</button>
-                    <button onClick={handleDownloadAll} disabled={isBusy || generatedImages.length === 0} className="flex items-center gap-2 bg-[var(--color-secondary)] hover:bg-[var(--color-secondary-hover)] text-[var(--color-text-on-primary)] font-bold py-2 px-4 rounded-lg transition-colors disabled:bg-[var(--color-bg-muted)] disabled:text-[var(--color-text-dimmer)] text-sm"><DownloadIcon className="w-4 h-4" />Download All</button>
-                </div>
-            </div>
-            <JustifiedGalleryGrid
-                images={generatedImages}
-                pendingCount={pendingImageCount}
-                pendingAspectRatio={options.aspectRatio}
-                onImageClick={onImageClick}
-                onRegenerate={handleRegenerateSingle}
-                onRemove={handleRemoveGeneratedImage}
-                onReprepare={handlePrepareSingleImage}
-                onDownloadSingle={handleDownloadSingle}
-                onGenerateSingleVideo={handleGenerateSingleVideo}
-                emptyStateIcon={HairStudioIcon}
-                emptyStateTitle="Style Gallery Awaits"
-                emptyStateDescription="Use the panel on the left to generate some styles!"
-                showVideoActions={true}
-            />
-        </StudioLayout>
-
-        <GenerationToolbar
-            aspectRatio={options.aspectRatio}
-            onAspectRatioChange={(ratio) => setOptions(prev => ({ ...prev, aspectRatio: ratio }))}
-            aspectRatioDisabled={false}
-            imageCount={options.imageCount}
-            onImageCountChange={(count) => setOptions(prev => ({ ...prev, imageCount: count }))}
-            imageCountMin={1}
-            imageCountMax={20}
-            imageCountDisabled={false}
-            generateButtonText="Generate"
-            onGenerate={handleGenerate}
-            generateDisabled={isGenerateDisabled}
-            pendingCount={pendingImageCount}
-            startOverButtonText="Clear"
-            onStartOver={handleStartOver}
-            startOverDisabled={isBusy}
-            studioMode="hair"
-            modelButtons={[
-                {
-                    key: 'nano-banana',
-                    icon: <BananaIcon className="w-5 h-5" />,
-                    label: 'Nano Banana',
-                    onClick: () => setModel('nano-banana'),
-                    isActive: model === 'nano-banana'
-                },
-                {
-                    key: 'nano-banana-pro',
-                    icon: (
-                        <div className="relative">
-                            <BananaIcon className="w-5 h-5" />
-                            <span className="absolute -bottom-2 -right-2 text-[8px] font-bold leading-none">PRO</span>
+            <StudioLayout
+                sidebar={
+                    <>
+                        <div className="w-full">
+                            {!croppedImage ? (
+                                <ImageUploader onImageUpload={onUpload} />
+                            ) : (
+                                <OriginalImageCard
+                                    originalImage={originalImage}
+                                    onRecrop={onRecrop}
+                                    onClear={handleClearImageAndResults}
+                                    isDataLocked={pendingImageCount > 0}
+                                    onPrepare={handlePrepareOriginal}
+                                    onGenerateVideo={handleGenerateOriginalVideo}
+                                    onDownload={handleDownloadOriginal}
+                                    aspectRatio={croppedImageAspectRatio}
+                                />
+                            )}
                         </div>
-                    ),
-                    label: 'Nano Banana Pro',
-                    onClick: () => setModel('nano-banana-pro'),
-                    isActive: model === 'nano-banana-pro'
-                },
-            ]}
-            modeButtons={model === 'nano-banana-pro' ? [
-                { key: '1K', text: '1K', onClick: () => setResolution('1K'), isActive: resolution === '1K', tooltip: '1024x1024 resolution' },
-                { key: '2K', text: '2K', onClick: () => setResolution('2K'), isActive: resolution === '2K', tooltip: '2048x2048 resolution' },
-                { key: '4K', text: '4K', onClick: () => setResolution('4K'), isActive: resolution === '4K', tooltip: '4096x4096 resolution' }
-            ] : undefined}
-        />
+                        <div className="w-full">
+                            <HairOptionsPanel options={options} setOptions={setOptions} disabled={false} />
+                        </div>
+                    </>
+                }
+            >
+                <div className="flex justify-between items-center mb-4 gap-4 flex-wrap">
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                        <button onClick={onShowHelp} className="p-2 bg-[var(--color-bg-muted)] hover:bg-[var(--color-bg-muted-hover)] rounded-lg text-[var(--color-text-main)] transition-colors" title="Help"><HelpIcon className="w-5 h-5" /></button>
+                    </div>
+                    {sessionId && <div className="inline-block bg-[var(--color-bg-muted)] text-[var(--color-text-light)] text-sm font-mono py-1.5 px-3 rounded-lg animate-fade-in truncate">Set ID: {sessionId}</div>}
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                        <button onClick={handlePrepareAll} disabled={areGlobalActionsDisabled || isPreparing} className="flex items-center gap-2 bg-[var(--color-action-prepare)] hover:bg-[var(--color-action-prepare-hover)] text-[var(--color-text-on-primary)] font-bold py-2 px-4 rounded-lg transition-colors disabled:bg-[var(--color-bg-muted)] disabled:text-[var(--color-text-dimmer)] text-sm"><PrepareMagicIcon className={`w-4 h-4 ${isPreparing ? 'animate-spin' : ''}`} />{isPreparing ? 'Preparing...' : 'Prepare All'}</button>
+                        <button onClick={handleGenerateAllVideos} disabled={areGlobalActionsDisabled || isGeneratingVideos} className="flex items-center gap-2 bg-[var(--color-action-generate)] hover:bg-[var(--color-action-generate-hover)] text-[var(--color-text-on-primary)] font-bold py-2 px-4 rounded-lg transition-colors disabled:bg-[var(--color-bg-muted)] disabled:text-[var(--color-text-dimmer)] text-sm"><VideoIcon className={`w-4 h-4 ${isGeneratingVideos ? 'animate-spin' : ''}`} />{isGeneratingVideos ? 'Generating...' : 'Generate Videos'}</button>
+                        <button onClick={handleDownloadAll} disabled={isBusy || generatedImages.length === 0} className="flex items-center gap-2 bg-[var(--color-secondary)] hover:bg-[var(--color-secondary-hover)] text-[var(--color-text-on-primary)] font-bold py-2 px-4 rounded-lg transition-colors disabled:bg-[var(--color-bg-muted)] disabled:text-[var(--color-text-dimmer)] text-sm"><DownloadIcon className="w-4 h-4" />Download All</button>
+                    </div>
+                </div>
+                <JustifiedGalleryGrid
+                    images={generatedImages}
+                    pendingCount={pendingImageCount}
+                    errors={errors}
+                    pendingAspectRatio={options.aspectRatio}
+                    onImageClick={onImageClick}
+                    onRegenerate={handleRegenerateSingle}
+                    onRemove={handleRemoveGeneratedImage}
+                    onRemoveError={handleRemoveError}
+                    onReprepare={handlePrepareSingleImage}
+                    onDownloadSingle={handleDownloadSingle}
+                    onGenerateSingleVideo={handleGenerateSingleVideo}
+                    emptyStateIcon={HairStudioIcon}
+                    emptyStateTitle="Style Gallery Awaits"
+                    emptyStateDescription="Use the panel on the left to generate some styles!"
+                    showVideoActions={true}
+                />
+            </StudioLayout>
+
+            <GenerationToolbar
+                aspectRatio={options.aspectRatio}
+                onAspectRatioChange={(ratio) => setOptions(prev => ({ ...prev, aspectRatio: ratio }))}
+                aspectRatioDisabled={false}
+                imageCount={options.imageCount}
+                onImageCountChange={(count) => setOptions(prev => ({ ...prev, imageCount: count }))}
+                imageCountMin={1}
+                imageCountMax={20}
+                imageCountDisabled={false}
+                generateButtonText="Generate"
+                onGenerate={handleGenerate}
+                generateDisabled={isGenerateDisabled}
+                pendingCount={pendingImageCount}
+                startOverButtonText="Clear"
+                onStartOver={handleStartOver}
+                startOverDisabled={isBusy}
+                studioMode="hair"
+                modelButtons={[
+                    {
+                        key: 'nano-banana',
+                        icon: <BananaIcon className="w-5 h-5" />,
+                        label: 'Nano Banana',
+                        onClick: () => setModel('nano-banana'),
+                        isActive: model === 'nano-banana'
+                    },
+                    {
+                        key: 'nano-banana-pro',
+                        icon: (
+                            <div className="relative">
+                                <BananaIcon className="w-5 h-5" />
+                                <span className="absolute -bottom-2 -right-2 text-[8px] font-bold leading-none">PRO</span>
+                            </div>
+                        ),
+                        label: 'Nano Banana Pro',
+                        onClick: () => setModel('nano-banana-pro'),
+                        isActive: model === 'nano-banana-pro'
+                    },
+                ]}
+                modeButtons={model === 'nano-banana-pro' ? [
+                    { key: '1K', text: '1K', onClick: () => setResolution('1K'), isActive: resolution === '1K', tooltip: '1024x1024 resolution' },
+                    { key: '2K', text: '2K', onClick: () => setResolution('2K'), isActive: resolution === '2K', tooltip: '2048x2048 resolution' },
+                    { key: '4K', text: '4K', onClick: () => setResolution('4K'), isActive: resolution === '4K', tooltip: '4096x4096 resolution' }
+                ] : undefined}
+            />
         </>
     );
 };

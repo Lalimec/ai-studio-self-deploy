@@ -117,45 +117,45 @@ const ImageStudio: React.FC<ImageStudioProps> = ({ logic, onImageClick, onShowHe
 
     return (
         <>
-        <div className="w-full max-w-screen-2xl mx-auto flex flex-col gap-6 pb-28">
-             <StudioLayout
-                sidebar={
-                    <>
-                        <ImageUploader
-                            onImageSelect={logic.handleNewImageUpload}
-                            imagePreviewUrls={logic.imagePreviewUrls}
-                            onRemoveImage={logic.handleRemoveUploadedImage}
-                            onRemoveAll={logic.handleRemoveAllUploadedImages}
-                            imageFiles={logic.imageFiles}
-                            inputImageWarnings={logic.inputImageWarnings}
-                        />
-
-                        <div className="w-full relative">
-                            <PromptEditor
-                                numberOfVersions={logic.numberOfVersions}
-                                onNumberOfVersionsChange={logic.handleNumberOfVersionsChange}
-                                promptContents={logic.promptContents}
-                                onPromptContentChange={logic.handlePromptContentChange}
-                                // FIX: Correct prop name from onEnhanceAndTranslate to onTranslate and handler
-                                onTranslate={logic.handleTranslatePrompt}
-                                translatingIndices={logic.translatingIndices}
-                                onGenerateVariation={logic.handleGenerateVariation}
-                                generatingVariationIndices={logic.generatingVariationIndices}
-                                onEnhance={logic.handleEnhancePrompt}
-                                enhancingIndices={logic.enhancingIndices}
+            <div className="w-full max-w-screen-2xl mx-auto flex flex-col gap-6 pb-28">
+                <StudioLayout
+                    sidebar={
+                        <>
+                            <ImageUploader
+                                onImageSelect={logic.handleNewImageUpload}
+                                imagePreviewUrls={logic.imagePreviewUrls}
+                                onRemoveImage={logic.handleRemoveUploadedImage}
+                                onRemoveAll={logic.handleRemoveAllUploadedImages}
+                                imageFiles={logic.imageFiles}
+                                inputImageWarnings={logic.inputImageWarnings}
                             />
-                            {logic.jsonPrompts.trim() !== '' && !logic.jsonError && (
-                                <div className="absolute inset-0 bg-[var(--color-bg-muted)]/50 backdrop-blur-[2px] rounded-lg flex items-center justify-center text-center p-4">
-                                    <p className="text-[var(--color-text-light)] font-semibold bg-[var(--color-bg-base)]/70 px-4 py-2 rounded-md shadow">
-                                        Using Bulk Prompts from Advanced Options
-                                    </p>
-                                </div>
-                            )}
-                        </div>
-                    </>
-                }
-            >
-                     <div className="flex justify-between items-center mb-4 gap-4 flex-wrap">
+
+                            <div className="w-full relative">
+                                <PromptEditor
+                                    numberOfVersions={logic.numberOfVersions}
+                                    onNumberOfVersionsChange={logic.handleNumberOfVersionsChange}
+                                    promptContents={logic.promptContents}
+                                    onPromptContentChange={logic.handlePromptContentChange}
+                                    // FIX: Correct prop name from onEnhanceAndTranslate to onTranslate and handler
+                                    onTranslate={logic.handleTranslatePrompt}
+                                    translatingIndices={logic.translatingIndices}
+                                    onGenerateVariation={logic.handleGenerateVariation}
+                                    generatingVariationIndices={logic.generatingVariationIndices}
+                                    onEnhance={logic.handleEnhancePrompt}
+                                    enhancingIndices={logic.enhancingIndices}
+                                />
+                                {logic.jsonPrompts.trim() !== '' && !logic.jsonError && (
+                                    <div className="absolute inset-0 bg-[var(--color-bg-muted)]/50 backdrop-blur-[2px] rounded-lg flex items-center justify-center text-center p-4">
+                                        <p className="text-[var(--color-text-light)] font-semibold bg-[var(--color-bg-base)]/70 px-4 py-2 rounded-md shadow">
+                                            Using Bulk Prompts from Advanced Options
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+                        </>
+                    }
+                >
+                    <div className="flex justify-between items-center mb-4 gap-4 flex-wrap">
                         <div className="flex items-center gap-2 flex-shrink-0">
                             <button onClick={onShowHelp} className="p-2 bg-[var(--color-bg-muted)] hover:bg-[var(--color-bg-muted-hover)] rounded-lg text-[var(--color-text-main)] transition-colors" title="Help">
                                 <HelpIcon className="w-5 h-5" />
@@ -175,7 +175,7 @@ const ImageStudio: React.FC<ImageStudioProps> = ({ logic, onImageClick, onShowHe
                                     Retry Failed ({failedCount})
                                 </button>
                             )}
-                             <label className="flex items-center gap-2 bg-[var(--color-bg-muted)] hover:bg-[var(--color-bg-muted-hover)] text-[var(--color-text-main)] font-bold py-2 px-4 rounded-lg transition-colors text-sm cursor-pointer">
+                            <label className="flex items-center gap-2 bg-[var(--color-bg-muted)] hover:bg-[var(--color-bg-muted-hover)] text-[var(--color-text-main)] font-bold py-2 px-4 rounded-lg transition-colors text-sm cursor-pointer">
                                 <input
                                     type="checkbox"
                                     checked={logic.includeOriginals}
@@ -198,6 +198,14 @@ const ImageStudio: React.FC<ImageStudioProps> = ({ logic, onImageClick, onShowHe
                     <JustifiedGalleryGrid
                         images={successfulImages}
                         pendingCount={pendingCount}
+                        errors={logic.generationResults
+                            .filter(r => r.status === 'error' || r.status === 'warning')
+                            .map(r => ({
+                                id: r.key,
+                                error: r.error || 'Unknown error',
+                                prompt: r.prompt,
+                                modelResponse: r.modelResponse
+                            }))}
                         pendingAspectRatio={logic.aspectRatio || '1:1'}
                         progressCompleted={logic.progress.completed}
                         progressTotal={logic.progress.total}
@@ -207,109 +215,110 @@ const ImageStudio: React.FC<ImageStudioProps> = ({ logic, onImageClick, onShowHe
                         }}
                         onRegenerate={logic.handleRetryOne}
                         onRemove={logic.handleRemoveGeneratedImage}
+                        onRemoveError={logic.handleRemoveGeneratedImage}
                         onDownloadSingle={logic.handleDownloadSingle}
                         emptyStateIcon={PiCubeIcon}
                         emptyStateTitle="Your Images Await"
                         emptyStateDescription="Upload images, choose a prompt, and click generate."
                         showVideoActions={false}
                     />
-            </StudioLayout>
+                </StudioLayout>
 
-            <AdvancedOptions
-                isAdvancedOpen={logic.isAdvancedOpen}
-                setIsAdvancedOpen={logic.setIsAdvancedOpen}
-                prependPrompt={logic.prependPrompt}
-                setPrependPrompt={logic.setPrependPrompt}
-                appendPrompt={logic.appendPrompt}
-                setAppendPrompt={logic.setAppendPrompt}
-                promptGenerationInstructions={logic.promptGenerationInstructions}
-                setPromptGenerationInstructions={logic.setPromptGenerationInstructions}
-                isTranslatingInstructions={logic.isTranslatingInstructions}
-                handleTranslateInstructions={logic.handleTranslateInstructions}
-                isGeneratingPrompts={logic.isGeneratingPrompts}
-                handleGeneratePromptList={logic.handleGeneratePromptList}
-                jsonPrompts={logic.jsonPrompts}
-                handleJsonPromptChange={logic.handleJsonPromptChange}
-                jsonError={logic.jsonError}
-                filenameTemplate={logic.filenameTemplate}
-                setFilenameTemplate={logic.setFilenameTemplate}
-            />
+                <AdvancedOptions
+                    isAdvancedOpen={logic.isAdvancedOpen}
+                    setIsAdvancedOpen={logic.setIsAdvancedOpen}
+                    prependPrompt={logic.prependPrompt}
+                    setPrependPrompt={logic.setPrependPrompt}
+                    appendPrompt={logic.appendPrompt}
+                    setAppendPrompt={logic.setAppendPrompt}
+                    promptGenerationInstructions={logic.promptGenerationInstructions}
+                    setPromptGenerationInstructions={logic.setPromptGenerationInstructions}
+                    isTranslatingInstructions={logic.isTranslatingInstructions}
+                    handleTranslateInstructions={logic.handleTranslateInstructions}
+                    isGeneratingPrompts={logic.isGeneratingPrompts}
+                    handleGeneratePromptList={logic.handleGeneratePromptList}
+                    jsonPrompts={logic.jsonPrompts}
+                    handleJsonPromptChange={logic.handleJsonPromptChange}
+                    jsonError={logic.jsonError}
+                    filenameTemplate={logic.filenameTemplate}
+                    setFilenameTemplate={logic.setFilenameTemplate}
+                />
 
-             <ImageStudioConfirmationDialog
-                isOpen={!!logic.pendingFiles}
-                onCancel={logic.handleCancelUpload}
-                onConfirm={logic.handleConfirmClearAndUpload}
-            />
+                <ImageStudioConfirmationDialog
+                    isOpen={!!logic.pendingFiles}
+                    onCancel={logic.handleCancelUpload}
+                    onConfirm={logic.handleConfirmClearAndUpload}
+                />
 
-            <CropChoiceModal
-                isOpen={logic.showCropChoiceModal}
-                onCrop={logic.handleStartCropping}
-                onUseOriginals={logic.handleUseOriginals}
-                onCancel={logic.handleCancelCropChoice}
-            />
-        </div>
+                <CropChoiceModal
+                    isOpen={logic.showCropChoiceModal}
+                    onCrop={logic.handleStartCropping}
+                    onUseOriginals={logic.handleUseOriginals}
+                    onCancel={logic.handleCancelCropChoice}
+                />
+            </div>
 
-        <GenerationToolbar
-            aspectRatio={(logic.aspectRatio || '1:1') as AspectRatio}
-            onAspectRatioChange={(ratio) => logic.setAspectRatio(ratio)}
-            aspectRatioOptions={getAspectRatioOptions()}
-            showAspectRatio={logic.model !== 'seedream'}
-            showImageCount={false}
-            imageCount={1}
-            onImageCountChange={() => {}}
-            modelButtons={modelButtons}
-            modeButtons={logic.model === 'nano-banana-pro' ? [
-                {
-                    key: '1K',
-                    text: '1K',
-                    onClick: () => logic.setResolution('1K'),
-                    isActive: logic.resolution === '1K',
-                    tooltip: '1024x1024 resolution'
-                },
-                {
-                    key: '2K',
-                    text: '2K',
-                    onClick: () => logic.setResolution('2K'),
-                    isActive: logic.resolution === '2K',
-                    tooltip: '2048x2048 resolution'
-                },
-                {
-                    key: '4K',
-                    text: '4K',
-                    onClick: () => logic.setResolution('4K'),
-                    isActive: logic.resolution === '4K',
-                    tooltip: '4096x4096 resolution'
-                }
-            ] : undefined}
-            generateButtonText="Generate"
-            onGenerate={logic.handleGenerate}
-            generateDisabled={logic.isGenerateDisabled}
-            pendingCount={logic.isLoading ? logic.progress.total - logic.progress.completed : 0}
-            startOverButtonText="Clear"
-            onStartOver={logic.handleStartOver}
-            startOverDisabled={logic.isLoading || logic.generationResults.length === 0}
-            studioMode="image"
-            seedreamSettings={logic.model === 'seedream' ? {
-                imageSizePreset: logic.imageSizePreset,
-                onImageSizePresetChange: logic.setImageSizePreset,
-                imageSizePresets: logic.imageSizePresets,
-                customWidth: logic.customWidth,
-                customHeight: logic.customHeight,
-                onCustomWidthChange: logic.setCustomWidth,
-                onCustomHeightChange: logic.setCustomHeight,
-                aspectRatioPresets: ASPECT_RATIO_PRESETS,
-                currentAspectRatio: logic.aspectRatio,
-                onAspectRatioPresetClick: (preset) => {
-                    if (logic.imageSizePreset === 'custom') {
-                        logic.setCustomWidth(preset.width);
-                        logic.setCustomHeight(preset.height);
-                    } else if (logic.imageSizePreset === 'custom_4K' || logic.imageSizePreset === 'custom_2K') {
-                        logic.setAspectRatio(preset.label);
+            <GenerationToolbar
+                aspectRatio={(logic.aspectRatio || '1:1') as AspectRatio}
+                onAspectRatioChange={(ratio) => logic.setAspectRatio(ratio)}
+                aspectRatioOptions={getAspectRatioOptions()}
+                showAspectRatio={logic.model !== 'seedream'}
+                showImageCount={false}
+                imageCount={1}
+                onImageCountChange={() => { }}
+                modelButtons={modelButtons}
+                modeButtons={logic.model === 'nano-banana-pro' ? [
+                    {
+                        key: '1K',
+                        text: '1K',
+                        onClick: () => logic.setResolution('1K'),
+                        isActive: logic.resolution === '1K',
+                        tooltip: '1024x1024 resolution'
+                    },
+                    {
+                        key: '2K',
+                        text: '2K',
+                        onClick: () => logic.setResolution('2K'),
+                        isActive: logic.resolution === '2K',
+                        tooltip: '2048x2048 resolution'
+                    },
+                    {
+                        key: '4K',
+                        text: '4K',
+                        onClick: () => logic.setResolution('4K'),
+                        isActive: logic.resolution === '4K',
+                        tooltip: '4096x4096 resolution'
                     }
-                },
-                isSeedreamAspectRatioInvalid: logic.isSeedreamAspectRatioInvalid
-            } : undefined}
-        />
+                ] : undefined}
+                generateButtonText="Generate"
+                onGenerate={logic.handleGenerate}
+                generateDisabled={logic.isGenerateDisabled}
+                pendingCount={logic.isLoading ? logic.progress.total - logic.progress.completed : 0}
+                startOverButtonText="Clear"
+                onStartOver={logic.handleStartOver}
+                startOverDisabled={logic.isLoading || logic.generationResults.length === 0}
+                studioMode="image"
+                seedreamSettings={logic.model === 'seedream' ? {
+                    imageSizePreset: logic.imageSizePreset,
+                    onImageSizePresetChange: logic.setImageSizePreset,
+                    imageSizePresets: logic.imageSizePresets,
+                    customWidth: logic.customWidth,
+                    customHeight: logic.customHeight,
+                    onCustomWidthChange: logic.setCustomWidth,
+                    onCustomHeightChange: logic.setCustomHeight,
+                    aspectRatioPresets: ASPECT_RATIO_PRESETS,
+                    currentAspectRatio: logic.aspectRatio,
+                    onAspectRatioPresetClick: (preset) => {
+                        if (logic.imageSizePreset === 'custom') {
+                            logic.setCustomWidth(preset.width);
+                            logic.setCustomHeight(preset.height);
+                        } else if (logic.imageSizePreset === 'custom_4K' || logic.imageSizePreset === 'custom_2K') {
+                            logic.setAspectRatio(preset.label);
+                        }
+                    },
+                    isSeedreamAspectRatioInvalid: logic.isSeedreamAspectRatioInvalid
+                } : undefined}
+            />
         </>
     );
 };

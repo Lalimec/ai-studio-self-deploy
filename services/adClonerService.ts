@@ -7,24 +7,24 @@ import { generateFigureImage } from './geminiService';
 
 
 export const researchAdContext = async (
-  adImageBlob: { base64: string, mimeType: string }
+    adImageBlob: { base64: string, mimeType: string }
 ): Promise<string> => {
-  const prompt = `Analyze this ad image to understand its context. What is the product, service, or topic being advertised? What is the overall theme and target audience? Provide a concise summary based on your analysis and web search.`;
-  
-  const response = await ai.models.generateContent({
-    model: Constance.models.text.flash,
-    contents: {
-      parts: [
-        { inlineData: { data: adImageBlob.base64, mimeType: adImageBlob.mimeType } },
-        { text: prompt },
-      ]
-    },
-    config: {
-      tools: [{googleSearch: {}}],
-    },
-  });
+    const prompt = `Analyze this ad image to understand its context. What is the product, service, or topic being advertised? What is the overall theme and target audience? Provide a concise summary based on your analysis and web search.`;
 
-  return response.text;
+    const response = await ai.models.generateContent({
+        model: Constance.models.text.flash,
+        contents: {
+            parts: [
+                { inlineData: { data: adImageBlob.base64, mimeType: adImageBlob.mimeType } },
+                { text: prompt },
+            ]
+        },
+        config: {
+            tools: [{ googleSearch: {} }],
+        },
+    });
+
+    return response.text;
 };
 
 export const enhanceAdInstructions = async (instruction: string): Promise<string> => {
@@ -49,18 +49,18 @@ export const generateAdPrompts = async (
         throw new Error("Ad image is required to generate prompts.");
     }
     const adBlob = dataUrlToBlob(adImage.croppedSrc);
-    
+
     let userPrompt = `Generate a base prompt and ${numVariations} variations for the provided ad image${subjectImages.length > 0 ? ' and subject images' : ''}.`;
     if (researchContext) {
-      userPrompt += `\n\nUse the following research context to inform the generation: "${researchContext}"`;
+        userPrompt += `\n\nUse the following research context to inform the generation: "${researchContext}"`;
     }
     if (userInstructions) {
-      userPrompt += `\n\nFollow these instructions: "${userInstructions}"`;
+        userPrompt += `\n\nFollow these instructions: "${userInstructions}"`;
     }
 
     const parts: any[] = [
-      { text: userPrompt },
-      { inlineData: { data: adBlob.base64, mimeType: adBlob.mimeType } },
+        { text: userPrompt },
+        { inlineData: { data: adBlob.base64, mimeType: adBlob.mimeType } },
     ];
     subjectImages.forEach((img) => {
         if (img.croppedSrc) {
@@ -100,13 +100,13 @@ export const getNewAdVariations = async (options: {
     let userPrompt = `Based on the provided base prompt and existing variations, generate ${numVariations} new, creative, and distinct variation(s).`;
 
     if (userInstructions) {
-      userPrompt += `\n\nRemember to also adhere to the original top-level instructions: "${userInstructions}"`;
+        userPrompt += `\n\nRemember to also adhere to the original top-level instructions: "${userInstructions}"`;
     }
 
     if (researchContext) {
         userPrompt += `\n\nAlso consider the original research context: "${researchContext}"`;
     }
-    
+
     userPrompt += `
       \n\nExisting Data (for context and to avoid generating duplicates):
       ${JSON.stringify(existingResult, null, 2)}
@@ -151,14 +151,18 @@ export const generateAdVariationImage = async (options: {
     imageModel: AdClonerSettings['imageModel'];
     aspectRatio: string | null;
     useNanoBananaWebhook: boolean;
+    resolution?: string;
 }): Promise<string> => {
-    const { imageSources, instructionalPrompt, imageModel: model, aspectRatio, useNanoBananaWebhook } = options;
+    const { imageSources, instructionalPrompt, imageModel: model, aspectRatio, useNanoBananaWebhook, resolution } = options;
 
     const result = await generateFigureImage(
-        'nano-banana', // This service is specific to Nano Banana for now
+        model,
         instructionalPrompt,
         imageSources,
-        { aspectRatio: aspectRatio || undefined },
+        {
+            aspectRatio: aspectRatio || undefined,
+            resolution
+        },
         useNanoBananaWebhook
     );
 
@@ -171,14 +175,19 @@ export const refineAdImage = async (options: {
     refineText: string;
     aspectRatio: string | null;
     useNanoBananaWebhook: boolean;
+    imageModel?: AdClonerSettings['imageModel'];
+    resolution?: string;
 }): Promise<string> => {
-    const { imageSources, refineText, aspectRatio, useNanoBananaWebhook } = options;
+    const { imageSources, refineText, aspectRatio, useNanoBananaWebhook, imageModel, resolution } = options;
 
     const result = await generateFigureImage(
-        'nano-banana',
+        imageModel || 'nano-banana',
         refineText,
         imageSources,
-        { aspectRatio: aspectRatio || undefined },
+        {
+            aspectRatio: aspectRatio || undefined,
+            resolution
+        },
         useNanoBananaWebhook
     );
 

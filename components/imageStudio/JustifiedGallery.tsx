@@ -37,8 +37,9 @@ interface JustifiedGalleryProps {
  * Categorize image into container type based on aspect ratio
  */
 const getContainerType = (aspectRatio: number): ContainerInfo => {
-    // Portrait: aspect ratio < 0.8 (taller than 4:5)
-    if (aspectRatio < 0.8) {
+    // Portrait: aspect ratio <= 0.81 (taller than or equal to ~4:5)
+    // We use 0.81 to include 4:5 (0.8) and account for minor floating point differences
+    if (aspectRatio <= 0.81) {
         return {
             type: 'portrait',
             slots: 2,

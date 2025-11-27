@@ -95,6 +95,8 @@ export const useArchitectureStudio = ({
     const [model, setModel] = useState<NanoBananaModel>('nano-banana');
     const [resolution, setResolution] = useState<NanoBananaResolution>('1K');
 
+    const [errors, setErrors] = useState<{ id: string; error: string; prompt?: string; modelResponse?: string }[]>([]);
+
     const isBusy = isPreparing || isGeneratingVideos || isGeneratingDepthMaps || pendingImageCount > 0 || originalImage.isPreparing || originalImage.isGeneratingVideo || originalImage.isGeneratingDepthMap;
 
     // Compute if Generate button should be disabled
@@ -103,10 +105,10 @@ export const useArchitectureStudio = ({
         !options.useCustomStyles &&
         options.styles.length === 0
     ) || (
-        options.styleSelectionMode === 'selected' &&
-        options.useCustomStyles &&
-        !options.customStyles.trim()
-    );
+            options.styleSelectionMode === 'selected' &&
+            options.useCustomStyles &&
+            !options.customStyles.trim()
+        );
 
     const onCropConfirm = (croppedImageDataUrl: string, aspectRatio: number) => {
         const isNewUpload = !croppedImage;
@@ -171,6 +173,8 @@ export const useArchitectureStudio = ({
                 setOriginalFile(null);
                 setCroppedImage(null);
                 setGeneratedImages([]);
+                setErrors([]);
+                setIsPreparing(false);
                 setGenerationTimestamp('');
                 setSessionId(null);
                 setOriginalImage({
@@ -343,7 +347,10 @@ export const useArchitectureStudio = ({
                     imageGenerationPrompt: newImage.imageGenerationPrompt
                 }, ...prev]);
             },
-            (errorMessage) => addToast(errorMessage, 'error'),
+            (errorMessage) => {
+                // addToast(errorMessage, 'error'); // Don't toast, show card
+                setErrors(prev => [...prev, { id: `err-${Date.now()}-${Math.random()}`, error: errorMessage }]);
+            },
             () => {
                 // onTaskComplete
                 setPendingImageCount(prev => Math.max(0, prev - 1));
@@ -395,14 +402,20 @@ export const useArchitectureStudio = ({
                     imageGenerationPrompt: newImage.imageGenerationPrompt
                 }, ...prev]);
             },
-            (errorMessage) => addToast(errorMessage, 'error'),
+            (errorMessage) => {
+                // addToast(errorMessage, 'error');
+                setErrors(prev => [...prev, { id: `err-${Date.now()}-${Math.random()}`, error: errorMessage }]);
+            },
             () => {
                 setPendingImageCount(prev => Math.max(0, prev - 1));
-            }
-        ).catch(err => {
-            addToast(err instanceof Error ? err.message : 'An error occurred during unstyled generation.', 'error');
-            setPendingImageCount(prev => Math.max(0, prev - 1));
-        });
+            }).catch(err => {
+                addToast(err instanceof Error ? err.message : 'An error occurred during unstyled generation.', 'error');
+                setPendingImageCount(prev => Math.max(0, prev - 1));
+            });
+    };
+
+    const handleRemoveError = (id: string) => {
+        setErrors(prev => prev.filter(e => e.id !== id));
     };
 
     const handleStartOver = () => {
@@ -1546,5 +1559,7 @@ export const useArchitectureStudio = ({
         setModel,
         resolution,
         setResolution,
+        errors,
+        handleRemoveError,
     };
 };

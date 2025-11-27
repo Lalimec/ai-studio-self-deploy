@@ -20,8 +20,8 @@ export enum ColorOption {
 }
 
 export enum AdornmentOption {
-    Original = 'Original',
-    Random = 'Random',
+  Original = 'Original',
+  Random = 'Random',
 }
 
 export const ASPECT_RATIOS = ['auto', '1:1', '2:3', '3:2', '3:4', '4:3', '4:5', '5:4', '9:16', '16:9', '21:9'] as const;
@@ -47,8 +47,8 @@ export type Beard = {
 };
 
 export type Accessory = {
-  id:string;
-  name:string;
+  id: string;
+  name: string;
 };
 
 export type GenerationOptions = {
@@ -120,79 +120,79 @@ export type Toast = {
 // --- BABY STUDIO TYPES ---
 
 export enum BabyGender {
-    Boy = "Boy",
-    Girl = "Girl",
-    SurpriseMe = "Surprise Me",
+  Boy = "Boy",
+  Girl = "Girl",
+  SurpriseMe = "Surprise Me",
 }
 
 export enum BabyAge {
-    Newborn = "Newborn (0-6 mo)",
-    Infant = "Infant (6-12 mo)",
-    Toddler = "Toddler (1-3 yrs)",
-    Child = "Child (4-6 yrs)",
+  Newborn = "Newborn (0-6 mo)",
+  Infant = "Infant (6-12 mo)",
+  Toddler = "Toddler (1-3 yrs)",
+  Child = "Child (4-6 yrs)",
 }
 
 export type BabyGenerationOptions = {
-    age: BabyAge;
-    gender: BabyGender;
-    composition: string[];
-    customComposition: string;
-    useCustomComposition: boolean;
-    background: string[];
-    customBackgrounds: string;
-    useCustomBackgrounds: boolean;
-    clothing: string[];
-    customClothing: string;
-    useCustomClothing: boolean;
-    action: string[];
-    customAction: string;
-    useCustomAction: boolean;
-    imageCount: number;
-    aspectRatio: AspectRatio;
+  age: BabyAge;
+  gender: BabyGender;
+  composition: string[];
+  customComposition: string;
+  useCustomComposition: boolean;
+  background: string[];
+  customBackgrounds: string;
+  useCustomBackgrounds: boolean;
+  clothing: string[];
+  customClothing: string;
+  useCustomClothing: boolean;
+  action: string[];
+  customAction: string;
+  useCustomAction: boolean;
+  imageCount: number;
+  aspectRatio: AspectRatio;
 };
 
 export type GeneratedBabyImage = {
-    src: string;
-    description: string;
-    filename: string;
-    imageGenerationPrompt: string;
-    isRegenerating?: boolean; // Keep for consistency, but won't be used
-    videoPrompt?: string;
-    isPreparing?: boolean;
-    videoSrc?: string;
-    isGeneratingVideo?: boolean;
-    videoGenerationFailed?: boolean;
-    publicUrl?: string;
+  src: string;
+  description: string;
+  filename: string;
+  imageGenerationPrompt: string;
+  isRegenerating?: boolean; // Keep for consistency, but won't be used
+  videoPrompt?: string;
+  isPreparing?: boolean;
+  videoSrc?: string;
+  isGeneratingVideo?: boolean;
+  videoGenerationFailed?: boolean;
+  publicUrl?: string;
 };
 
 export type ParentImageState = {
-    id: 'parent1' | 'parent2';
-    file: File | null;
-    originalSrc: string | null;
-    croppedSrc: string | null;
-    publicUrl?: string; // To cache the uploaded URL
-    isPreparing?: boolean;
-    videoPrompt?: string;
-    isGeneratingVideo?: boolean;
-    videoSrc?: string;
-    filename?: string;
-    videoGenerationFailed?: boolean;
+  id: 'parent1' | 'parent2';
+  file: File | null;
+  originalSrc: string | null;
+  croppedSrc: string | null;
+  publicUrl?: string; // To cache the uploaded URL
+  isPreparing?: boolean;
+  videoPrompt?: string;
+  isGeneratingVideo?: boolean;
+  videoSrc?: string;
+  filename?: string;
+  videoGenerationFailed?: boolean;
 };
 
 export type OriginalImageState = {
-    file: File | null;
-    croppedSrc: string | null;
-    publicUrl?: string; // To cache the uploaded URL
-    isPreparing?: boolean;
-    videoPrompt?: string;
-    isGeneratingVideo?: boolean;
-    videoSrc?: string;
-    filename?: string;
-    videoGenerationFailed?: boolean;
-    // Architecture Studio specific
-    depthMapSrc?: string;
-    isGeneratingDepthMap?: boolean;
-    depthMapGenerationFailed?: boolean;
+  file: File | null;
+  croppedSrc: string | null;
+  publicUrl?: string; // To cache the uploaded URL
+  isPreparing?: boolean;
+  videoPrompt?: string;
+  isGeneratingVideo?: boolean;
+  videoSrc?: string;
+  filename?: string;
+  videoGenerationFailed?: boolean;
+  // Architecture Studio specific
+  depthMapSrc?: string;
+  isGeneratingDepthMap?: boolean;
+  depthMapGenerationFailed?: boolean;
 };
 
 // Architecture Studio - Image Transformation Types
@@ -200,15 +200,15 @@ export type TransformationType = 'tidy' | 'unfurnished' | 'livedIn';
 export type ActiveVersionType = 'real' | TransformationType;
 
 export type TransformedVersionState = OriginalImageState & {
-    transformationType: TransformationType;
-    sourceVersion: ActiveVersionType; // Which version this was created from
-    isGenerating?: boolean; // Currently generating this transformation
+  transformationType: TransformationType;
+  sourceVersion: ActiveVersionType; // Which version this was created from
+  isGenerating?: boolean; // Currently generating this transformation
 };
 
 export type TransformedVersionsState = {
-    tidy?: TransformedVersionState;
-    unfurnished?: TransformedVersionState;
-    livedIn?: TransformedVersionState;
+  tidy?: TransformedVersionState;
+  unfurnished?: TransformedVersionState;
+  livedIn?: TransformedVersionState;
 };
 
 
@@ -234,28 +234,28 @@ export interface ImageStudioRunResult {
 }
 
 export interface ImageStudioGenerationResult {
-    key: string;
-    status: 'success' | 'error' | 'warning' | 'pending';
-    url?: string;
-    prompt?: string;
-    error?: string;
-    modelResponse?: string;
-    originalImageIndex: number;
-    originalPromptIndex: number;
-    batchTimestamp: number;
+  key: string;
+  status: 'success' | 'error' | 'warning' | 'pending';
+  url?: string;
+  prompt?: string;
+  error?: string;
+  modelResponse?: string;
+  originalImageIndex: number;
+  originalPromptIndex: number;
+  batchTimestamp: number;
 }
 
 export type ImageStudioResultImage = {
-    src: string;
-    filename: string;
-    imageGenerationPrompt: string;
-    // FIX: Add optional properties to conform to DisplayImage union type
-    isRegenerating?: boolean;
-    videoPrompt?: string;
-    isPreparing?: boolean;
-    videoSrc?: string;
-    isGeneratingVideo?: boolean;
-    publicUrl?: string;
+  src: string;
+  filename: string;
+  imageGenerationPrompt: string;
+  // FIX: Add optional properties to conform to DisplayImage union type
+  isRegenerating?: boolean;
+  videoPrompt?: string;
+  isPreparing?: boolean;
+  videoSrc?: string;
+  isGeneratingVideo?: boolean;
+  publicUrl?: string;
 };
 
 // --- TIMELINE STUDIO TYPES ---
@@ -290,18 +290,19 @@ export type AdSubjectImageState = AdImageState & {
 
 export type AdClonerSettings = {
   textModel: 'gemini-2.5-flash' | 'gemini-2.5-pro';
-  imageModel: 'gemini-2.5-flash-image';
+  imageModel: 'gemini-2.5-flash-image' | 'nano-banana-pro';
+  resolution?: NanoBananaResolution;
 };
 
 export type AdClonerPromptDetails = {
-    summary: string;
-    overall_format_and_art_style: string;
-    composition_and_layout: string;
-    subject: string;
-    actions_and_poses_clockwise_from_top_left: string;
-    setting_background: string;
-    text_and_ui_elements: string;
-    overall_mood: string;
+  summary: string;
+  overall_format_and_art_style: string;
+  composition_and_layout: string;
+  subject: string;
+  actions_and_poses_clockwise_from_top_left: string;
+  setting_background: string;
+  text_and_ui_elements: string;
+  overall_mood: string;
 };
 
 export type AdClonerVariation = {
@@ -325,98 +326,98 @@ export type VariationImageHistory = {
 
 // FIX: Added VariationState here to make it globally available.
 export type VariationState = {
-    isLoading: boolean;
-    imageHistory: string[];
-    activeImageIndex: number;
-    refineText: string;
-    refineImage: { file: File | null; src: string | null };
-    isEnhancingRefine: boolean;
-    isGeneratingRefineVariation: boolean;
-    isTranslatingRefine: boolean;
+  isLoading: boolean;
+  imageHistory: string[];
+  activeImageIndex: number;
+  refineText: string;
+  refineImage: { file: File | null; src: string | null };
+  isEnhancingRefine: boolean;
+  isGeneratingRefineVariation: boolean;
+  isTranslatingRefine: boolean;
 };
 
 // --- GLOBAL SETTINGS ---
 export type NanoBananaWebhookSettings = {
-    hair: boolean;
-    baby: boolean;
-    image: boolean;
-    architecture: boolean;
-    adCloner: boolean;
-    videoAnalyzer: boolean;
+  hair: boolean;
+  baby: boolean;
+  image: boolean;
+  architecture: boolean;
+  adCloner: boolean;
+  videoAnalyzer: boolean;
 };
 
 export type DownloadSettings = {
-    includeMetadataFiles: boolean; // Whether to download .txt metadata files alongside images
+  includeMetadataFiles: boolean; // Whether to download .txt metadata files alongside images
 };
 
 // --- VIDEO ANALYZER TYPES ---
 export type AnalysisModel = 'gemini-2.5-pro' | 'gemini-2.5-flash';
 export type ImageModel =
-    'imagen-4.0-ultra-generate-001' |
-    'imagen-4.0-generate-001' |
-    'imagen-4.0-fast-generate-001' |
-    'gemini-2.5-flash-image' |
-    'nano-banana' |
-    'seedream' |
-    'flux-kontext-pro' |
-    'qwen';
+  'imagen-4.0-ultra-generate-001' |
+  'imagen-4.0-generate-001' |
+  'imagen-4.0-fast-generate-001' |
+  'gemini-2.5-flash-image' |
+  'nano-banana' |
+  'seedream' |
+  'flux-kontext-pro' |
+  'qwen';
 
 export type VideoAnalyzerSettings = {
-    analysisModel: AnalysisModel;
-    imageModel: ImageModel;
-    aspectRatio: AspectRatio;
-    sceneImageModel: ImageModel;
-    sceneAspectRatio: AspectRatio;
-    additionalInstructions: string;
-    nanoBananaPrompt: string;
-    sceneInstructions: string;
+  analysisModel: AnalysisModel;
+  imageModel: ImageModel;
+  aspectRatio: AspectRatio;
+  sceneImageModel: ImageModel;
+  sceneAspectRatio: AspectRatio;
+  additionalInstructions: string;
+  nanoBananaPrompt: string;
+  sceneInstructions: string;
 };
 
 export interface StoryboardScene {
-    timestamp: string;
-    description: string;
-    visuals: string;
-    assets: string;
-    still_prompt: string;
-    video_prompt: string;
-    generated_images?: string[];
-    manual_offset_ms?: number;
+  timestamp: string;
+  description: string;
+  visuals: string;
+  assets: string;
+  still_prompt: string;
+  video_prompt: string;
+  generated_images?: string[];
+  manual_offset_ms?: number;
 }
 
 export interface VideoAnalysis {
-    analysis: string;
-    concept_approaches: string;
-    storyboard: StoryboardScene[];
-    overall_video_style_prompt: string;
+  analysis: string;
+  concept_approaches: string;
+  storyboard: StoryboardScene[];
+  overall_video_style_prompt: string;
 }
 
 export interface AdIdea {
-    id?: string;
-    title: string;
-    description: string;
-    layout: string;
-    cta: string;
-    text: {
-        headline: string;
-        body: string;
-        disclaimer: string;
-    };
-    subjects: string;
-    environment: string;
-    vibe: string;
-    creatives: string;
-    generation_prompt: string;
-    generatedImages?: string[];
+  id?: string;
+  title: string;
+  description: string;
+  layout: string;
+  cta: string;
+  text: {
+    headline: string;
+    body: string;
+    disclaimer: string;
+  };
+  subjects: string;
+  environment: string;
+  vibe: string;
+  creatives: string;
+  generation_prompt: string;
+  generatedImages?: string[];
 }
 
 export class JsonParseError extends Error {
-    public rawResponse: string;
+  public rawResponse: string;
 
-    constructor(message: string, rawResponse: string) {
-        super(message);
-        this.name = 'JsonParseError';
-        this.rawResponse = rawResponse;
-    }
+  constructor(message: string, rawResponse: string) {
+    super(message);
+    this.name = 'JsonParseError';
+    this.rawResponse = rawResponse;
+  }
 }
 
 // --- ARCHITECTURE STUDIO TYPES ---

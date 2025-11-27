@@ -69,6 +69,8 @@ export const useHairStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
     const [model, setModel] = useState<NanoBananaModel>('nano-banana');
     const [resolution, setResolution] = useState<NanoBananaResolution>('1K');
 
+    const [errors, setErrors] = useState<{ id: string; error: string; prompt?: string; modelResponse?: string }[]>([]);
+
     const isBusy = isPreparing || isGeneratingVideos || pendingImageCount > 0 || originalImage.isPreparing || originalImage.isGeneratingVideo;
     const isGenerateDisabled = !croppedImage;
 
@@ -169,7 +171,10 @@ export const useHairStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
                     imageGenerationPrompt: newImage.imageGenerationPrompt
                 }, ...prev]);
             },
-            (errorMessage) => addToast(errorMessage, 'error'),
+            (errorMessage) => {
+                // addToast(errorMessage, 'error'); // Don't toast, show card
+                setErrors(prev => [...prev, { id: `err-${Date.now()}-${Math.random()}`, error: errorMessage }]);
+            },
             () => { // onTaskComplete
                 setPendingImageCount(prev => Math.max(0, prev - 1));
             }
@@ -179,6 +184,10 @@ export const useHairStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
         });
     };
 
+    const handleRemoveError = (id: string) => {
+        setErrors(prev => prev.filter(e => e.id !== id));
+    };
+
     const handleStartOver = () => {
         setConfirmAction({
             title: "Start Over?",
@@ -186,6 +195,7 @@ export const useHairStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
             onConfirm: () => {
                 logUserAction('START_OVER_HAIR', { sessionId });
                 setOriginalFile(null); setCroppedImage(null); setGeneratedImages([]);
+                setErrors([]);
                 setIsPreparing(false); setIsGeneratingVideos(false);
                 setGenerationTimestamp(''); setPendingImageCount(0);
                 setSessionId(null);
@@ -295,7 +305,7 @@ export const useHairStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
             setGeneratedImages(prev => prev.map(img => img.filename === filename ? { ...img, isGeneratingVideo: false, videoGenerationFailed: true } : img));
         }
     };
-    
+
     const handleRemoveGeneratedImage = (filenameToRemove: string) => {
         logUserAction('REMOVE_HAIR_IMAGE', { filename: filenameToRemove, sessionId });
         setGeneratedImages((prev) => prev.filter(img => img.filename !== filenameToRemove));
@@ -674,5 +684,7 @@ export const useHairStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
         handleDownloadOriginal,
         handleDownloadSingle,
         handleDownloadAll,
+        errors,
+        handleRemoveError,
     };
 };

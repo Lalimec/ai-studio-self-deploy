@@ -25,7 +25,7 @@ export const useAdCloner = ({ addToast, setConfirmAction, withMultiDownloadWarni
     const [adImage, setAdImage] = useState<AdImageState>(initialAdState);
     const [subjectImages, setSubjectImages] = useState<AdSubjectImageState[]>([]);
     const [sessionId, setSessionId] = useState<string | null>(null);
-    
+
     const [researchContext, setResearchContext] = useState('');
     const [includeResearch, setIncludeResearch] = useState(true);
     const [isResearching, setIsResearching] = useState(false);
@@ -38,7 +38,7 @@ export const useAdCloner = ({ addToast, setConfirmAction, withMultiDownloadWarni
 
     const [generationResult, setGenerationResult] = useState<AdClonerGenerationResult | null>(null);
     const [isGeneratingPrompts, setIsGeneratingPrompts] = useState(false);
-    
+
     // FIX: Changed state key from number to string to fix TypeScript's type inference with Object.values/entries
     const [variationStates, setVariationStates] = useState<Record<string, VariationState>>({});
     const [isGeneratingAllImages, setIsGeneratingAllImages] = useState(false);
@@ -46,9 +46,10 @@ export const useAdCloner = ({ addToast, setConfirmAction, withMultiDownloadWarni
     const [settings, setSettings] = useState<AdClonerSettings>({
         textModel: 'gemini-2.5-flash',
         imageModel: 'gemini-2.5-flash-image',
+        resolution: '2K',
     });
     const [settingsModalOpen, setSettingsModalOpen] = useState(false);
-    
+
     // FIX: `s` is now correctly inferred as `VariationState`, fixing the error on `s.isLoading`.
     const isBusy = isGeneratingPrompts || isResearching || isGeneratingAllImages || isEnhancingInstructions || isTranslatingInstructions || Object.values(variationStates).some(s => (s as VariationState).isLoading);
 
@@ -63,10 +64,10 @@ export const useAdCloner = ({ addToast, setConfirmAction, withMultiDownloadWarni
         } else if (cropper.type === 'adCloner-refine' && cropper.id) {
             const index = parseInt(cropper.id, 10);
             // FIX: Use string key `cropper.id` to access variationStates.
-            setVariationState(index, { refineImage: { ...variationStates[cropper.id]?.refineImage, src: croppedSrc }});
+            setVariationState(index, { refineImage: { ...variationStates[cropper.id]?.refineImage, src: croppedSrc } });
         }
     };
-    
+
     const onCropCancel = (cropper: NonNullable<ActiveCropper>) => {
         if (cropper.type === 'adCloner-subject' && cropper.id) {
             // If a subject was added but cropping was cancelled, remove it.
@@ -74,7 +75,7 @@ export const useAdCloner = ({ addToast, setConfirmAction, withMultiDownloadWarni
         }
         // No action needed for ad image or refine image on cancel, they just don't get updated.
     };
-    
+
     const onSubjectUpload = (file: File, originalSrc: string, id: string) => {
         if (subjectImages.length >= 6) {
             addToast("You can upload a maximum of 6 subject images.", "info");
@@ -82,7 +83,7 @@ export const useAdCloner = ({ addToast, setConfirmAction, withMultiDownloadWarni
         }
         setSubjectImages(prev => [...prev, { id, file, originalSrc, croppedSrc: null }]);
     };
-    
+
     const onRefineImageUpload = (file: File, src: string, variationIndex: string) => {
         const index = parseInt(variationIndex, 10);
         setVariationState(index, { refineImage: { file, src: null } });
@@ -126,7 +127,7 @@ export const useAdCloner = ({ addToast, setConfirmAction, withMultiDownloadWarni
             });
             setGenerationResult(result);
         } catch (e) {
-             addToast(e instanceof Error ? e.message : 'Failed to generate prompts.', 'error');
+            addToast(e instanceof Error ? e.message : 'Failed to generate prompts.', 'error');
         } finally {
             setIsGeneratingPrompts(false);
         }
@@ -170,7 +171,7 @@ export const useAdCloner = ({ addToast, setConfirmAction, withMultiDownloadWarni
             };
         });
     };
-    
+
     const handleGenerateAdImage = async (index: number, isBatch: boolean = false) => {
         if (!generationResult || !adImage.file) return;
         logUserAction('GENERATE_ADCLONER_IMAGE', { variationIndex: index, isBatch, sessionId });
@@ -178,11 +179,11 @@ export const useAdCloner = ({ addToast, setConfirmAction, withMultiDownloadWarni
         if (!isBatch) addToast(`Generating image for Variation ${index + 1}...`, 'info');
         try {
             const imageSources: { base64: string; mimeType: string; }[] = [];
-            if(adImage.croppedSrc) {
+            if (adImage.croppedSrc) {
                 imageSources.push(dataUrlToBlob(adImage.croppedSrc));
             }
             subjectImages.forEach(img => {
-                if(img.croppedSrc) {
+                if (img.croppedSrc) {
                     imageSources.push(dataUrlToBlob(img.croppedSrc));
                 }
             });
@@ -192,6 +193,7 @@ export const useAdCloner = ({ addToast, setConfirmAction, withMultiDownloadWarni
                 imageModel: settings.imageModel,
                 aspectRatio,
                 useNanoBananaWebhook,
+                resolution: settings.resolution,
             });
             setVariationState(index, (currentState) => {
                 const newHistory = [...currentState.imageHistory, imageUrl];
@@ -212,7 +214,7 @@ export const useAdCloner = ({ addToast, setConfirmAction, withMultiDownloadWarni
             setVariationState(index, { isLoading: false });
         }
     };
-    
+
     const handleGenerateAllImages = async () => {
         if (!generationResult || isBusy) return;
 
@@ -266,7 +268,7 @@ export const useAdCloner = ({ addToast, setConfirmAction, withMultiDownloadWarni
         logUserAction('REFINE_ADCLONER_IMAGE', { variationIndex: index, refineText: state.refineText, hasRefineImage: !!state.refineImage.src, sessionId });
 
         const currentImageSrc = state.imageHistory[state.activeImageIndex];
-        
+
         setVariationState(index, { isLoading: true });
         addToast(`Applying edits to Variation ${index + 1}...`, 'info');
         try {
@@ -279,8 +281,10 @@ export const useAdCloner = ({ addToast, setConfirmAction, withMultiDownloadWarni
                 refineText: state.refineText,
                 aspectRatio,
                 useNanoBananaWebhook,
+                imageModel: settings.imageModel,
+                resolution: settings.resolution,
             });
-            
+
             setVariationState(index, (currentState) => {
                 const newHistory = [...currentState.imageHistory, imageUrl];
                 return {
@@ -314,7 +318,7 @@ export const useAdCloner = ({ addToast, setConfirmAction, withMultiDownloadWarni
                 // If an image before the active one was deleted, shift the active index down
                 newActiveIndex--;
             }
-            
+
             return {
                 imageHistory: newHistory,
                 activeImageIndex: newActiveIndex,
@@ -341,17 +345,17 @@ export const useAdCloner = ({ addToast, setConfirmAction, withMultiDownloadWarni
                     ...prev,
                     variations: [...prev.variations, ...newVariations]
                 }) : prev);
-                 addToast(`${newVariations.length} new variation(s) added!`, "success");
+                addToast(`${newVariations.length} new variation(s) added!`, "success");
             } else {
                 addToast("The AI couldn't generate new variations from that instruction.", "info");
             }
-        } catch(e) {
+        } catch (e) {
             addToast(e instanceof Error ? e.message : 'Failed to get more variations.', 'error');
         } finally {
             setIsGeneratingPrompts(false);
         }
     };
-    
+
     const handleStartOver = () => {
         setConfirmAction({
             title: "Clear Session?",
@@ -464,7 +468,7 @@ export const useAdCloner = ({ addToast, setConfirmAction, withMultiDownloadWarni
             }
         });
     };
-    
+
     const handleDownloadSingleVariation = (index: number) => {
         withMultiDownloadWarning(async () => {
             // FIX: Add type assertion to ensure `state` is correctly typed, preventing property access errors.
@@ -474,7 +478,7 @@ export const useAdCloner = ({ addToast, setConfirmAction, withMultiDownloadWarni
                 addToast("No images to download for this variation.", "error");
                 return;
             }
-            
+
             try {
                 const files: ZipFileEntry[] = [];
 
@@ -525,7 +529,7 @@ export const useAdCloner = ({ addToast, setConfirmAction, withMultiDownloadWarni
                     const newVariations = prev.variations.filter((_, i) => i !== indexToRemove);
                     return { ...prev, variations: newVariations };
                 });
-    
+
                 setVariationStates(prev => {
                     // FIX: Type of newStates should be Record<string, VariationState>
                     const newStates: Record<string, VariationState> = {};
@@ -568,13 +572,13 @@ export const useAdCloner = ({ addToast, setConfirmAction, withMultiDownloadWarni
         try {
             const variedText = await generatePromptVariation(textToVary);
             setVariationState(index, { refineText: variedText, isGeneratingRefineVariation: false });
-             addToast("Refinement prompt variation generated!", "success");
+            addToast("Refinement prompt variation generated!", "success");
         } catch (e) {
             addToast(`Variation failed: ${e instanceof Error ? e.message : "Unknown error"}`, 'error');
             setVariationState(index, { isGeneratingRefineVariation: false });
         }
     };
-    
+
     const handleTranslateRefinePrompt = async (index: number) => {
         // FIX: Use string key to access state
         const textToTranslate = variationStates[String(index)]?.refineText;

@@ -2,6 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { DisplayImage } from '../types';
 import { JustifiedGallery, useImageDimensions } from './imageStudio/JustifiedGallery';
+import { GalleryErrorCard } from './GalleryErrorCard';
 import {
     DownloadIcon,
     RegenerateIcon,
@@ -14,13 +15,22 @@ import {
     DepthMapIcon
 } from './Icons';
 
+export interface GalleryError {
+    id: string;
+    error: string;
+    prompt?: string;
+    modelResponse?: string;
+}
+
 interface JustifiedGalleryGridProps {
     images: DisplayImage[];
     pendingCount: number;
+    errors?: GalleryError[];
     pendingAspectRatio?: string; // Aspect ratio for pending placeholders (e.g., "1:1", "4:5", "16:9", "auto")
     onImageClick: (id: string) => void;
     onRegenerate?: (id: string) => void;
     onRemove: (id: string) => void;
+    onRemoveError?: (id: string) => void;
     onReprepare?: (id: string) => void;
     onDownloadSingle: (id: string) => void;
     onGenerateSingleVideo?: (id: string) => void;
@@ -59,10 +69,12 @@ const parseAspectRatio = (aspectRatio?: string): number => {
 export const JustifiedGalleryGrid: React.FC<JustifiedGalleryGridProps> = ({
     images,
     pendingCount,
+    errors,
     pendingAspectRatio,
     onImageClick,
     onRegenerate,
     onRemove,
+    onRemoveError,
     onReprepare,
     onDownloadSingle,
     onGenerateSingleVideo,
@@ -120,12 +132,12 @@ export const JustifiedGalleryGrid: React.FC<JustifiedGalleryGridProps> = ({
     const allAspectRatiosLoaded = imageUrls.length === 0 || imageUrls.every(url => aspectRatios.has(url));
 
     // Empty state
-    if (images.length === 0 && pendingCount === 0) {
+    if (images.length === 0 && pendingCount === 0 && (!errors || errors.length === 0)) {
         const IconComponent = EmptyIcon || PiCubeIcon;
         return (
             <div className="col-span-full flex flex-col items-center justify-center text-center p-10 rounded-lg min-h-[500px]">
                 <div className="text-center">
-                    <IconComponent className="mx-auto h-24 w-24 text-[var(--color-border-default)] opacity-75"/>
+                    <IconComponent className="mx-auto h-24 w-24 text-[var(--color-border-default)] opacity-75" />
                     <h3 className="mt-4 text-xl font-semibold text-[var(--color-text-light)]">{emptyStateTitle}</h3>
                     <p className="mt-1 text-sm text-[var(--color-text-dimmer)]">{emptyStateDescription}</p>
                 </div>
@@ -166,53 +178,78 @@ export const JustifiedGalleryGrid: React.FC<JustifiedGalleryGridProps> = ({
             >
                 {containerWidth !== null && containerWidth > 0 && allAspectRatiosLoaded && (
                     <JustifiedGallery
-                    images={[
-                        // Pending placeholders FIRST - use generation aspect ratio
-                        ...Array.from({ length: pendingCount }, (_, i) => ({
-                            url: `pending:${i}`,
-                            aspectRatio: parseAspectRatio(pendingAspectRatio),
-                            key: `pending-${i}`
-                        })),
-                        // Actual images
-                        ...images.map(img => ({
-                            url: img.src,
-                            aspectRatio: aspectRatios.get(img.src) || 4/5,
-                            key: 'id' in img ? img.id : img.filename
-                        }))
-                    ]}
-                    targetRowHeight={280}
-                    containerWidth={containerWidth}
-                    gap={16}
-                    renderImage={(item, width, height) => {
-                        // Render pending placeholder
-                        if (item.url.startsWith('pending:')) {
-                            return (
-                                <div className="w-full h-full bg-[var(--color-bg-muted)] rounded-lg flex items-center justify-center animate-pulse">
-                                    <PiCubeIcon className="w-10 h-10 text-[var(--color-text-dimmer)] opacity-50" />
-                                </div>
+                        images={[
+                            // Pending placeholders FIRST - use generation aspect ratio
+                            ...Array.from({ length: pendingCount }, (_, i) => ({
+                                url: `pending:${i}`,
+                                aspectRatio: parseAspectRatio(pendingAspectRatio),
+                                key: `pending-${i}`
+                            })),
+                            // Error cards
+                            ...(errors || []).map(error => ({
+                                url: `error:${error.id}`,
+                                aspectRatio: parseAspectRatio(pendingAspectRatio), // Use same aspect ratio as pending/target
+                                key: `error-${error.id}`
+                            })),
+                            // Actual images
+                            ...images.map(img => ({
+                                url: img.src,
+                                aspectRatio: aspectRatios.get(img.src) || 4 / 5,
+                                key: 'id' in img ? img.id : img.filename
+                            }))
+                        ]}
+                        targetRowHeight={280}
+                        containerWidth={containerWidth}
+                        gap={16}
+                        renderImage={(item, width, height) => {
+                            // Render pending placeholder
+                            if (item.url.startsWith('pending:')) {
+                                return (
+                                    <div className="w-full h-full bg-[var(--color-bg-muted)] rounded-lg flex items-center justify-center animate-pulse">
+                                        <PiCubeIcon className="w-10 h-10 text-[var(--color-text-dimmer)] opacity-50" />
+                                    </div>
+                                );
+                            }
+
+                            // Render error card
+                            if (item.url.startsWith('error:')) {
+                                const errorId = item.key.replace('error-', '');
+                                const errorItem = errors?.find(e => e.id === errorId);
+                                if (!errorItem) return null;
+
+                                return (
+                                    <GalleryErrorCard
+                                        id={errorItem.id}
+                                        error={errorItem.error}
+                                        prompt={errorItem.prompt}
+                                        modelResponse={errorItem.modelResponse}
+                                        onRetry={onRegenerate} // Use onRegenerate for retry
+                                        onRemove={onRemoveError || onRemove}
+                                        aspectRatio={item.aspectRatio}
+                                    />
+                                );
+                            }
+
+                            // Find the actual image
+                            const image = images.find(img =>
+                                ('id' in img ? img.id : img.filename) === item.key
                             );
-                        }
 
-                        // Find the actual image
-                        const image = images.find(img =>
-                            ('id' in img ? img.id : img.filename) === item.key
-                        );
+                            if (!image) return null;
 
-                        if (!image) return null;
-
-                        return <ImageCard
-                            image={image}
-                            onImageClick={onImageClick}
-                            onRegenerate={onRegenerate}
-                            onRemove={onRemove}
-                            onReprepare={onReprepare}
-                            onDownloadSingle={onDownloadSingle}
-                            onGenerateSingleVideo={onGenerateSingleVideo}
-                            onGenerateDepthMap={onGenerateDepthMap}
-                            showVideoActions={showVideoActions}
-                        />;
-                    }}
-                />
+                            return <ImageCard
+                                image={image}
+                                onImageClick={onImageClick}
+                                onRegenerate={onRegenerate}
+                                onRemove={onRemove}
+                                onReprepare={onReprepare}
+                                onDownloadSingle={onDownloadSingle}
+                                onGenerateSingleVideo={onGenerateSingleVideo}
+                                onGenerateDepthMap={onGenerateDepthMap}
+                                showVideoActions={showVideoActions}
+                            />;
+                        }}
+                    />
                 )}
             </div>
         </div>

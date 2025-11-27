@@ -26,8 +26,8 @@ type BabyStudioHookProps = {
 };
 
 export const useBabyStudio = ({ addToast, setConfirmAction, withMultiDownloadWarning, setDownloadProgress, useNanoBananaWebhook, downloadSettings }: BabyStudioHookProps) => {
-    const [parent1, setParent1] = useState<ParentImageState>({...initialParentState, id: 'parent1'});
-    const [parent2, setParent2] = useState<ParentImageState>({...initialParentState, id: 'parent2'});
+    const [parent1, setParent1] = useState<ParentImageState>({ ...initialParentState, id: 'parent1' });
+    const [parent2, setParent2] = useState<ParentImageState>({ ...initialParentState, id: 'parent2' });
     const [options, setOptions] = useState<BabyGenerationOptions>({
         age: BabyAge.Toddler, gender: BabyGender.SurpriseMe,
         composition: [], customComposition: '', useCustomComposition: false,
@@ -43,6 +43,8 @@ export const useBabyStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
     const [isGeneratingVideos, setIsGeneratingVideos] = useState(false);
     const [model, setModel] = useState<NanoBananaModel>('nano-banana');
     const [resolution, setResolution] = useState<NanoBananaResolution>('1K');
+
+    const [errors, setErrors] = useState<{ id: string; error: string; prompt?: string; modelResponse?: string }[]>([]);
 
     const isBusy = pendingImageCount > 0 || isPreparing || isGeneratingVideos || parent1.isPreparing || parent1.isGeneratingVideo || parent2.isPreparing || parent2.isGeneratingVideo;
 
@@ -77,6 +79,7 @@ export const useBabyStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
                 onConfirm: () => {
                     applyCrop();
                     setGeneratedImages([]);
+                    setErrors([]);
                     setSessionId(generateSetId());
                 },
                 onCancel: applyCrop,
@@ -88,8 +91,8 @@ export const useBabyStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
 
     const handleClearParent = (parent: 'parent1' | 'parent2') => {
         const clearState = () => {
-            if (parent === 'parent1') setParent1({...initialParentState, id: 'parent1'});
-            else setParent2({...initialParentState, id: 'parent2'});
+            if (parent === 'parent1') setParent1({ ...initialParentState, id: 'parent1' });
+            else setParent2({ ...initialParentState, id: 'parent2' });
         };
         if (generatedImages.length > 0) {
             setConfirmAction({
@@ -99,6 +102,7 @@ export const useBabyStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
                 onConfirm: () => {
                     clearState();
                     setGeneratedImages([]);
+                    setErrors([]);
                     setSessionId(null);
                 },
             });
@@ -112,7 +116,7 @@ export const useBabyStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
 
     const handleGenerate = () => {
         if (!parent1.croppedSrc || !parent1.file || !parent2.croppedSrc || !parent2.file || !sessionId) return;
-        
+
         const currentOptions = { ...options };
         logUserAction('GENERATE_BABY_IMAGES', { options: currentOptions, sessionId });
         const batchSize = currentOptions.imageCount;
@@ -128,7 +132,8 @@ export const useBabyStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
                 setPendingImageCount(prev => Math.max(0, prev - 1));
             },
             (errorMsg) => {
-                addToast(errorMsg, 'error');
+                // addToast(errorMsg, 'error'); // Don't toast, show card
+                setErrors(prev => [...prev, { id: `err-${Date.now()}-${Math.random()}`, error: errorMsg }]);
                 setPendingImageCount(prev => Math.max(0, prev - 1));
             }
         ).catch(err => {
@@ -136,19 +141,24 @@ export const useBabyStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
             setPendingImageCount(prev => Math.max(0, prev - batchSize));
         });
     };
-    
+
     const handleStartOver = () => {
         setConfirmAction({
             title: "Start Over?",
             message: "This will clear all parent photos and generated results. Are you sure?",
             onConfirm: () => {
-                setParent1({...initialParentState, id: 'parent1'}); 
-                setParent2({...initialParentState, id: 'parent2'});
-                setGeneratedImages([]); 
+                setParent1({ ...initialParentState, id: 'parent1' });
+                setParent2({ ...initialParentState, id: 'parent2' });
+                setGeneratedImages([]);
+                setErrors([]);
                 setPendingImageCount(0); setSessionId(null);
                 setIsPreparing(false); setIsGeneratingVideos(false);
             }
         });
+    };
+
+    const handleRemoveError = (id: string) => {
+        setErrors(prev => prev.filter(e => e.id !== id));
     };
 
     const handlePrepareAll = async () => {
@@ -160,12 +170,12 @@ export const useBabyStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
         if (parent2.croppedSrc && !parent2.videoPrompt && !parent2.isPreparing) {
             unpreparedParents.push(parent2);
         }
-    
+
         const totalToPrepare = unpreparedBabies.length + unpreparedParents.length;
         if (totalToPrepare === 0) {
             return addToast("All items are already prepared.", "info");
         }
-    
+
         logUserAction('PREPARE_BABY_VIDEO_ALL', { babyCount: unpreparedBabies.length, parentCount: unpreparedParents.length, sessionId });
         setIsPreparing(true);
         setGeneratedImages(prev => prev.map(img => unpreparedBabies.some(un => un.filename === img.filename) ? { ...img, isPreparing: true } : img));
@@ -174,13 +184,13 @@ export const useBabyStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
             setParent(prev => ({ ...prev, isPreparing: true }));
         });
         addToast(`Preparing ${totalToPrepare} video prompts...`, "info");
-    
+
         try {
             const babyPromises = prepareBabyVideoPrompts(unpreparedBabies,
                 (filename, prompt) => setGeneratedImages(prev => prev.map(img => img.filename === filename ? { ...img, videoPrompt: prompt, isPreparing: false } : img)),
                 (error) => addToast(error, 'error')
             );
-            
+
             const parentPromises = unpreparedParents.map(async (parent) => {
                 try {
                     const imageBlob = dataUrlToBlob(parent.croppedSrc!);
@@ -191,15 +201,15 @@ export const useBabyStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
                     addToast(error instanceof Error ? error.message : `Error preparing ${parent.id}.`, 'error');
                 }
             });
-    
+
             await Promise.all([babyPromises, ...parentPromises]);
             addToast("Video prompt preparation complete!", "success");
         } catch (err) { addToast(err instanceof Error ? err.message : 'Error during preparation.', 'error'); }
         finally {
             setIsPreparing(false);
             setGeneratedImages(prev => prev.map(img => img.isPreparing ? { ...img, isPreparing: false } : img));
-            setParent1(p => p.isPreparing ? {...p, isPreparing: false} : p);
-            setParent2(p => p.isPreparing ? {...p, isPreparing: false} : p);
+            setParent1(p => p.isPreparing ? { ...p, isPreparing: false } : p);
+            setParent2(p => p.isPreparing ? { ...p, isPreparing: false } : p);
         }
     };
 
@@ -234,7 +244,7 @@ export const useBabyStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
             return null;
         }
     };
-    
+
     const handleGenerateAllVideos = async () => {
         // Find items ready to generate (have prompts, not currently generating)
         const babiesWithPrompts = generatedImages.filter(img => !!img.videoPrompt && !img.isGeneratingVideo);
@@ -314,8 +324,8 @@ export const useBabyStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
                     publicUrl = await ensurePublicUrlForBaby((item as GeneratedBabyImage).filename);
                 }
 
-                if(publicUrl && item.videoPrompt) {
-                     videoTasks.push({
+                if (publicUrl && item.videoPrompt) {
+                    videoTasks.push({
                         startImageUrl: publicUrl,
                         videoPrompt: item.videoPrompt,
                         filename: filename,
@@ -327,8 +337,8 @@ export const useBabyStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
                 addToast("Some images failed to upload and were skipped.", "warning");
             }
 
-            if(videoTasks.length > 0) {
-                 await generateAllVideos(videoTasks,
+            if (videoTasks.length > 0) {
+                await generateAllVideos(videoTasks,
                     (filename, videoSrc) => {
                         if (filename === 'parent1' || filename === 'parent2') {
                             const setParent = filename === 'parent1' ? setParent1 : setParent2;
@@ -357,8 +367,8 @@ export const useBabyStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
         finally {
             setIsGeneratingVideos(false);
             setGeneratedImages(prev => prev.map(img => ({ ...img, isGeneratingVideo: false })));
-            setParent1(p => ({...p, isGeneratingVideo: false}));
-            setParent2(p => ({...p, isGeneratingVideo: false}));
+            setParent1(p => ({ ...p, isGeneratingVideo: false }));
+            setParent2(p => ({ ...p, isGeneratingVideo: false }));
         }
     };
 
@@ -405,7 +415,7 @@ export const useBabyStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
             setGeneratedImages(prev => prev.map(img => img.filename === filename ? { ...img, isGeneratingVideo: false, videoGenerationFailed: true } : img));
         }
     };
-    
+
     const handleRemoveGeneratedImage = (filenameToRemove: string) => {
         setGeneratedImages((prev) => prev.filter(img => img.filename !== filenameToRemove));
     };
@@ -459,7 +469,7 @@ export const useBabyStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
             setParent(p => ({ ...p, isGeneratingVideo: false, videoGenerationFailed: true }));
         }
     };
-    
+
     const handleDownloadParent = (parentId: 'parent1' | 'parent2') => {
         withMultiDownloadWarning(async () => {
             const parentToDownload = parentId === 'parent1' ? parent1 : parent2;
@@ -623,10 +633,12 @@ export const useBabyStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
     return {
         parent1, setParent1,
         parent2, setParent2,
-        initialParentState: {...initialParentState, id: 'parent1'},
+        initialParentState: { ...initialParentState, id: 'parent1' },
         options, setOptions,
         generatedImages,
         pendingImageCount,
+        errors,
+        handleRemoveError,
         sessionId,
         isPreparing,
         isGeneratingVideos,

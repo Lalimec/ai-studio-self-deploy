@@ -79,70 +79,78 @@ export const NanoBananaProStudio: React.FC<NanoBananaProStudioProps> = ({
                         </>
                     }
                 >
-                        {/* Header Toolbar */}
-                        <div className="flex justify-between items-center mb-4 gap-4 flex-wrap">
-                            <div className="flex items-center gap-2 flex-shrink-0">
-                                <button
-                                    onClick={onShowHelp}
-                                    className="p-2 bg-[var(--color-bg-muted)] hover:bg-[var(--color-bg-muted-hover)] text-[var(--color-text-main)] rounded-lg transition-colors"
-                                    aria-label="Help"
-                                >
-                                    <HelpIcon className="w-5 h-5" />
-                                </button>
-                            </div>
-
-                            <div className="flex items-center gap-2 flex-wrap justify-end">
-                                {logic.generationResults.filter(r => r.status === 'error' || r.status === 'warning').length > 0 && (
-                                    <button
-                                        onClick={logic.handleRetryAll}
-                                        disabled={logic.isLoading}
-                                        className="flex items-center gap-2 bg-[var(--color-warning)] hover:bg-[var(--color-warning-hover)] text-[var(--color-text-on-primary)] font-bold py-2 px-4 rounded-lg transition-colors text-sm disabled:opacity-50"
-                                    >
-                                        <PiSpinnerIcon className="w-5 h-5" />
-                                        Retry Failed ({logic.generationResults.filter(r => r.status === 'error' || r.status === 'warning').length})
-                                    </button>
-                                )}
-
-                                <label className="flex items-center gap-2 bg-[var(--color-bg-muted)] hover:bg-[var(--color-bg-muted-hover)] text-[var(--color-text-main)] font-bold py-2 px-4 rounded-lg transition-colors text-sm cursor-pointer">
-                                    <input
-                                        type="checkbox"
-                                        checked={logic.includeOriginals}
-                                        onChange={(e) => logic.setIncludeOriginals(e.target.checked)}
-                                        className="h-4 w-4 rounded border-[var(--color-border-default)] bg-[var(--color-bg-surface)] text-[var(--color-primary)] focus:ring-[var(--color-primary-ring)] focus:ring-offset-2 focus:ring-offset-[var(--color-bg-muted)]"
-                                    />
-                                    <span>Include originals</span>
-                                </label>
-
-                                <button
-                                    onClick={logic.handleDownloadAll}
-                                    disabled={logic.isLoading || logic.generationResults.length === 0}
-                                    className="flex items-center gap-2 bg-[var(--color-secondary)] hover:bg-[var(--color-secondary-hover)] text-[var(--color-text-on-primary)] font-bold py-2 px-4 rounded-lg transition-colors disabled:bg-[var(--color-bg-muted)] disabled:text-[var(--color-text-dimmer)] text-sm"
-                                >
-                                    <PiDownloadSimpleIcon className="w-4 h-4" />
-                                    Download All
-                                </button>
-                            </div>
+                    {/* Header Toolbar */}
+                    <div className="flex justify-between items-center mb-4 gap-4 flex-wrap">
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                            <button
+                                onClick={onShowHelp}
+                                className="p-2 bg-[var(--color-bg-muted)] hover:bg-[var(--color-bg-muted-hover)] text-[var(--color-text-main)] rounded-lg transition-colors"
+                                aria-label="Help"
+                            >
+                                <HelpIcon className="w-5 h-5" />
+                            </button>
                         </div>
 
-                        {/* Results Gallery */}
-                        <JustifiedGalleryGrid
-                            images={successfulImages}
-                            pendingCount={pendingCount}
-                            pendingAspectRatio={logic.aspectRatio as string}
-                            progressCompleted={logic.progress.completed}
-                            progressTotal={logic.progress.total}
-                            onImageClick={(filename) => {
-                                const result = logic.generationResults.find(r => r.key === filename);
-                                if (result?.url) onImageClick(result.url);
-                            }}
-                            onRegenerate={logic.handleRetryOne}
-                            onRemove={logic.handleRemoveResult}
-                            onDownloadSingle={logic.handleDownloadResult}
-                            emptyStateIcon={BananaIcon}
-                            emptyStateTitle="Pro Gallery Awaits"
-                            emptyStateDescription="Upload images, configure prompts, and generate with Nano Banana Pro."
-                            showVideoActions={false}
-                        />
+                        <div className="flex items-center gap-2 flex-wrap justify-end">
+                            {logic.generationResults.filter(r => r.status === 'error' || r.status === 'warning').length > 0 && (
+                                <button
+                                    onClick={logic.handleRetryAll}
+                                    disabled={logic.isLoading}
+                                    className="flex items-center gap-2 bg-[var(--color-warning)] hover:bg-[var(--color-warning-hover)] text-[var(--color-text-on-primary)] font-bold py-2 px-4 rounded-lg transition-colors text-sm disabled:opacity-50"
+                                >
+                                    <PiSpinnerIcon className="w-5 h-5" />
+                                    Retry Failed ({logic.generationResults.filter(r => r.status === 'error' || r.status === 'warning').length})
+                                </button>
+                            )}
+
+                            <label className="flex items-center gap-2 bg-[var(--color-bg-muted)] hover:bg-[var(--color-bg-muted-hover)] text-[var(--color-text-main)] font-bold py-2 px-4 rounded-lg transition-colors text-sm cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={logic.includeOriginals}
+                                    onChange={(e) => logic.setIncludeOriginals(e.target.checked)}
+                                    className="h-4 w-4 rounded border-[var(--color-border-default)] bg-[var(--color-bg-surface)] text-[var(--color-primary)] focus:ring-[var(--color-primary-ring)] focus:ring-offset-2 focus:ring-offset-[var(--color-bg-muted)]"
+                                />
+                                <span>Include originals</span>
+                            </label>
+
+                            <button
+                                onClick={logic.handleDownloadAll}
+                                disabled={logic.isLoading || logic.generationResults.length === 0}
+                                className="flex items-center gap-2 bg-[var(--color-secondary)] hover:bg-[var(--color-secondary-hover)] text-[var(--color-text-on-primary)] font-bold py-2 px-4 rounded-lg transition-colors disabled:bg-[var(--color-bg-muted)] disabled:text-[var(--color-text-dimmer)] text-sm"
+                            >
+                                <PiDownloadSimpleIcon className="w-4 h-4" />
+                                Download All
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Results Gallery */}
+                    <JustifiedGalleryGrid
+                        images={successfulImages}
+                        pendingCount={pendingCount}
+                        errors={logic.generationResults
+                            .filter(r => r.status === 'error' || r.status === 'warning')
+                            .map(r => ({
+                                id: r.key,
+                                error: r.error || 'Unknown error',
+                                prompt: r.prompt,
+                                modelResponse: r.modelResponse
+                            }))}
+                        pendingAspectRatio={logic.aspectRatio as string}
+                        progressCompleted={logic.progress.completed}
+                        progressTotal={logic.progress.total}
+                        onImageClick={(filename) => {
+                            const result = logic.generationResults.find(r => r.key === filename);
+                            if (result?.url) onImageClick(result.url);
+                        }}
+                        onRegenerate={logic.handleRetryOne}
+                        onRemove={logic.handleRemoveResult}
+                        onDownloadSingle={logic.handleDownloadResult}
+                        emptyStateIcon={BananaIcon}
+                        emptyStateTitle="Pro Gallery Awaits"
+                        emptyStateDescription="Upload images, configure prompts, and generate with Nano Banana Pro."
+                        showVideoActions={false}
+                    />
                 </StudioLayout>
 
                 {/* Bottom: Advanced Options */}
@@ -171,7 +179,7 @@ export const NanoBananaProStudio: React.FC<NanoBananaProStudioProps> = ({
                     aspectRatio={logic.aspectRatio as any}
                     onAspectRatioChange={logic.setAspectRatio}
                     imageCount={1}
-                    onImageCountChange={() => {}}
+                    onImageCountChange={() => { }}
                     onGenerate={logic.handleGenerate}
                     generateButtonText="Generate"
                     generateDisabled={false}
