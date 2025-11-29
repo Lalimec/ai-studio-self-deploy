@@ -80,7 +80,7 @@ export const prepareAllTimelinePrompts = async (
     }
   };
 
-  await processWithConcurrency(pairs, processSingleTask, 6);
+  await processWithConcurrency(pairs, processSingleTask, 10);
 };
 
 // FIX: Added the missing `translateTextToEnglish` function.

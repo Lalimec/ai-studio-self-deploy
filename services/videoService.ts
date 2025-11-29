@@ -4,8 +4,8 @@ import { ai, dataUrlToBlob as dataUrlToBlobUtil } from './geminiClient';
 import { GenerateContentResponse } from '@google/genai';
 import { Constance } from './endpoints';
 
-const POLLING_INTERVAL_MS = 5000;
-const MAX_POLLING_ATTEMPTS = 60; // 5 minutes timeout (60 attempts * 5 seconds)
+const POLLING_INTERVAL_MS = 10000; // 10 seconds between polls (reduced frequency, less server load)
+const MAX_POLLING_ATTEMPTS = 60; // 10 minutes timeout (60 attempts × 10 seconds = 600s)
 
 // FIX: Export the text model name so other services can use it consistently.
 export const textModel = Constance.models.text.flash;
@@ -13,6 +13,26 @@ export const textModel = Constance.models.text.flash;
 // FIX: Export the dataUrlToBlob utility for use in other hooks.
 export const dataUrlToBlob = dataUrlToBlobUtil;
 
+// Custom error classes for better error handling
+export class VideoTimeoutError extends Error {
+    requestId: string;
+    attemptsMade: number;
+
+    constructor(requestId: string, attemptsMade: number) {
+        const minutes = (attemptsMade * POLLING_INTERVAL_MS) / 1000 / 60;
+        super(`Video generation polling timed out after ${minutes.toFixed(1)} minutes. The video may still be processing.`);
+        this.name = 'VideoTimeoutError';
+        this.requestId = requestId;
+        this.attemptsMade = attemptsMade;
+    }
+}
+
+export class VideoGenerationError extends Error {
+    constructor(message: string) {
+        super(message);
+        this.name = 'VideoGenerationError';
+    }
+}
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -25,8 +45,8 @@ const parseGenerationError = (error: Error, task: { filename: string }): string 
 };
 
 
-const pollForResult = async (requestId: string): Promise<string> => {
-    for (let attempt = 0; attempt < MAX_POLLING_ATTEMPTS; attempt++) {
+const pollForResult = async (requestId: string, startAttempt: number = 0): Promise<string> => {
+    for (let attempt = startAttempt; attempt < MAX_POLLING_ATTEMPTS; attempt++) {
         await delay(POLLING_INTERVAL_MS);
 
         try {
@@ -40,7 +60,7 @@ const pollForResult = async (requestId: string): Promise<string> => {
 
             if (!response.ok) {
                 if (result && (result.Error || result.error)) {
-                    throw new Error(result.Error || result.error); // Definitive failure with specific message
+                    throw new VideoGenerationError(result.Error || result.error);
                 }
                 console.warn(`Polling attempt ${attempt + 1} failed with status ${response.status}. Retrying...`);
                 continue; // Generic server error, retry
@@ -51,27 +71,39 @@ const pollForResult = async (requestId: string): Promise<string> => {
             }
 
             if (result.Error) {
-                throw new Error(result.Error); // Definitive failure with specific message
+                throw new VideoGenerationError(result.Error);
             }
 
             if (result.status !== 'generating') {
-                throw new Error(`Video generation failed with status: ${result.status || 'unknown'}`); // Definitive failure
+                throw new VideoGenerationError(`Video generation failed with status: ${result.status || 'unknown'}`);
             }
 
             // If status is 'generating', loop continues...
 
         } catch (error) {
+            // Don't wrap our custom errors
+            if (error instanceof VideoGenerationError || error instanceof VideoTimeoutError) {
+                throw error;
+            }
+
             // Distinguish between transient errors (network, parsing) and definitive failures.
             if (error instanceof SyntaxError || error instanceof TypeError) {
                 console.warn(`Polling attempt ${attempt + 1} encountered a transient error. Retrying...`, error);
-                if (attempt === MAX_POLLING_ATTEMPTS - 1) throw error; // Fail on last attempt
+                if (attempt === MAX_POLLING_ATTEMPTS - 1) {
+                    throw new VideoTimeoutError(requestId, attempt + 1);
+                }
                 continue; // Retry on transient errors
             }
-            // Re-throw definitive errors (the ones we created with `new Error`).
-            throw error;
+            // Re-throw other errors as VideoGenerationError
+            throw new VideoGenerationError(error instanceof Error ? error.message : String(error));
         }
     }
-    throw new Error(`Video generation timed out after ${MAX_POLLING_ATTEMPTS * POLLING_INTERVAL_MS / 1000 / 60} minutes.`);
+    throw new VideoTimeoutError(requestId, MAX_POLLING_ATTEMPTS);
+};
+
+// Function to resume polling from a timeout
+export const resumeVideoPolling = async (requestId: string, attemptsMade: number = 0): Promise<string> => {
+    return pollForResult(requestId, attemptsMade);
 };
 
 type VideoGenerationParams = {
@@ -82,7 +114,7 @@ type VideoGenerationParams = {
 
 const generateSingleVideo = async (params: VideoGenerationParams): Promise<string> => {
     if (!params.videoPrompt) {
-        throw new Error(`Video prompt is missing.`);
+        throw new VideoGenerationError(`Video prompt is missing.`);
     }
 
     const payload: { [key: string]: any } = {
@@ -103,18 +135,18 @@ const generateSingleVideo = async (params: VideoGenerationParams): Promise<strin
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
     });
-    
+
     // We assume error responses are also JSON, so we parse the body first.
     const initialResult = await initialResponse.json();
 
     // Check for an error payload OR a non-200 status code
     if (!initialResponse.ok || (initialResult && initialResult.Error)) {
         const errorMessage = initialResult.Error || `Video generation initiation failed with status ${initialResponse.status}`;
-        throw new Error(errorMessage);
+        throw new VideoGenerationError(errorMessage);
     }
 
     if (!initialResult.request_id) {
-        throw new Error('API response did not contain a request_id.');
+        throw new VideoGenerationError('API response did not contain a request_id.');
     }
 
     // Step 2: Poll for the video URL using the request ID
@@ -123,27 +155,50 @@ const generateSingleVideo = async (params: VideoGenerationParams): Promise<strin
 
 export type VideoTask = VideoGenerationParams & { filename: string };
 
+// Non-blocking timeout callback - just notifies, doesn't wait for user response
+export type VideoTimeoutCallback = (filename: string, requestId: string, attemptsMade: number) => void;
+
 export const generateAllVideos = async (
     videoTasks: VideoTask[],
     onVideoGenerated: (filename: string, videoSrc: string) => void,
-    onError: (errorMessage: string) => void
+    onError: (errorMessage: string) => void,
+    onVideoTimeout?: VideoTimeoutCallback
 ): Promise<void> => {
     const processTask = async (task: VideoTask) => {
         try {
             const videoSrc = await generateSingleVideo(task);
             onVideoGenerated(task.filename, videoSrc);
         } catch (error) {
-            const message = error instanceof Error ? error.message : 'An unknown error occurred';
-            onError(`Failed on ${task.filename}: ${message}`);
+            if (error instanceof VideoTimeoutError) {
+                // Non-blocking timeout handling - just notify and continue processing other videos
+                if (onVideoTimeout) {
+                    onVideoTimeout(task.filename, error.requestId, error.attemptsMade);
+                } else {
+                    // Fallback: treat as regular error if no timeout handler provided
+                    onError(`Timeout on ${task.filename}: ${error.message}`);
+                }
+            } else {
+                // Regular error handling
+                const message = error instanceof Error ? error.message : 'An unknown error occurred';
+                onError(`Failed on ${task.filename}: ${message}`);
+            }
         }
     };
-    
+
     await processWithConcurrency(videoTasks, processTask, 8);
 };
 
 export const generateSingleVideoForImage = async (params: VideoTask): Promise<string> => {
     return generateSingleVideo(params);
 }
+
+// Retry a specific timed-out video by its requestId
+export const retryTimeoutVideo = async (
+    requestId: string,
+    attemptsMade: number = 0
+): Promise<string> => {
+    return resumeVideoPolling(requestId, attemptsMade);
+};
 
 // --- FIX: Added missing functions that were being imported in various hooks ---
 
@@ -254,5 +309,5 @@ export const prepareVideoPrompts = async (
     }
   };
 
-  await processWithConcurrency(images, processSingleTask, 6);
+  await processWithConcurrency(images, processSingleTask, 10);
 };

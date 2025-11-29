@@ -87,6 +87,9 @@ export type GeneratedImage = {
   videoSrc?: string;
   isGeneratingVideo?: boolean;
   videoGenerationFailed?: boolean;
+  videoTimedOut?: boolean; // NEW: Indicates polling timed out (yellow warning state)
+  videoRequestId?: string; // NEW: Stored for retry capability
+  videoAttemptsMade?: number; // NEW: Track retry attempts
   publicUrl?: string;
 };
 
@@ -101,6 +104,9 @@ export type StudioImage = {
   isGeneratingVideo?: boolean;
   videoSrc?: string;
   videoGenerationFailed?: boolean;
+  videoTimedOut?: boolean; // NEW: Indicates polling timed out (yellow warning state)
+  videoRequestId?: string; // NEW: Stored for retry capability
+  videoAttemptsMade?: number; // NEW: Track retry attempts
 };
 
 export type ImageForVideoProcessing = {
@@ -162,6 +168,9 @@ export type GeneratedBabyImage = {
   videoSrc?: string;
   isGeneratingVideo?: boolean;
   videoGenerationFailed?: boolean;
+  videoTimedOut?: boolean; // NEW: Indicates polling timed out (yellow warning state)
+  videoRequestId?: string; // NEW: Stored for retry capability
+  videoAttemptsMade?: number; // NEW: Track retry attempts
   publicUrl?: string;
 };
 
