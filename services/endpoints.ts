@@ -46,6 +46,12 @@ export const endpoints = {
     nanoBananaPro: 'https://n8n.cemil.al/webhook/7c6e2f5c-24aa-4650-9152-3d718bd69f8c/higgsfield/edit-nano-banana-pro', // Placeholder
     qwen: 'https://n8n.cemil.al/webhook/5533f0bb-064a-4757-adcb-56793505fdf3/fal/edit-qwen',
     depthMap: 'https://n8n.cemil.al/webhook/3bd7adc2-c5ef-4e89-b43e-b0b0c063f199/fal/marigold-depth',
+  },
+
+  // Upscaler endpoints
+  upscaler: {
+    crystal: 'https://n8n.cemil.al/webhook/3bd7adc2-c5ef-4e89-b43e-b0b0c063f199/fal/crystal-upscaler',
+    seedvr: 'https://n8n.cemil.al/webhook/3bd7adc2-c5ef-4e89-b43e-b0b0c063f199/fal/seedvr2-upscaler',
   }
 };
 
@@ -196,6 +202,34 @@ export const schemas = {
       response: {
         success: {
           images: ['string (base64 encoded image data)'],
+        }
+      }
+    }
+  },
+  upscaler: {
+    crystal: {
+      request: {
+        image_url: 'string (public URL)',
+        scale_factor: 'number (1-4, default: 2)',
+      },
+      response: {
+        success: {
+          image: { url: 'string (upscaled image URL)' },
+        }
+      }
+    },
+    seedvr: {
+      request: {
+        image_url: 'string (public URL)',
+        upscale_mode: 'string ("factor" | "target", default: "factor")',
+        upscale_factor: 'number (1-4, default: 2, used when mode is "factor")',
+        target_resolution: 'string ("720p" | "1080p" | "1440p" | "2160p", default: "1440p", used when mode is "target")',
+        noise_scale: 'number (default: 0.1)',
+        output_format: 'string ("png" | "jpg" | "webp", default: "jpg")',
+      },
+      response: {
+        success: {
+          image: { url: 'string (upscaled image URL)' },
         }
       }
     }

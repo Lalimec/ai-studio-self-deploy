@@ -40,6 +40,7 @@ import {
   LuLayers,
   LuListChecks,
   LuDices,
+  LuMaximize2,
 } from 'react-icons/lu';
 import {
     PiCaretDown, PiSparkle, PiSpinner, PiTranslate, PiCheck,
@@ -113,3 +114,5 @@ export const FlowerIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <L
 export const DepthMapIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <LuLayers {...props} />;
 export const ListChecksIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <LuListChecks {...props} />;
 export const DicesIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <LuDices {...props} />;
+export const UpscalerIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <LuMaximize2 {...props} />;
+export const UpscalerStudioIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <LuMaximize2 {...props} />;

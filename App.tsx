@@ -16,6 +16,7 @@ import { useImageStudioLogic } from './hooks/useImageStudioLogic';
 import { useAdCloner } from './hooks/useAdCloner';
 import { useVideoAnalyzerStudio } from './hooks/useVideoAnalyzerStudio';
 import { useNanoBananaProStudio } from './hooks/useNanoBananaProStudio';
+import { useUpscalerStudio } from './hooks/useUpscalerStudio';
 import { logUserAction } from './services/loggingService';
 
 import {
@@ -44,10 +45,11 @@ import ImageStudio from './components/ImageStudio';
 import AdClonerStudio from './components/adCloner/AdClonerStudio';
 import VideoAnalyzerStudio from './components/videoAnalyzer/VideoAnalyzerStudio';
 import NanoBananaProStudio from './components/nanoBananaProStudio/NanoBananaProStudio';
-import { HairStudioIcon, BabyIcon, ArchitectureStudioIcon, ImageStudioIcon, VideoStudioIcon, TimelineStudioIcon, PrepareMagicIcon, AdClonerIcon, VideoAnalyzerIcon, SettingsIcon, BananaIcon } from './components/Icons';
+import UpscalerStudio from './components/upscalerStudio/UpscalerStudio';
+import { HairStudioIcon, BabyIcon, ArchitectureStudioIcon, ImageStudioIcon, VideoStudioIcon, TimelineStudioIcon, PrepareMagicIcon, AdClonerIcon, VideoAnalyzerIcon, SettingsIcon, BananaIcon, UpscalerStudioIcon } from './components/Icons';
 import { ImageStudioConfirmationDialog } from './components/imageStudio/ImageStudioConfirmationDialog';
 
-type AppMode = 'hairStudio' | 'babyStudio' | 'architectureStudio' | 'imageStudio' | 'nanoBananaProStudio' | 'adCloner' | 'videoAnalyzer' | 'videoStudio' | 'timelineStudio';
+type AppMode = 'hairStudio' | 'babyStudio' | 'architectureStudio' | 'imageStudio' | 'nanoBananaProStudio' | 'adCloner' | 'videoAnalyzer' | 'videoStudio' | 'timelineStudio' | 'upscalerStudio';
 
 export type ActiveCropper = {
     type: 'hair' | 'parent1' | 'parent2' | 'architecture' | 'adCloner-ad' | 'adCloner-subject' | 'adCloner-refine';
@@ -191,6 +193,7 @@ function App() {
     const adClonerLogic = useAdCloner({ addToast, setConfirmAction, withMultiDownloadWarning, setDownloadProgress, useNanoBananaWebhook: nanoBananaWebhookSettings.adCloner });
     const videoAnalyzerLogic = useVideoAnalyzerStudio({ addToast, setConfirmAction, setDownloadProgress, withMultiDownloadWarning, useNanoBananaWebhook: nanoBananaWebhookSettings.videoAnalyzer, downloadSettings });
     const nanoBananaProLogic = useNanoBananaProStudio(addToast, setConfirmAction, setDownloadProgress, withMultiDownloadWarning, downloadSettings);
+    const upscalerStudioLogic = useUpscalerStudio({ addToast, setConfirmAction, setDownloadProgress, withMultiDownloadWarning, downloadSettings });
 
     useEffect(() => {
         const isModalOpen = isCropping || timelineStudioLogic.isCropping || lightboxIndex !== null || confirmAction || showHelpModal || downloadProgress.visible || timelineStudioLogic.showCropChoice || timelineStudioLogic.isLightboxOpen || !!imageStudioLogic.pendingFiles || imageStudioLogic.croppingFiles || adClonerLogic.settingsModalOpen || showGlobalSettings || isReadingFile;
@@ -498,6 +501,46 @@ function App() {
         }
     };
 
+    const handleImportToUpscalerStudio = (source: 'hair' | 'baby' | 'architecture' | 'imageStudio' | 'nanoBananaProStudio' | 'adCloner') => {
+        let sourceImages: DisplayImage[] = [];
+        if (source === 'hair') sourceImages = hairStudioLogic.generatedImages;
+        if (source === 'baby') sourceImages = babyStudioLogic.generatedImages;
+        if (source === 'architecture') sourceImages = architectureStudioLogic.generatedImages;
+        if (source === 'imageStudio') sourceImages = imageStudioLogic.generationResults.filter(r => r.status === 'success').map(r => ({ src: r.url!, filename: imageStudioLogic.getDownloadFilename(r), imageGenerationPrompt: r.prompt! }));
+        if (source === 'nanoBananaProStudio') {
+            sourceImages = nanoBananaProLogic.generationResults
+                .filter(r => r.status === 'success' && r.urls)
+                .flatMap(r => r.urls!.map((url, idx) => ({
+                    src: url,
+                    filename: `nano-banana-pro-${r.timestamp}-${idx}.png`,
+                    imageGenerationPrompt: r.prompt || ''
+                })));
+        }
+        if (source === 'adCloner') {
+            sourceImages = Object.values(adClonerLogic.variationStates)
+                .filter((state: VariationState) => state.activeImageIndex > -1)
+                .map((state: VariationState, index) => ({
+                    src: state.imageHistory[state.activeImageIndex],
+                    filename: `ad-cloner-var-${index + 1}.jpg`,
+                    imageGenerationPrompt: 'Generated from Ad Cloner variation.'
+                }));
+        }
+
+        if (sourceImages.length === 0) return addToast(`No images in the selected studio to import.`, 'info');
+
+        const performImport = async () => {
+            const files = await Promise.all(sourceImages.map(img =>
+                fetch(img.src).then(res => res.blob()).then(blob => new File([blob], img.filename, { type: blob.type }))
+            ));
+
+            logUserAction('IMPORT_TO_UPSCALER', { source, count: files.length });
+            upscalerStudioLogic.handleImagesUpload(files);
+            addToast(`${files.length} image(s) imported to Upscaler Studio.`, 'success');
+        };
+
+        performImport();
+    };
+
     const adClonerImageCount = useMemo(() => {
         if (!showBetaFeatures) return 0;
         // FIX: Added explicit 'VariationState' type annotation to the 'state' parameter to resolve 'unknown' type errors.
@@ -541,10 +584,12 @@ function App() {
                 );
             case 'videoAnalyzer':
                 return [];
+            case 'upscalerStudio':
+                return upscalerStudioLogic.upscalerImages;
             default:
                 return [];
         }
-    }, [appMode, hairStudioLogic.generatedImages, babyStudioLogic.generatedImages, videoStudioLogic.studioImages, timelineStudioLogic.timelineImages, imageStudioLogic.generationResults, imageStudioLogic, adClonerLogic.variationStates, nanoBananaProLogic.generationResults]);
+    }, [appMode, hairStudioLogic.generatedImages, babyStudioLogic.generatedImages, videoStudioLogic.studioImages, timelineStudioLogic.timelineImages, imageStudioLogic.generationResults, imageStudioLogic, adClonerLogic.variationStates, nanoBananaProLogic.generationResults, upscalerStudioLogic.upscalerImages]);
 
     const handleImageClick = (id: string) => {
         let index = -1;
@@ -614,6 +659,7 @@ function App() {
                     {showBetaFeatures && <NavButton mode="videoAnalyzer" label="Video Analyzer" icon={<VideoAnalyzerIcon className="h-6 w-6" />} />}
                     <NavButton mode="videoStudio" label="Video" icon={<VideoStudioIcon className="h-6 w-6" />} />
                     <NavButton mode="timelineStudio" label="Timeline" icon={<TimelineStudioIcon className="h-6 w-6" />} />
+                    <NavButton mode="upscalerStudio" label="Upscale" icon={<UpscalerStudioIcon className="h-6 w-6" />} />
                 </div>
                 <p className={`mt-4 text-lg text-[var(--color-text-dim)]`}>
                     {appMode === 'hairStudio' && 'Virtually try on new hairstyles in seconds.'}
@@ -625,6 +671,7 @@ function App() {
                     {appMode === 'timelineStudio' && 'Create video transitions between a sequence of images.'}
                     {appMode === 'adCloner' && showBetaFeatures && 'Deconstruct and generate creative variations of any ad.'}
                     {appMode === 'videoAnalyzer' && showBetaFeatures && 'Analyze video ads and generate creative variations.'}
+                    {appMode === 'upscalerStudio' && 'Upscale your images with Crystal or SeedVR models.'}
                 </p>
             </header>
 
@@ -698,6 +745,19 @@ function App() {
                     <VideoAnalyzerStudio
                         logic={videoAnalyzerLogic}
                         onShowHelp={() => setShowHelpModal(true)}
+                        onImageClick={handleImageClick}
+                    />
+                ) : appMode === 'upscalerStudio' ? (
+                    <UpscalerStudio
+                        logic={upscalerStudioLogic}
+                        hairImages={hairStudioLogic.generatedImages}
+                        babyImages={babyStudioLogic.generatedImages}
+                        architectureImages={architectureStudioLogic.generatedImages}
+                        imageStudioImages={imageStudioLogic.generationResults.filter(r => r.status === 'success').map(r => ({ src: r.url!, filename: imageStudioLogic.getDownloadFilename(r), imageGenerationPrompt: r.prompt! }))}
+                        nanoBananaProStudioImages={nanoBananaProLogic.generationResults.filter(r => r.status === 'success').map(r => ({ src: r.url!, filename: nanoBananaProLogic.getDownloadFilename(r), imageGenerationPrompt: r.prompt! }))}
+                        adClonerImageCount={adClonerImageCount}
+                        showBetaFeatures={showBetaFeatures}
+                        onImport={handleImportToUpscalerStudio}
                         onImageClick={handleImageClick}
                     />
                 ) : (
