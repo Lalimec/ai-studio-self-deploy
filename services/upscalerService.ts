@@ -149,8 +149,8 @@ export const upscaleAllImages = async (
  * Returns the default upscaler settings.
  */
 export const getDefaultUpscalerSettings = (): UpscalerSettings => ({
-    model: 'crystal',
+    model: 'seedvr',
     scaleFactor: 2,
-    upscaleMode: 'factor',
+    upscaleMode: 'target',
     targetResolution: '1440p',
 });

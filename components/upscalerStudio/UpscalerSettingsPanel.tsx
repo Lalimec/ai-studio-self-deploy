@@ -75,7 +75,7 @@ const UpscalerSettingsPanel: React.FC<UpscalerSettingsPanelProps> = ({
                                 value={settings.scaleFactor}
                                 onChange={handleScaleFactorChange}
                                 disabled={disabled}
-                                className="w-24 h-2 bg-[var(--color-bg-muted)] rounded-lg appearance-none cursor-pointer accent-[var(--color-primary)] disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="w-24 h-2 bg-[var(--color-border-default)] rounded-lg appearance-none cursor-pointer accent-[var(--color-primary)] disabled:opacity-50 disabled:cursor-not-allowed"
                             />
                             <span className="text-sm font-mono text-[var(--color-text-main)] min-w-[3ch]">
                                 {settings.scaleFactor}x
@@ -128,7 +128,7 @@ const UpscalerSettingsPanel: React.FC<UpscalerSettingsPanelProps> = ({
                                         value={settings.scaleFactor}
                                         onChange={handleScaleFactorChange}
                                         disabled={disabled}
-                                        className="w-24 h-2 bg-[var(--color-bg-muted)] rounded-lg appearance-none cursor-pointer accent-[var(--color-primary)] disabled:opacity-50 disabled:cursor-not-allowed"
+                                        className="w-24 h-2 bg-[var(--color-border-default)] rounded-lg appearance-none cursor-pointer accent-[var(--color-primary)] disabled:opacity-50 disabled:cursor-not-allowed"
                                     />
                                     <span className="text-sm font-mono text-[var(--color-text-main)] min-w-[3ch]">
                                         {settings.scaleFactor}x
