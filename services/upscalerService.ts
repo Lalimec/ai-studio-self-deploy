@@ -37,6 +37,11 @@ export const upscaleWithCrystal = async (
         throw new UpscalerError(errorMsg);
     }
 
+    // Handle response format: { images: ["..."] } (array format like other studios)
+    if (result?.images && Array.isArray(result.images) && result.images.length > 0) {
+        return result.images[0];
+    }
+
     // Handle response format: { image: { url: "..." } }
     if (result?.image?.url) {
         return result.image.url;
@@ -47,6 +52,7 @@ export const upscaleWithCrystal = async (
         return result.url;
     }
 
+    console.error('Unexpected Crystal upscaler response format:', result);
     throw new UpscalerError('Crystal upscaler did not return a valid image URL.');
 };
 
@@ -83,6 +89,11 @@ export const upscaleWithSeedVR = async (
         throw new UpscalerError(errorMsg);
     }
 
+    // Handle response format: { images: ["..."] } (array format like other studios)
+    if (result?.images && Array.isArray(result.images) && result.images.length > 0) {
+        return result.images[0];
+    }
+
     // Handle response format: { image: { url: "..." } }
     if (result?.image?.url) {
         return result.image.url;
@@ -93,6 +104,7 @@ export const upscaleWithSeedVR = async (
         return result.url;
     }
 
+    console.error('Unexpected SeedVR upscaler response format:', result);
     throw new UpscalerError('SeedVR upscaler did not return a valid image URL.');
 };
 

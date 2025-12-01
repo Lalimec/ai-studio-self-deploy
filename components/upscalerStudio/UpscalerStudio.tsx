@@ -1,6 +1,6 @@
 /// <reference lib="dom" />
 import React, { useRef, useCallback, useState } from 'react';
-import { GeneratedImage, GeneratedBabyImage, GeneratedArchitectureImage, ImageStudioResultImage, UpscalerImage, UpscalerModel, UpscaleMode, TargetResolution } from '../../types';
+import { GeneratedImage, GeneratedBabyImage, GeneratedArchitectureImage, ImageStudioResultImage, UpscalerImage, TargetResolution } from '../../types';
 import MultiImageUploader from '../MultiImageUploader';
 import {
     UpscalerIcon, TrashIcon, DownloadIcon,
@@ -141,30 +141,6 @@ const SourceButton: React.FC<{
     </button>
 );
 
-// Compact import button for header
-const ImportButton: React.FC<{
-    icon: React.ReactNode;
-    label: string;
-    count?: number;
-    onClick: () => void;
-    disabled?: boolean;
-}> = ({ icon, label, count, onClick, disabled }) => (
-    <button
-        onClick={onClick}
-        disabled={disabled}
-        className="flex items-center gap-1.5 bg-[var(--color-bg-muted)] hover:bg-[var(--color-bg-muted-hover)] text-[var(--color-text-main)] font-medium py-1.5 px-3 rounded-lg transition-colors disabled:bg-[var(--color-bg-surface-light)] disabled:text-[var(--color-text-dimmer)] disabled:cursor-not-allowed text-xs"
-        title={`Import from ${label}`}
-    >
-        {icon}
-        <span className="hidden sm:inline">{label}</span>
-        {count !== undefined && count > 0 && (
-            <span className="bg-[var(--color-primary)] text-[var(--color-text-on-primary)] text-xs font-bold rounded-full px-1.5 py-0.5 min-w-[1.25rem] text-center">
-                {count}
-            </span>
-        )}
-    </button>
-);
-
 const UpscalerStudio: React.FC<UpscalerStudioProps> = (props) => {
     const {
         logic, hairImages, babyImages, architectureImages, imageStudioImages, nanoBananaProStudioImages, adClonerImageCount, showBetaFeatures, onImport,
@@ -224,40 +200,40 @@ const UpscalerStudio: React.FC<UpscalerStudioProps> = (props) => {
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
                         <SourceButton
                             icon={<HairStudioIcon className="w-12 h-12 text-[var(--color-primary-accent)]" />}
-                            title="Hair Studio"
-                            description="Import generated hairstyles"
+                            title="Import from Hair Studio"
+                            description="Use your generated hairstyles."
                             count={hairImages.length}
                             onClick={() => onImport('hair')}
                             disabled={hairImages.length === 0 || isBusy}
                         />
                         <SourceButton
                             icon={<BabyIcon className="w-12 h-12 text-[var(--color-primary-accent)]" />}
-                            title="Baby Studio"
-                            description="Import baby photos"
+                            title="Import from Baby Studio"
+                            description="Use your generated baby photos."
                             count={babyImages.length}
                             onClick={() => onImport('baby')}
                             disabled={babyImages.length === 0 || isBusy}
                         />
                         <SourceButton
                             icon={<ArchitectureStudioIcon className="w-12 h-12 text-[var(--color-primary-accent)]" />}
-                            title="Architecture"
-                            description="Import architectural designs"
+                            title="Import from Architecture"
+                            description="Use your architectural designs."
                             count={architectureImages.length}
                             onClick={() => onImport('architecture')}
                             disabled={architectureImages.length === 0 || isBusy}
                         />
                         <SourceButton
                             icon={<ImageStudioIcon className="w-12 h-12 text-[var(--color-primary-accent)]" />}
-                            title="Image Studio"
-                            description="Import batch images"
+                            title="Import from Image Studio"
+                            description="Use your batch generated images."
                             count={imageStudioImages.length}
                             onClick={() => onImport('imageStudio')}
                             disabled={imageStudioImages.length === 0 || isBusy}
                         />
                         <SourceButton
                             icon={<BananaIcon className="w-12 h-12 text-[var(--color-primary-accent)]" />}
-                            title="Pro Studio"
-                            description="Import pro quality images"
+                            title="Import from Pro Studio"
+                            description="Use your pro quality images."
                             count={nanoBananaProStudioImages.length}
                             onClick={() => onImport('nanoBananaProStudio')}
                             disabled={nanoBananaProStudioImages.length === 0 || isBusy}
@@ -265,8 +241,8 @@ const UpscalerStudio: React.FC<UpscalerStudioProps> = (props) => {
                         {showBetaFeatures && (
                             <SourceButton
                                 icon={<AdClonerIcon className="w-12 h-12 text-[var(--color-primary-accent)]" />}
-                                title="Ad Cloner"
-                                description="Import ad variations"
+                                title="Import from Ad Cloner"
+                                description="Use latest ad variations."
                                 count={adClonerImageCount}
                                 onClick={() => onImport('adCloner')}
                                 disabled={adClonerImageCount === 0 || isBusy}
@@ -308,29 +284,45 @@ const UpscalerStudio: React.FC<UpscalerStudioProps> = (props) => {
             )}
 
             <div className={`w-full max-w-7xl mx-auto flex flex-col ${isDragging ? 'opacity-50' : ''}`}>
-                {/* Top Header: Import Options + Session Info */}
+                {/* Top Header: Import Options + Actions */}
                 <header className="flex justify-between items-center mb-6 gap-4 flex-wrap">
-                    <div className="flex items-center gap-2 flex-wrap">
+                    <div className="flex items-center gap-2">
                         <MultiImageUploader onImagesUpload={handleImagesUpload} isButton />
-                        <ImportButton icon={<HairStudioIcon className="w-4 h-4" />} label="Hair" count={hairImages.length} onClick={() => onImport('hair')} disabled={isBusy || hairImages.length === 0} />
-                        <ImportButton icon={<BabyIcon className="w-4 h-4" />} label="Baby" count={babyImages.length} onClick={() => onImport('baby')} disabled={isBusy || babyImages.length === 0} />
-                        <ImportButton icon={<ArchitectureStudioIcon className="w-4 h-4" />} label="Arch" count={architectureImages.length} onClick={() => onImport('architecture')} disabled={isBusy || architectureImages.length === 0} />
-                        <ImportButton icon={<ImageStudioIcon className="w-4 h-4" />} label="Image" count={imageStudioImages.length} onClick={() => onImport('imageStudio')} disabled={isBusy || imageStudioImages.length === 0} />
-                        <ImportButton icon={<BananaIcon className="w-4 h-4" />} label="Pro" count={nanoBananaProStudioImages.length} onClick={() => onImport('nanoBananaProStudio')} disabled={isBusy || nanoBananaProStudioImages.length === 0} />
-                        {showBetaFeatures && (
-                            <ImportButton icon={<AdClonerIcon className="w-4 h-4" />} label="Ad" count={adClonerImageCount} onClick={() => onImport('adCloner')} disabled={isBusy || adClonerImageCount === 0} />
-                        )}
+                        <button onClick={() => onImport('hair')} disabled={isBusy || hairImages.length === 0} className="flex items-center gap-2 bg-[var(--color-bg-muted-hover)] hover:bg-[var(--color-border-default)] text-[var(--color-text-main)] font-bold py-2 px-4 rounded-lg transition-colors disabled:bg-[var(--color-bg-surface-light)] disabled:text-[var(--color-text-dimmer)] text-sm" title="Import images from Hair Studio">
+                            <HairStudioIcon className="w-4 h-4" /> Import from Hair
+                        </button>
+                        <button onClick={() => onImport('baby')} disabled={isBusy || babyImages.length === 0} className="flex items-center gap-2 bg-[var(--color-bg-muted-hover)] hover:bg-[var(--color-border-default)] text-[var(--color-text-main)] font-bold py-2 px-4 rounded-lg transition-colors disabled:bg-[var(--color-bg-surface-light)] disabled:text-[var(--color-text-dimmer)] text-sm" title="Import images from Baby Studio">
+                            <BabyIcon className="w-4 h-4" /> Import from Baby
+                        </button>
+                        <button onClick={() => onImport('architecture')} disabled={isBusy || architectureImages.length === 0} className="flex items-center gap-2 bg-[var(--color-bg-muted-hover)] hover:bg-[var(--color-border-default)] text-[var(--color-text-main)] font-bold py-2 px-4 rounded-lg transition-colors disabled:bg-[var(--color-bg-surface-light)] disabled:text-[var(--color-text-dimmer)] text-sm" title="Import images from Architecture Studio">
+                            <ArchitectureStudioIcon className="w-4 h-4" /> Import from Architecture
+                        </button>
+                        <button onClick={() => onImport('imageStudio')} disabled={isBusy || imageStudioImages.length === 0} className="flex items-center gap-2 bg-[var(--color-bg-muted-hover)] hover:bg-[var(--color-border-default)] text-[var(--color-text-main)] font-bold py-2 px-4 rounded-lg transition-colors disabled:bg-[var(--color-bg-surface-light)] disabled:text-[var(--color-text-dimmer)] text-sm" title="Import images from Image Studio">
+                            <ImageStudioIcon className="w-4 h-4" /> Import from Image
+                        </button>
+                        <button onClick={() => onImport('nanoBananaProStudio')} disabled={isBusy || nanoBananaProStudioImages.length === 0} className="flex items-center gap-2 bg-[var(--color-bg-muted-hover)] hover:bg-[var(--color-border-default)] text-[var(--color-text-main)] font-bold py-2 px-4 rounded-lg transition-colors disabled:bg-[var(--color-bg-surface-light)] disabled:text-[var(--color-text-dimmer)] text-sm" title="Import images from Pro Studio">
+                            <BananaIcon className="w-4 h-4" /> Import from Pro
+                        </button>
                     </div>
 
-                    <div className="flex items-center gap-3 flex-shrink-0">
+                    <div className="flex items-center gap-2 flex-shrink-0">
                         {sessionId && (
-                            <div className="hidden lg:inline-block bg-[var(--color-bg-muted)] text-[var(--color-text-dim)] text-xs font-mono py-1.5 px-3 rounded-lg truncate">
-                                Set: {sessionId}
+                            <div className="hidden lg:inline-block bg-[var(--color-bg-muted-hover)] text-[var(--color-text-dim)] text-sm font-mono py-1.5 px-3 rounded-lg animate-fade-in truncate">
+                                Set ID: {sessionId}
                             </div>
                         )}
                         <div className="text-sm text-[var(--color-text-dim)]">
                             {upscalerImages.length} image{upscalerImages.length !== 1 ? 's' : ''} • {upscaledCount} upscaled
                         </div>
+                        <button
+                            onClick={handleDownloadAll}
+                            disabled={isBusy || upscalerImages.length === 0}
+                            className="flex items-center gap-2 bg-[var(--color-secondary)] hover:bg-[var(--color-secondary-hover)] text-[var(--color-text-on-primary)] font-bold py-2 px-4 rounded-lg transition-colors disabled:bg-[var(--color-bg-muted)] disabled:text-[var(--color-text-dimmer)] text-sm"
+                            title="Download all as ZIP"
+                        >
+                            <DownloadIcon className="w-4 h-4" />
+                            Download All
+                        </button>
                     </div>
                 </header>
 
@@ -352,15 +344,15 @@ const UpscalerStudio: React.FC<UpscalerStudioProps> = (props) => {
                 <div className="max-w-7xl mx-auto px-6 py-4 h-full">
                     <div className="h-full flex flex-wrap items-center justify-between gap-4">
                         {/* Left side: Model & Settings */}
-                        <div className="flex flex-wrap items-center gap-4">
+                        <div className="flex flex-wrap items-center gap-6">
                             {/* Model Selection */}
                             <div className="flex items-center gap-2">
-                                <label className="text-xs font-medium text-[var(--color-text-light)] whitespace-nowrap">Model:</label>
+                                <label className="text-sm font-medium text-[var(--color-text-light)] whitespace-nowrap">Model:</label>
                                 <div className="flex rounded-lg overflow-hidden border border-[var(--color-border-default)]">
                                     <button
                                         onClick={() => handleUpdateSettings({ model: 'crystal' })}
                                         disabled={isBusy}
-                                        className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+                                        className={`px-4 py-2 text-sm font-medium transition-colors ${
                                             settings.model === 'crystal'
                                                 ? 'bg-[var(--color-primary)] text-[var(--color-text-on-primary)]'
                                                 : 'bg-[var(--color-bg-surface)] text-[var(--color-text-light)] hover:bg-[var(--color-bg-muted-hover)]'
@@ -371,7 +363,7 @@ const UpscalerStudio: React.FC<UpscalerStudioProps> = (props) => {
                                     <button
                                         onClick={() => handleUpdateSettings({ model: 'seedvr' })}
                                         disabled={isBusy}
-                                        className={`px-3 py-1.5 text-xs font-medium transition-colors border-l border-[var(--color-border-default)] ${
+                                        className={`px-4 py-2 text-sm font-medium transition-colors border-l border-[var(--color-border-default)] ${
                                             settings.model === 'seedvr'
                                                 ? 'bg-[var(--color-primary)] text-[var(--color-text-on-primary)]'
                                                 : 'bg-[var(--color-bg-surface)] text-[var(--color-text-light)] hover:bg-[var(--color-bg-muted-hover)]'
@@ -384,8 +376,8 @@ const UpscalerStudio: React.FC<UpscalerStudioProps> = (props) => {
 
                             {/* Crystal: Scale Factor */}
                             {settings.model === 'crystal' && (
-                                <div className="flex items-center gap-2">
-                                    <label className="text-xs font-medium text-[var(--color-text-light)] whitespace-nowrap">Scale:</label>
+                                <div className="flex items-center gap-3">
+                                    <label className="text-sm font-medium text-[var(--color-text-light)] whitespace-nowrap">Scale:</label>
                                     <input
                                         type="range"
                                         min="1"
@@ -394,9 +386,9 @@ const UpscalerStudio: React.FC<UpscalerStudioProps> = (props) => {
                                         value={settings.scaleFactor}
                                         onChange={(e) => handleUpdateSettings({ scaleFactor: parseFloat(e.target.value) })}
                                         disabled={isBusy}
-                                        className="w-20 h-2 bg-[var(--color-border-default)] rounded-lg appearance-none cursor-pointer accent-[var(--color-primary)] disabled:opacity-50"
+                                        className="w-32 h-2 bg-[var(--color-border-default)] rounded-lg appearance-none cursor-pointer accent-[var(--color-primary)] disabled:opacity-50"
                                     />
-                                    <span className="text-xs font-mono text-[var(--color-primary-accent)] w-6 text-center">
+                                    <span className="font-semibold text-[var(--color-primary-accent)] w-6 text-center">
                                         {settings.scaleFactor}x
                                     </span>
                                 </div>
@@ -406,12 +398,12 @@ const UpscalerStudio: React.FC<UpscalerStudioProps> = (props) => {
                             {settings.model === 'seedvr' && (
                                 <>
                                     <div className="flex items-center gap-2">
-                                        <label className="text-xs font-medium text-[var(--color-text-light)] whitespace-nowrap">Mode:</label>
+                                        <label className="text-sm font-medium text-[var(--color-text-light)] whitespace-nowrap">Mode:</label>
                                         <div className="flex rounded-lg overflow-hidden border border-[var(--color-border-default)]">
                                             <button
                                                 onClick={() => handleUpdateSettings({ upscaleMode: 'factor' })}
                                                 disabled={isBusy}
-                                                className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+                                                className={`px-4 py-2 text-sm font-medium transition-colors ${
                                                     settings.upscaleMode === 'factor'
                                                         ? 'bg-[var(--color-secondary)] text-[var(--color-text-on-primary)]'
                                                         : 'bg-[var(--color-bg-surface)] text-[var(--color-text-light)] hover:bg-[var(--color-bg-muted-hover)]'
@@ -422,7 +414,7 @@ const UpscalerStudio: React.FC<UpscalerStudioProps> = (props) => {
                                             <button
                                                 onClick={() => handleUpdateSettings({ upscaleMode: 'target' })}
                                                 disabled={isBusy}
-                                                className={`px-3 py-1.5 text-xs font-medium transition-colors border-l border-[var(--color-border-default)] ${
+                                                className={`px-4 py-2 text-sm font-medium transition-colors border-l border-[var(--color-border-default)] ${
                                                     settings.upscaleMode === 'target'
                                                         ? 'bg-[var(--color-secondary)] text-[var(--color-text-on-primary)]'
                                                         : 'bg-[var(--color-bg-surface)] text-[var(--color-text-light)] hover:bg-[var(--color-bg-muted-hover)]'
@@ -434,8 +426,8 @@ const UpscalerStudio: React.FC<UpscalerStudioProps> = (props) => {
                                     </div>
 
                                     {settings.upscaleMode === 'factor' && (
-                                        <div className="flex items-center gap-2">
-                                            <label className="text-xs font-medium text-[var(--color-text-light)] whitespace-nowrap">Scale:</label>
+                                        <div className="flex items-center gap-3">
+                                            <label className="text-sm font-medium text-[var(--color-text-light)] whitespace-nowrap">Scale:</label>
                                             <input
                                                 type="range"
                                                 min="1"
@@ -444,9 +436,9 @@ const UpscalerStudio: React.FC<UpscalerStudioProps> = (props) => {
                                                 value={settings.scaleFactor}
                                                 onChange={(e) => handleUpdateSettings({ scaleFactor: parseFloat(e.target.value) })}
                                                 disabled={isBusy}
-                                                className="w-20 h-2 bg-[var(--color-border-default)] rounded-lg appearance-none cursor-pointer accent-[var(--color-primary)] disabled:opacity-50"
+                                                className="w-32 h-2 bg-[var(--color-border-default)] rounded-lg appearance-none cursor-pointer accent-[var(--color-primary)] disabled:opacity-50"
                                             />
-                                            <span className="text-xs font-mono text-[var(--color-primary-accent)] w-6 text-center">
+                                            <span className="font-semibold text-[var(--color-primary-accent)] w-6 text-center">
                                                 {settings.scaleFactor}x
                                             </span>
                                         </div>
@@ -454,14 +446,14 @@ const UpscalerStudio: React.FC<UpscalerStudioProps> = (props) => {
 
                                     {settings.upscaleMode === 'target' && (
                                         <div className="flex items-center gap-2">
-                                            <label className="text-xs font-medium text-[var(--color-text-light)] whitespace-nowrap">Resolution:</label>
+                                            <label className="text-sm font-medium text-[var(--color-text-light)] whitespace-nowrap">Resolution:</label>
                                             <div className="flex rounded-lg overflow-hidden border border-[var(--color-border-default)]">
                                                 {targetResolutions.map((resolution, index) => (
                                                     <button
                                                         key={resolution}
                                                         onClick={() => handleUpdateSettings({ targetResolution: resolution })}
                                                         disabled={isBusy}
-                                                        className={`px-2 py-1.5 text-xs font-medium transition-colors ${
+                                                        className={`px-3 py-2 text-sm font-medium transition-colors ${
                                                             index > 0 ? 'border-l border-[var(--color-border-default)]' : ''
                                                         } ${
                                                             settings.targetResolution === resolution
@@ -482,31 +474,20 @@ const UpscalerStudio: React.FC<UpscalerStudioProps> = (props) => {
                         {/* Right side: Action Buttons */}
                         <div className="flex items-center gap-2">
                             <button
-                                onClick={handleClearAll}
-                                disabled={isBusy}
-                                className="flex items-center gap-1.5 bg-[var(--color-bg-muted)] hover:bg-[var(--color-bg-muted-hover)] text-[var(--color-text-main)] font-semibold py-2 px-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-                                title="Clear all images"
-                            >
-                                <TrashIcon className="w-4 h-4" />
-                                Clear
-                            </button>
-                            <button
-                                onClick={handleDownloadAll}
-                                disabled={isBusy || upscalerImages.length === 0}
-                                className="flex items-center gap-1.5 bg-[var(--color-secondary)] hover:bg-[var(--color-secondary-hover)] text-[var(--color-text-on-primary)] font-semibold py-2 px-3 rounded-lg transition-colors disabled:bg-[var(--color-bg-muted)] disabled:text-[var(--color-text-dimmer)] disabled:cursor-not-allowed text-sm"
-                                title="Download all as ZIP"
-                            >
-                                <DownloadIcon className="w-4 h-4" />
-                                Download
-                            </button>
-                            <button
                                 onClick={handleUpscaleAll}
                                 disabled={isBusy || upscalerImages.length === 0}
-                                className="flex items-center gap-1.5 bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-[var(--color-text-on-primary)] font-semibold py-2 px-4 rounded-lg transition-colors disabled:bg-[var(--color-bg-muted)] disabled:text-[var(--color-text-dimmer)] disabled:cursor-not-allowed text-sm"
+                                className="bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-[var(--color-text-on-primary)] font-semibold py-2 px-4 rounded-lg transition-colors disabled:bg-[var(--color-bg-muted)] disabled:text-[var(--color-text-dimmer)] disabled:cursor-not-allowed text-sm"
                                 title="Upscale all images"
                             >
-                                <UpscalerIcon className={`w-4 h-4 ${isUpscaling ? 'animate-pulse' : ''}`} />
                                 {isUpscaling ? 'Upscaling...' : 'Upscale All'}
+                            </button>
+                            <button
+                                onClick={handleClearAll}
+                                disabled={isBusy}
+                                className="bg-[var(--color-bg-muted)] hover:bg-[var(--color-bg-muted-hover)] text-[var(--color-text-main)] font-semibold py-2 px-4 rounded-lg transition-colors disabled:bg-[var(--color-bg-surface)] disabled:text-[var(--color-text-dimmer)] disabled:cursor-not-allowed text-sm"
+                                title="Clear all images"
+                            >
+                                Start Over
                             </button>
                         </div>
                     </div>
