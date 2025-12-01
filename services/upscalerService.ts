@@ -49,9 +49,9 @@ export const calculateScaleForTarget = (
     const rawScale = Math.sqrt(targetMegapixels / currentMegapixels);
 
     // Minimum scale is 1 (no downscaling), no upper limit for Crystal
-    // Round to nearest 0.5 for cleaner values
+    // Round to 2 decimal places for precision
     const clampedScale = Math.max(1, rawScale);
-    const roundedScale = Math.round(clampedScale * 2) / 2;
+    const roundedScale = Math.round(clampedScale * 100) / 100;
 
     return roundedScale;
 };

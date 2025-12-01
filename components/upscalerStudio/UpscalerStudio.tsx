@@ -126,7 +126,9 @@ const UpscalerCard: React.FC<{
                 {image.appliedSettings && (
                     <p className="text-xs text-[var(--color-text-dimmer)]">
                         {image.appliedSettings.model === 'crystal'
-                            ? `Crystal ${image.appliedSettings.scaleFactor}x`
+                            ? `Crystal ${image.appliedSettings.upscaleMode === 'factor'
+                                ? `${image.appliedSettings.scaleFactor}x`
+                                : image.appliedSettings.targetResolution}`
                             : `SeedVR ${image.appliedSettings.upscaleMode === 'factor'
                                 ? `${image.appliedSettings.scaleFactor}x`
                                 : image.appliedSettings.targetResolution}`
