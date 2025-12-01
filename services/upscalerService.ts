@@ -29,7 +29,7 @@ const TARGET_MEGAPIXELS: Record<TargetResolution, number> = {
  * @param width Original image width
  * @param height Original image height
  * @param targetResolution Target resolution (720p, 1080p, 1440p, 2160p)
- * @returns Scale factor clamped to 1-4 range
+ * @returns Scale factor (minimum 1, no upper limit for Crystal)
  */
 export const calculateScaleForTarget = (
     width: number,
@@ -48,9 +48,9 @@ export const calculateScaleForTarget = (
     // (since we're scaling in both dimensions)
     const rawScale = Math.sqrt(targetMegapixels / currentMegapixels);
 
-    // Clamp to Crystal's supported range (1-4)
+    // Minimum scale is 1 (no downscaling), no upper limit for Crystal
     // Round to nearest 0.5 for cleaner values
-    const clampedScale = Math.max(1, Math.min(4, rawScale));
+    const clampedScale = Math.max(1, rawScale);
     const roundedScale = Math.round(clampedScale * 2) / 2;
 
     return roundedScale;
@@ -59,7 +59,7 @@ export const calculateScaleForTarget = (
 /**
  * Upscales an image using the Crystal Upscaler.
  * @param imageUrl Public URL of the image to upscale
- * @param scaleFactor Scale factor (1-4, default 2)
+ * @param scaleFactor Scale factor (minimum 1, default 2, no upper limit)
  * @returns URL of the upscaled image
  */
 export const upscaleWithCrystal = async (
