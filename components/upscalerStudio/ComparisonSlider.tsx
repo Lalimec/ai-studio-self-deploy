@@ -51,7 +51,7 @@ const ComparisonSlider: React.FC<ComparisonSliderProps> = ({
             <img
                 src={upscaledSrc}
                 alt="Upscaled"
-                className="absolute inset-0 w-full h-full object-contain"
+                className="absolute inset-0 w-full h-full object-cover"
                 draggable={false}
             />
 
@@ -59,7 +59,7 @@ const ComparisonSlider: React.FC<ComparisonSliderProps> = ({
             <img
                 src={originalSrc}
                 alt="Original"
-                className="absolute inset-0 w-full h-full object-contain"
+                className="absolute inset-0 w-full h-full object-cover"
                 style={{
                     clipPath: `inset(0 ${100 - sliderPosition}% 0 0)`,
                 }}
