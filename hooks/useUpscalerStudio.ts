@@ -118,28 +118,27 @@ export const useUpscalerStudio = ({
         }
     };
 
+    // Count of images that haven't been upscaled yet
+    const pendingUpscaleCount = upscalerImages.filter(img => !img.upscaledSrc && !img.isUpscaling).length;
+
     const handleUpscaleAll = async () => {
         const imagesToUpscale = upscalerImages.filter(img => !img.isUpscaling);
-        const imagesWithoutUpscaled = imagesToUpscale.filter(img => !img.upscaledSrc);
-        const imagesWithUpscaled = imagesToUpscale.filter(img => img.upscaledSrc);
 
         if (imagesToUpscale.length === 0) {
             return addToast("No images to upscale.", "info");
         }
 
-        // If there are images with existing upscaled versions, warn the user
-        if (imagesWithUpscaled.length > 0) {
-            setConfirmAction({
-                title: "Re-upscale Images?",
-                message: `${imagesWithUpscaled.length} image(s) already have upscaled versions. Re-upscaling will replace the existing upscaled images. Do you want to continue?`,
-                confirmText: "Upscale All",
-                confirmVariant: 'primary',
-                onConfirm: () => executeUpscaleAll(imagesToUpscale),
-            });
-            return;
+        executeUpscaleAll(imagesToUpscale);
+    };
+
+    const handleUpscaleNewOnly = async () => {
+        const newImages = upscalerImages.filter(img => !img.upscaledSrc && !img.isUpscaling);
+
+        if (newImages.length === 0) {
+            return addToast("All images have already been upscaled.", "info");
         }
 
-        executeUpscaleAll(imagesWithoutUpscaled);
+        executeUpscaleAll(newImages);
     };
 
     const executeUpscaleAll = async (toProcess: UpscalerImage[]) => {
@@ -330,12 +329,14 @@ export const useUpscalerStudio = ({
         isUpscaling,
         isBusy,
         settings,
+        pendingUpscaleCount,
         handleImagesUpload,
         handleRemoveImage,
         handleClearAll,
         handleUpdateSettings,
         handleUpscaleSingle,
         handleUpscaleAll,
+        handleUpscaleNewOnly,
         handleDownloadSingle,
         handleDownloadAll,
     };

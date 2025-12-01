@@ -1,11 +1,12 @@
 /// <reference lib="dom" />
-import React, { useRef, useCallback, useState } from 'react';
+import React, { useRef, useCallback, useState, useEffect } from 'react';
 import { GeneratedImage, GeneratedBabyImage, GeneratedArchitectureImage, ImageStudioResultImage, UpscalerImage, TargetResolution } from '../../types';
 import MultiImageUploader from '../MultiImageUploader';
 import {
     UpscalerIcon, TrashIcon, DownloadIcon,
     HairStudioIcon, BabyIcon, ArchitectureStudioIcon, UploadIcon,
-    ImageStudioIcon, AdClonerIcon, BananaIcon, AlertCircleIcon, CheckCircleIcon
+    ImageStudioIcon, AdClonerIcon, BananaIcon, AlertCircleIcon, CheckCircleIcon,
+    ChevronDownIcon
 } from '../Icons';
 import { useUpscalerStudio } from '../../hooks/useUpscalerStudio';
 import ComparisonSlider from './ComparisonSlider';
@@ -167,9 +168,26 @@ const UpscalerStudio: React.FC<UpscalerStudioProps> = (props) => {
 
     const {
         upscalerImages, isBusy, isUpscaling, settings,
-        handleImagesUpload, handleClearAll, handleUpscaleAll, sessionId,
-        handleDownloadAll, handleUpdateSettings,
+        handleImagesUpload, handleClearAll, handleUpscaleAll, handleUpscaleNewOnly,
+        sessionId, handleDownloadAll, handleUpdateSettings, pendingUpscaleCount,
     } = logic;
+
+    const [showUpscaleMenu, setShowUpscaleMenu] = useState(false);
+    const upscaleMenuRef = useRef<HTMLDivElement>(null);
+
+    // Close dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (upscaleMenuRef.current && !upscaleMenuRef.current.contains(e.target as Node)) {
+                setShowUpscaleMenu(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const hasUpscaledImages = upscalerImages.some(img => img.upscaledSrc);
+    const allUpscaled = pendingUpscaleCount === 0 && upscalerImages.length > 0;
 
     const [isDragging, setIsDragging] = useState(false);
     const dragCounter = useRef(0);
@@ -487,14 +505,50 @@ const UpscalerStudio: React.FC<UpscalerStudioProps> = (props) => {
 
                         {/* Right side: Action Buttons */}
                         <div className="flex items-center gap-2">
-                            <button
-                                onClick={handleUpscaleAll}
-                                disabled={isBusy || upscalerImages.length === 0}
-                                className="bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-[var(--color-text-on-primary)] font-semibold py-2 px-4 rounded-lg transition-colors disabled:bg-[var(--color-bg-muted)] disabled:text-[var(--color-text-dimmer)] disabled:cursor-not-allowed text-sm"
-                                title="Upscale all images"
-                            >
-                                {isUpscaling ? 'Upscaling...' : 'Upscale All'}
-                            </button>
+                            {/* Upscale dropdown button */}
+                            <div className="relative" ref={upscaleMenuRef}>
+                                <button
+                                    onClick={() => setShowUpscaleMenu(!showUpscaleMenu)}
+                                    disabled={isBusy || upscalerImages.length === 0}
+                                    className="flex items-center gap-1 bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-[var(--color-text-on-primary)] font-semibold py-2 px-4 rounded-lg transition-colors disabled:bg-[var(--color-bg-muted)] disabled:text-[var(--color-text-dimmer)] disabled:cursor-not-allowed text-sm"
+                                    title="Upscale options"
+                                >
+                                    {isUpscaling ? 'Upscaling...' : 'Upscale'}
+                                    <ChevronDownIcon className={`w-4 h-4 transition-transform ${showUpscaleMenu ? 'rotate-180' : ''}`} />
+                                </button>
+
+                                {showUpscaleMenu && !isBusy && (
+                                    <div className="absolute bottom-full mb-2 right-0 bg-[var(--color-bg-surface)] border border-[var(--color-border-default)] rounded-lg shadow-xl overflow-hidden min-w-[200px] z-50">
+                                        <button
+                                            onClick={() => {
+                                                handleUpscaleAll();
+                                                setShowUpscaleMenu(false);
+                                            }}
+                                            className="w-full text-left px-4 py-3 text-sm text-[var(--color-text-main)] hover:bg-[var(--color-bg-muted-hover)] transition-colors border-b border-[var(--color-border-muted)]"
+                                        >
+                                            <div className="font-semibold">Upscale All</div>
+                                            <div className="text-xs text-[var(--color-text-dim)]">
+                                                Re-upscale all {upscalerImages.length} images
+                                            </div>
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                handleUpscaleNewOnly();
+                                                setShowUpscaleMenu(false);
+                                            }}
+                                            disabled={allUpscaled}
+                                            className="w-full text-left px-4 py-3 text-sm text-[var(--color-text-main)] hover:bg-[var(--color-bg-muted-hover)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                                        >
+                                            <div className="font-semibold">Upscale New Only</div>
+                                            <div className="text-xs text-[var(--color-text-dim)]">
+                                                {pendingUpscaleCount > 0
+                                                    ? `Upscale ${pendingUpscaleCount} pending image${pendingUpscaleCount !== 1 ? 's' : ''}`
+                                                    : 'All images already upscaled'}
+                                            </div>
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
                             <button
                                 onClick={handleClearAll}
                                 disabled={isBusy}

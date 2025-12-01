@@ -5,6 +5,7 @@ import {
   LuShuffle,
   LuChevronLeft,
   LuChevronRight,
+  LuChevronDown,
   LuX,
   LuTrash2,
   LuWand,
@@ -59,6 +60,7 @@ export const PrepareMagicIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props)
 export const CheckCircleIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <LuCircleCheck {...props} />;
 export const ChevronLeftIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <LuChevronLeft {...props} />;
 export const ChevronRightIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <LuChevronRight {...props} />;
+export const ChevronDownIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <LuChevronDown {...props} />;
 export const CloseIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <LuX {...props} />;
 export const HelpIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <LuCircleHelp  {...props} />;
 export const SettingsIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <LuSettings {...props} />;
