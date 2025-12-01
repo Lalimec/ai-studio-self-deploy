@@ -137,13 +137,13 @@ const Lightbox: React.FC<LightboxProps> = ({ images, currentIndex, setCurrentInd
       >
         {/* Comparison Slider for upscaler images with upscaled version */}
         {upscalerImage && upscalerImage.upscaledSrc ? (
-          <div className="max-w-full max-h-[90vh] w-[90vw] h-[85vh] rounded-lg shadow-2xl overflow-hidden">
-            <ComparisonSlider
-              originalSrc={upscalerImage.src}
-              upscaledSrc={upscalerImage.upscaledSrc}
-              showLabels={true}
-            />
-          </div>
+          <ComparisonSlider
+            originalSrc={upscalerImage.src}
+            upscaledSrc={upscalerImage.upscaledSrc}
+            showLabels={true}
+            mode="fit"
+            className="rounded-lg shadow-2xl overflow-hidden"
+          />
         ) : (
           <>
             <img
