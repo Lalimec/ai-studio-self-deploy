@@ -205,7 +205,6 @@ const UpscalerStudio: React.FC<UpscalerStudioProps> = (props) => {
         }
     }, [handleImagesUpload]);
 
-    const upscaledCount = upscalerImages.filter(img => img.upscaledSrc).length;
     const targetResolutions: TargetResolution[] = ['720p', '1080p', '1440p', '2160p'];
 
     // Empty state - welcome screen
@@ -329,9 +328,6 @@ const UpscalerStudio: React.FC<UpscalerStudioProps> = (props) => {
                                 Set ID: {sessionId}
                             </div>
                         )}
-                        <div className="text-sm text-[var(--color-text-dim)]">
-                            {upscalerImages.length} image{upscalerImages.length !== 1 ? 's' : ''} • {upscaledCount} upscaled
-                        </div>
                         <button
                             onClick={handleDownloadAll}
                             disabled={isBusy || upscalerImages.length === 0}
@@ -345,7 +341,7 @@ const UpscalerStudio: React.FC<UpscalerStudioProps> = (props) => {
                 </header>
 
                 {/* Image Grid */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                     {upscalerImages.map(image => (
                         <UpscalerCard
                             key={image.id}
@@ -505,7 +501,7 @@ const UpscalerStudio: React.FC<UpscalerStudioProps> = (props) => {
                                 className="bg-[var(--color-bg-muted)] hover:bg-[var(--color-bg-muted-hover)] text-[var(--color-text-main)] font-semibold py-2 px-4 rounded-lg transition-colors disabled:bg-[var(--color-bg-surface)] disabled:text-[var(--color-text-dimmer)] disabled:cursor-not-allowed text-sm"
                                 title="Clear all images"
                             >
-                                Start Over
+                                Clear
                             </button>
                         </div>
                     </div>
