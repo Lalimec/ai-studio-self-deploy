@@ -1,7 +1,7 @@
 /// <reference lib="dom" />
 import { useState, useCallback } from 'react';
 import { UpscalerImage, UpscalerSettings, Toast as ToastType, DownloadSettings } from '../types';
-import { upscaleImage, upscaleAllImages, getDefaultUpscalerSettings, UpscaleTask } from '../services/upscalerService';
+import { upscaleImage, upscaleAllImages, getDefaultUpscalerSettings, UpscaleTask, calculateScaleForTarget } from '../services/upscalerService';
 import { uploadImageFromDataUrl } from '../services/imageUploadService';
 import { generateSetId, generateShortId, getTimestamp, getExtensionFromDataUrl } from '../services/imageUtils';
 import { logUserAction } from '../services/loggingService';
@@ -34,21 +34,36 @@ export const useUpscalerStudio = ({
         if (files.length === 0) return;
         if (!sessionId) setSessionId(generateSetId());
 
-        const readFileAsDataURL = (file: File): Promise<{ file: File; src: string }> => {
+        // Read file as data URL and extract dimensions
+        const readFileWithDimensions = (file: File): Promise<{ file: File; src: string; width: number; height: number }> => {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
-                reader.onload = () => resolve({ file, src: reader.result as string });
+                reader.onload = () => {
+                    const src = reader.result as string;
+                    // Create an image to get dimensions
+                    const img = new Image();
+                    img.onload = () => {
+                        resolve({ file, src, width: img.naturalWidth, height: img.naturalHeight });
+                    };
+                    img.onerror = () => {
+                        // If we can't get dimensions, still allow upload with 0x0
+                        resolve({ file, src, width: 0, height: 0 });
+                    };
+                    img.src = src;
+                };
                 reader.onerror = reject;
                 reader.readAsDataURL(file);
             });
         };
 
-        Promise.all(files.map(readFileAsDataURL))
+        Promise.all(files.map(readFileWithDimensions))
             .then(results => {
-                const newImages: UpscalerImage[] = results.map(({ file, src }) => ({
+                const newImages: UpscalerImage[] = results.map(({ file, src, width, height }) => ({
                     id: `up-${generateShortId()}-${Date.now()}`,
                     src,
                     file,
+                    width,
+                    height,
                     filename: `${file.name.substring(0, file.name.lastIndexOf('.')) || file.name}_${generateShortId()}.${file.name.substring(file.name.lastIndexOf('.') + 1)}`,
                 }));
                 setUpscalerImages(prev => [...newImages, ...prev]);
@@ -105,10 +120,21 @@ export const useUpscalerStudio = ({
                 throw new Error("Failed to get public URL for the image.");
             }
 
-            const upscaledUrl = await upscaleImage(publicUrl, settings);
+            // For Crystal in target mode, calculate the scale factor dynamically
+            let effectiveSettings = settings;
+            if (settings.model === 'crystal' && settings.upscaleMode === 'target') {
+                const calculatedScale = calculateScaleForTarget(
+                    image.width || 0,
+                    image.height || 0,
+                    settings.targetResolution
+                );
+                effectiveSettings = { ...settings, scaleFactor: calculatedScale };
+            }
+
+            const upscaledUrl = await upscaleImage(publicUrl, effectiveSettings);
             setUpscalerImages(prev => prev.map(img =>
                 img.id === id
-                    ? { ...img, upscaledSrc: upscaledUrl, isUpscaling: false, upscaleFailed: false, appliedSettings: { ...settings } }
+                    ? { ...img, upscaledSrc: upscaledUrl, isUpscaling: false, upscaleFailed: false, appliedSettings: { ...effectiveSettings } }
                     : img
             ));
             addToast("Image upscaled successfully!", "success");
@@ -158,6 +184,8 @@ export const useUpscalerStudio = ({
                         id: image.id,
                         imageUrl: publicUrl,
                         settings: { ...settings },
+                        width: image.width,
+                        height: image.height,
                     });
                 }
             }

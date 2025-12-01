@@ -1,4 +1,4 @@
-import { UpscalerSettings } from '../types';
+import { UpscalerSettings, TargetResolution } from '../types';
 import { Constance } from './endpoints';
 import { processWithConcurrency } from './apiUtils';
 
@@ -8,6 +8,53 @@ export class UpscalerError extends Error {
         this.name = 'UpscalerError';
     }
 }
+
+/**
+ * Target resolution to megapixels mapping.
+ * Based on standard video resolutions:
+ * - 720p:  1280 x 720  = 0.92 MP
+ * - 1080p: 1920 x 1080 = 2.07 MP
+ * - 1440p: 2560 x 1440 = 3.69 MP
+ * - 2160p: 3840 x 2160 = 8.29 MP
+ */
+const TARGET_MEGAPIXELS: Record<TargetResolution, number> = {
+    '720p': 0.92,
+    '1080p': 2.07,
+    '1440p': 3.69,
+    '2160p': 8.29,
+};
+
+/**
+ * Calculates the scale factor needed to reach a target resolution.
+ * @param width Original image width
+ * @param height Original image height
+ * @param targetResolution Target resolution (720p, 1080p, 1440p, 2160p)
+ * @returns Scale factor clamped to 1-4 range
+ */
+export const calculateScaleForTarget = (
+    width: number,
+    height: number,
+    targetResolution: TargetResolution
+): number => {
+    if (!width || !height || width === 0 || height === 0) {
+        // If we don't have dimensions, default to 2x
+        return 2;
+    }
+
+    const currentMegapixels = (width * height) / 1_000_000;
+    const targetMegapixels = TARGET_MEGAPIXELS[targetResolution];
+
+    // Scale factor is the square root of the megapixel ratio
+    // (since we're scaling in both dimensions)
+    const rawScale = Math.sqrt(targetMegapixels / currentMegapixels);
+
+    // Clamp to Crystal's supported range (1-4)
+    // Round to nearest 0.5 for cleaner values
+    const clampedScale = Math.max(1, Math.min(4, rawScale));
+    const roundedScale = Math.round(clampedScale * 2) / 2;
+
+    return roundedScale;
+};
 
 /**
  * Upscales an image using the Crystal Upscaler.
@@ -129,6 +176,8 @@ export type UpscaleTask = {
     id: string;
     imageUrl: string;
     settings: UpscalerSettings;
+    width?: number;   // Original image dimensions for dynamic scale calculation
+    height?: number;
 };
 
 /**
@@ -146,7 +195,19 @@ export const upscaleAllImages = async (
 ): Promise<void> => {
     const processTask = async (task: UpscaleTask) => {
         try {
-            const upscaledUrl = await upscaleImage(task.imageUrl, task.settings);
+            let effectiveSettings = task.settings;
+
+            // For Crystal in target mode, calculate the scale factor dynamically
+            if (task.settings.model === 'crystal' && task.settings.upscaleMode === 'target') {
+                const calculatedScale = calculateScaleForTarget(
+                    task.width || 0,
+                    task.height || 0,
+                    task.settings.targetResolution
+                );
+                effectiveSettings = { ...task.settings, scaleFactor: calculatedScale };
+            }
+
+            const upscaledUrl = await upscaleImage(task.imageUrl, effectiveSettings);
             onImageUpscaled(task.id, upscaledUrl);
         } catch (error) {
             const message = error instanceof Error ? error.message : 'Unknown error occurred';

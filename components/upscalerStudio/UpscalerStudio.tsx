@@ -406,24 +406,80 @@ const UpscalerStudio: React.FC<UpscalerStudioProps> = (props) => {
                                 </div>
                             </div>
 
-                            {/* Crystal: Scale Factor */}
+                            {/* Crystal: Mode + Factor/Resolution */}
                             {settings.model === 'crystal' && (
-                                <div className="flex items-center gap-3">
-                                    <label className="text-sm font-medium text-[var(--color-text-light)] whitespace-nowrap">Scale:</label>
-                                    <input
-                                        type="range"
-                                        min="1"
-                                        max="4"
-                                        step="0.5"
-                                        value={settings.scaleFactor}
-                                        onChange={(e) => handleUpdateSettings({ scaleFactor: parseFloat(e.target.value) })}
-                                        disabled={isBusy}
-                                        className="w-32 h-2 bg-[var(--color-border-default)] rounded-lg appearance-none cursor-pointer accent-[var(--color-primary)] disabled:opacity-50"
-                                    />
-                                    <span className="font-semibold text-[var(--color-primary-accent)] w-6 text-center">
-                                        {settings.scaleFactor}x
-                                    </span>
-                                </div>
+                                <>
+                                    <div className="flex items-center gap-2">
+                                        <label className="text-sm font-medium text-[var(--color-text-light)] whitespace-nowrap">Mode:</label>
+                                        <div className="flex rounded-lg overflow-hidden border border-[var(--color-border-default)]">
+                                            <button
+                                                onClick={() => handleUpdateSettings({ upscaleMode: 'factor' })}
+                                                disabled={isBusy}
+                                                className={`px-4 py-2 text-sm font-medium transition-colors ${
+                                                    settings.upscaleMode === 'factor'
+                                                        ? 'bg-[var(--color-secondary)] text-[var(--color-text-on-primary)]'
+                                                        : 'bg-[var(--color-bg-surface)] text-[var(--color-text-light)] hover:bg-[var(--color-bg-muted-hover)]'
+                                                } disabled:opacity-50 disabled:cursor-not-allowed`}
+                                            >
+                                                Factor
+                                            </button>
+                                            <button
+                                                onClick={() => handleUpdateSettings({ upscaleMode: 'target' })}
+                                                disabled={isBusy}
+                                                className={`px-4 py-2 text-sm font-medium transition-colors border-l border-[var(--color-border-default)] ${
+                                                    settings.upscaleMode === 'target'
+                                                        ? 'bg-[var(--color-secondary)] text-[var(--color-text-on-primary)]'
+                                                        : 'bg-[var(--color-bg-surface)] text-[var(--color-text-light)] hover:bg-[var(--color-bg-muted-hover)]'
+                                                } disabled:opacity-50 disabled:cursor-not-allowed`}
+                                            >
+                                                Target
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {settings.upscaleMode === 'factor' && (
+                                        <div className="flex items-center gap-3">
+                                            <label className="text-sm font-medium text-[var(--color-text-light)] whitespace-nowrap">Scale:</label>
+                                            <input
+                                                type="range"
+                                                min="1"
+                                                max="4"
+                                                step="0.5"
+                                                value={settings.scaleFactor}
+                                                onChange={(e) => handleUpdateSettings({ scaleFactor: parseFloat(e.target.value) })}
+                                                disabled={isBusy}
+                                                className="w-32 h-2 bg-[var(--color-border-default)] rounded-lg appearance-none cursor-pointer accent-[var(--color-primary)] disabled:opacity-50"
+                                            />
+                                            <span className="font-semibold text-[var(--color-primary-accent)] w-6 text-center">
+                                                {settings.scaleFactor}x
+                                            </span>
+                                        </div>
+                                    )}
+
+                                    {settings.upscaleMode === 'target' && (
+                                        <div className="flex items-center gap-2">
+                                            <label className="text-sm font-medium text-[var(--color-text-light)] whitespace-nowrap">Resolution:</label>
+                                            <div className="flex rounded-lg overflow-hidden border border-[var(--color-border-default)]">
+                                                {targetResolutions.map((resolution, index) => (
+                                                    <button
+                                                        key={resolution}
+                                                        onClick={() => handleUpdateSettings({ targetResolution: resolution })}
+                                                        disabled={isBusy}
+                                                        className={`px-3 py-2 text-sm font-medium transition-colors ${
+                                                            index > 0 ? 'border-l border-[var(--color-border-default)]' : ''
+                                                        } ${
+                                                            settings.targetResolution === resolution
+                                                                ? 'bg-[var(--color-secondary)] text-[var(--color-text-on-primary)]'
+                                                                : 'bg-[var(--color-bg-surface)] text-[var(--color-text-light)] hover:bg-[var(--color-bg-muted-hover)]'
+                                                        } disabled:opacity-50 disabled:cursor-not-allowed`}
+                                                    >
+                                                        {resolution}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </>
                             )}
 
                             {/* SeedVR: Mode + Factor/Resolution */}
