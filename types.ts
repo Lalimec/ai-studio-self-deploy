@@ -520,5 +520,31 @@ export type GeneratedArchitectureImage = {
   depthMapGenerationFailed?: boolean;
 };
 
+// --- UPSCALER STUDIO TYPES ---
+export type UpscalerModel = 'crystal' | 'seedvr';
+export type UpscaleMode = 'factor' | 'target';
+export type TargetResolution = '720p' | '1080p' | '1440p' | '2160p';
+
+export type UpscalerSettings = {
+  model: UpscalerModel;
+  scaleFactor: number;              // 1-4, default 2 (used in factor mode)
+  upscaleMode: UpscaleMode;         // 'factor' or 'target' - applies to both Crystal and SeedVR
+  targetResolution: TargetResolution; // Target mode resolution, default '1440p'
+};
+
+export type UpscalerImage = {
+  id: string;
+  src: string;                      // Original image data URL
+  file?: File;
+  filename: string;
+  width?: number;                   // Original image width (for dynamic scale calculation)
+  height?: number;                  // Original image height (for dynamic scale calculation)
+  publicUrl?: string;               // Cached upload URL for API calls
+  upscaledSrc?: string;             // Upscaled image URL
+  isUpscaling?: boolean;
+  upscaleFailed?: boolean;
+  appliedSettings?: UpscalerSettings; // Settings used for this upscale
+};
+
 // --- SHARED DISPLAY TYPE ---
-export type DisplayImage = GeneratedImage | StudioImage | GeneratedBabyImage | ImageStudioResultImage | GeneratedArchitectureImage;
+export type DisplayImage = GeneratedImage | StudioImage | GeneratedBabyImage | ImageStudioResultImage | GeneratedArchitectureImage | UpscalerImage;

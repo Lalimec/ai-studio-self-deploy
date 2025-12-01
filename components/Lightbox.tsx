@@ -1,15 +1,16 @@
 /// <reference lib="dom" />
 import React, { useEffect, useCallback, useState } from 'react';
-import { DisplayImage } from '../types';
+import { DisplayImage, UpscalerImage } from '../types';
 import { ChevronLeftIcon, ChevronRightIcon, CloseIcon, SwapIcon } from './Icons';
+import ComparisonSlider from './upscalerStudio/ComparisonSlider';
 
 interface LightboxProps {
   images: DisplayImage[];
   currentIndex: number;
   setCurrentIndex: (index: number) => void;
   onClose: () => void;
-  // FIX: Added 'adCloner' to the mode type to allow the Lightbox to be used in the Ad Cloner studio.
-  mode?: 'hairStudio' | 'videoStudio' | 'babyStudio' | 'imageStudio' | 'timelineStudio' | 'adCloner';
+  // FIX: Added 'adCloner' and 'upscalerStudio' to the mode type to allow the Lightbox to be used in these studios.
+  mode?: 'hairStudio' | 'videoStudio' | 'babyStudio' | 'imageStudio' | 'timelineStudio' | 'adCloner' | 'upscalerStudio';
 }
 
 const Lightbox: React.FC<LightboxProps> = ({ images, currentIndex, setCurrentIndex, onClose, mode = 'hairStudio' }) => {
@@ -61,9 +62,13 @@ const Lightbox: React.FC<LightboxProps> = ({ images, currentIndex, setCurrentInd
   if (images.length === 0 || currentIndex === null) {
     return null;
   }
-  
+
   const currentImage = images[currentIndex];
   const title = 'hairstyle' in currentImage ? currentImage.hairstyle.name : ('description' in currentImage ? currentImage.description : currentImage.filename);
+
+  // Check if this is an upscaler image with both original and upscaled versions
+  const isUpscalerImage = 'upscaledSrc' in currentImage && (currentImage as UpscalerImage).upscaledSrc;
+  const upscalerImage = isUpscalerImage ? (currentImage as UpscalerImage) : null;
 
   return (
     <div
@@ -130,23 +135,36 @@ const Lightbox: React.FC<LightboxProps> = ({ images, currentIndex, setCurrentInd
         className="relative group max-w-full max-h-full flex items-center justify-center p-4 sm:p-8"
         onClick={e => e.stopPropagation()}
       >
-        <img
-          src={currentImage.src}
-          alt={`Enlarged view of ${title}`}
-          className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl transition-opacity duration-300"
-          style={{ opacity: showVideo ? 0 : 1 }}
-        />
-        {currentImage.videoSrc && (
-          <video
-            key={currentImage.videoSrc}
-            src={currentImage.videoSrc}
-            autoPlay
-            loop
-            muted
-            playsInline
-            className="absolute inset-0 w-full h-full object-contain rounded-lg transition-opacity duration-300 pointer-events-none"
-            style={{ opacity: showVideo ? 1 : 0 }}
+        {/* Comparison Slider for upscaler images with upscaled version */}
+        {upscalerImage && upscalerImage.upscaledSrc ? (
+          <ComparisonSlider
+            originalSrc={upscalerImage.src}
+            upscaledSrc={upscalerImage.upscaledSrc}
+            showLabels={true}
+            mode="fit"
+            className="rounded-lg shadow-2xl overflow-hidden"
           />
+        ) : (
+          <>
+            <img
+              src={currentImage.src}
+              alt={`Enlarged view of ${title}`}
+              className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl transition-opacity duration-300"
+              style={{ opacity: showVideo ? 0 : 1 }}
+            />
+            {currentImage.videoSrc && (
+              <video
+                key={currentImage.videoSrc}
+                src={currentImage.videoSrc}
+                autoPlay
+                loop
+                muted
+                playsInline
+                className="absolute inset-0 w-full h-full object-contain rounded-lg transition-opacity duration-300 pointer-events-none"
+                style={{ opacity: showVideo ? 1 : 0 }}
+              />
+            )}
+          </>
         )}
         <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-b-lg pointer-events-none">
           <div className="max-w-full w-[70ch] mx-auto text-left pointer-events-auto">

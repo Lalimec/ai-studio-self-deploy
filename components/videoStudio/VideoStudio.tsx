@@ -264,7 +264,7 @@ const VideoStudio: React.FC<VideoStudioProps> = (props) => {
                 </div>
             </div>
         )}
-        <div className={`w-full max-w-7xl mx-auto flex flex-col ${isDragging ? 'opacity-50' : ''}`}>
+        <div className={`w-full max-w-screen-2xl mx-auto flex flex-col ${isDragging ? 'opacity-50' : ''}`}>
             <header className="flex justify-between items-center mb-6 gap-4 flex-wrap">
                 <div className="flex items-center gap-2">
                     <MultiImageUploader onImagesUpload={handleImagesUpload} isButton />

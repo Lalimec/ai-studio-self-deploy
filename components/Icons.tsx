@@ -5,6 +5,7 @@ import {
   LuShuffle,
   LuChevronLeft,
   LuChevronRight,
+  LuChevronDown,
   LuX,
   LuTrash2,
   LuWand,
@@ -40,6 +41,7 @@ import {
   LuLayers,
   LuListChecks,
   LuDices,
+  LuMaximize2,
 } from 'react-icons/lu';
 import {
     PiCaretDown, PiSparkle, PiSpinner, PiTranslate, PiCheck,
@@ -58,6 +60,7 @@ export const PrepareMagicIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props)
 export const CheckCircleIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <LuCircleCheck {...props} />;
 export const ChevronLeftIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <LuChevronLeft {...props} />;
 export const ChevronRightIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <LuChevronRight {...props} />;
+export const ChevronDownIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <LuChevronDown {...props} />;
 export const CloseIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <LuX {...props} />;
 export const HelpIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <LuCircleHelp  {...props} />;
 export const SettingsIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <LuSettings {...props} />;
@@ -113,3 +116,5 @@ export const FlowerIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <L
 export const DepthMapIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <LuLayers {...props} />;
 export const ListChecksIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <LuListChecks {...props} />;
 export const DicesIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <LuDices {...props} />;
+export const UpscalerIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <LuMaximize2 {...props} />;
+export const UpscalerStudioIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <LuMaximize2 {...props} />;

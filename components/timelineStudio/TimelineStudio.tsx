@@ -330,7 +330,7 @@ const TimelineStudio: React.FC<TimelineStudioProps> = (props) => {
     const findImageById = (id: string) => timelineImages.find(img => img.id === id);
 
     return (
-        <div className="w-full max-w-7xl mx-auto flex flex-col gap-8">
+        <div className="w-full max-w-screen-2xl mx-auto flex flex-col gap-8">
             <header className="flex justify-between items-center gap-4 flex-wrap">
                 <div className="flex items-center gap-2">
                     <button onClick={handleUploadClick} className="flex items-center gap-2 bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-[var(--color-text-on-primary)] font-bold py-2 px-4 rounded-lg transition-colors text-sm" title="Upload more images">
