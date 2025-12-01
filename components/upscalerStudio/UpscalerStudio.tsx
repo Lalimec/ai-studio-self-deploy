@@ -8,6 +8,7 @@ import {
     ImageStudioIcon, AdClonerIcon, BananaIcon, AlertCircleIcon, CheckCircleIcon
 } from '../Icons';
 import { useUpscalerStudio } from '../../hooks/useUpscalerStudio';
+import ComparisonSlider from './ComparisonSlider';
 
 interface UpscalerStudioProps {
     logic: ReturnType<typeof useUpscalerStudio>;
@@ -36,33 +37,50 @@ const UpscalerCard: React.FC<{
     const upscaleButtonTitle = upscaledSrc ? "Re-upscale image" : "Upscale image";
     const downloadButtonTitle = upscaledSrc ? "Download original and upscaled" : "Download original";
 
+    const hasUpscaled = !!upscaledSrc && !isUpscaling;
+
     return (
         <div className="flex flex-col gap-3">
             <div
                 className="group relative bg-[var(--color-bg-surface-light)] rounded-lg overflow-hidden shadow-lg shadow-[var(--color-shadow-primary)]/10 aspect-[4/5]"
-                onMouseEnter={() => upscaledSrc && setIsHovering(true)}
-                onMouseLeave={() => upscaledSrc && setIsHovering(false)}
+                onMouseEnter={() => setIsHovering(true)}
+                onMouseLeave={() => setIsHovering(false)}
             >
-                <button
-                    onClick={() => onImageClick(upscaledSrc || src)}
-                    className="w-full h-full block"
-                    aria-label={`View larger image of ${image.filename}`}
-                    title="Click to view a larger version"
-                >
-                    <img
-                        src={isHovering && upscaledSrc ? upscaledSrc : src}
-                        alt={`Upscaler image ${image.filename}`}
-                        className="w-full h-full object-cover block transition-opacity duration-300"
-                    />
-                    {upscaleFailed && !isUpscaling && (
-                        <div className="absolute inset-0 bg-red-500/30 pointer-events-none flex items-center justify-center" title="Upscaling failed. Please try again.">
-                            <AlertCircleIcon className="w-8 h-8 text-white/80" />
-                        </div>
-                    )}
-                </button>
+                {/* Comparison slider shown on hover when upscaled version exists */}
+                {hasUpscaled && isHovering ? (
+                    <div
+                        className="w-full h-full cursor-pointer"
+                        onClick={() => onImageClick(id)}
+                        title="Click to view comparison in lightbox"
+                    >
+                        <ComparisonSlider
+                            originalSrc={src}
+                            upscaledSrc={upscaledSrc}
+                            showLabels={true}
+                        />
+                    </div>
+                ) : (
+                    <button
+                        onClick={() => onImageClick(hasUpscaled ? id : src)}
+                        className="w-full h-full block"
+                        aria-label={`View larger image of ${image.filename}`}
+                        title={hasUpscaled ? "Hover to compare, click to view in lightbox" : "Click to view a larger version"}
+                    >
+                        <img
+                            src={hasUpscaled ? upscaledSrc : src}
+                            alt={`Upscaler image ${image.filename}`}
+                            className="w-full h-full object-cover block transition-opacity duration-300"
+                        />
+                        {upscaleFailed && !isUpscaling && (
+                            <div className="absolute inset-0 bg-red-500/30 pointer-events-none flex items-center justify-center" title="Upscaling failed. Please try again.">
+                                <AlertCircleIcon className="w-8 h-8 text-white/80" />
+                            </div>
+                        )}
+                    </button>
+                )}
 
-                {upscaledSrc && !isUpscaling && (
-                    <div className="absolute top-2 left-2 p-1 bg-[var(--color-bg-overlay)] rounded-full text-[var(--color-success-accent)] pointer-events-none" title="Upscaled version available">
+                {hasUpscaled && !isHovering && (
+                    <div className="absolute top-2 left-2 p-1 bg-[var(--color-bg-overlay)] rounded-full text-[var(--color-success-accent)] pointer-events-none" title="Upscaled - hover to compare">
                         <CheckCircleIcon className="w-5 h-5" />
                     </div>
                 )}
