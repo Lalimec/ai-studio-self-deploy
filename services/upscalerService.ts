@@ -1,6 +1,6 @@
 import { UpscalerSettings, TargetResolution } from '../types';
 import { Constance } from './endpoints';
-import { processWithConcurrency } from './apiUtils';
+import { processWithConcurrency, fetchViaWebhookProxy } from './apiUtils';
 
 export class UpscalerError extends Error {
     constructor(message: string) {
@@ -71,18 +71,14 @@ export const upscaleWithCrystal = async (
         scale_factor: scaleFactor,
     };
 
-    const response = await fetch(Constance.endpoints.upscaler.crystal, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-    });
-
-    const result = await response.json();
-
-    if (!response.ok) {
-        const errorMsg = result?.error || result?.Error || `Crystal upscaler failed with status ${response.status}`;
-        throw new UpscalerError(errorMsg);
-    }
+    // Use webhook proxy to avoid CORS issues
+    const result = await fetchViaWebhookProxy<{
+        images?: string[];
+        image?: { url?: string };
+        url?: string;
+        error?: string;
+        Error?: string;
+    }>(Constance.endpoints.upscaler.crystal, payload);
 
     // Handle response format: { images: ["..."] } (array format like other studios)
     if (result?.images && Array.isArray(result.images) && result.images.length > 0) {
@@ -123,18 +119,14 @@ export const upscaleWithSeedVR = async (
         output_format: 'jpg',
     };
 
-    const response = await fetch(Constance.endpoints.upscaler.seedvr, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-    });
-
-    const result = await response.json();
-
-    if (!response.ok) {
-        const errorMsg = result?.error || result?.Error || `SeedVR upscaler failed with status ${response.status}`;
-        throw new UpscalerError(errorMsg);
-    }
+    // Use webhook proxy to avoid CORS issues
+    const result = await fetchViaWebhookProxy<{
+        images?: string[];
+        image?: { url?: string };
+        url?: string;
+        error?: string;
+        Error?: string;
+    }>(Constance.endpoints.upscaler.seedvr, payload);
 
     // Handle response format: { images: ["..."] } (array format like other studios)
     if (result?.images && Array.isArray(result.images) && result.images.length > 0) {

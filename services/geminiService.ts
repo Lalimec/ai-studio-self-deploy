@@ -8,6 +8,7 @@ import { GoogleGenAI, Modality, GenerateContentResponse } from '@google/genai';
 import { ai } from './geminiClient';
 import { Constance } from './endpoints';
 import { uploadImageFromDataUrl } from './imageUploadService';
+import { fetchViaWebhookProxy } from './apiUtils';
 
 /**
  * Detects the image format from base64-encoded data by examining the magic bytes.
@@ -261,24 +262,8 @@ export const generateFigureImage = async (
             throw new Error(`Model ${model} requires an external API call, but no handler is implemented.`);
         }
 
-        const response = await fetch(endpoint, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-        });
-
-        if (!response.ok) {
-            let errorMsg = `Image generation failed with status ${response.status}.`;
-            try {
-                const errorBody = await response.json();
-                errorMsg = errorBody.error || errorBody.message || errorMsg;
-            } catch (e) {
-                // response was not json
-            }
-            throw new Error(errorMsg);
-        }
-
-        const result = await response.json();
+        // Use webhook proxy to avoid CORS issues
+        const result = await fetchViaWebhookProxy(endpoint, payload);
 
         // All external models are expected to return an 'images' array
         if (result && Array.isArray(result.images) && result.images.length > 0) {

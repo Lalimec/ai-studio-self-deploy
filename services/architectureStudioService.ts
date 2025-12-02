@@ -14,7 +14,7 @@ import {
     COLOR_SCHEMES,
     TIDY_OPTIONS
 } from '../architectureConstants';
-import { processWithConcurrency } from './apiUtils';
+import { processWithConcurrency, fetchViaWebhookProxy } from './apiUtils';
 import { dataUrlToBlob } from './geminiClient';
 import { Constance } from './endpoints';
 import { generateFigureImage } from './geminiService';
@@ -467,31 +467,18 @@ export const generateDepthMap = async (
       imageUrl = await uploadImageFromDataUrl(imageSrc);
     }
 
-    // Call depth map endpoint
+    // Call depth map endpoint using webhook proxy to avoid CORS issues
     const payload = {
       image_url: imageUrl,
       num_inference_steps: 5,
       ensemble_size: 5,
     };
 
-    const response = await fetch(Constance.endpoints.image.depthMap, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) {
-      let errorMsg = `Depth map generation failed with status ${response.status}.`;
-      try {
-        const errorBody = await response.json();
-        errorMsg = errorBody.error || errorBody.message || errorMsg;
-      } catch (e) {
-        // response was not json
-      }
-      throw new Error(errorMsg);
-    }
-
-    const result = await response.json();
+    const result = await fetchViaWebhookProxy<{
+      images?: string[];
+      error?: string;
+      message?: string;
+    }>(Constance.endpoints.image.depthMap, payload);
 
     // Extract depth map from response (same pattern as Flux/Seedream)
     if (result && Array.isArray(result.images) && result.images.length > 0 && typeof result.images[0] === 'string') {

@@ -1,5 +1,5 @@
 import { ImageForVideoProcessing, GeneratedImage, StudioImage, GeneratedBabyImage } from '../types';
-import { processWithConcurrency } from './apiUtils';
+import { processWithConcurrency, fetchViaWebhookProxy } from './apiUtils';
 import { ai, dataUrlToBlob as dataUrlToBlobUtil } from './geminiClient';
 import { GenerateContentResponse } from '@google/genai';
 import { Constance } from './endpoints';
@@ -50,28 +50,24 @@ const pollForResult = async (requestId: string, startAttempt: number = 0): Promi
         await delay(POLLING_INTERVAL_MS);
 
         try {
-            const response = await fetch(Constance.endpoints.videoStatus, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id: requestId }),
-            });
-
-            const result = await response.json();
-
-            if (!response.ok) {
-                if (result && (result.Error || result.error)) {
-                    throw new VideoGenerationError(result.Error || result.error);
-                }
-                console.warn(`Polling attempt ${attempt + 1} failed with status ${response.status}. Retrying...`);
-                continue; // Generic server error, retry
-            }
+            // Use webhook proxy to avoid CORS issues
+            const result = await fetchViaWebhookProxy<{
+                videos?: string[];
+                Error?: string;
+                error?: string;
+                status?: string;
+            }>(
+                Constance.endpoints.videoStatus,
+                { id: requestId },
+                { maxRetries: 1 } // Don't retry much within polling since we already have polling retries
+            );
 
             if (result.videos && Array.isArray(result.videos) && result.videos.length > 0) {
                 return result.videos[0]; // Success
             }
 
-            if (result.Error) {
-                throw new VideoGenerationError(result.Error);
+            if (result.Error || result.error) {
+                throw new VideoGenerationError(result.Error || result.error || 'Unknown error');
             }
 
             if (result.status !== 'generating') {
@@ -129,20 +125,15 @@ const generateSingleVideo = async (params: VideoGenerationParams): Promise<strin
         payload.end_image_url = params.endImageUrl;
     }
 
-    // Step 1: Initiate video generation and get a request ID
-    const initialResponse = await fetch(Constance.endpoints.videoGeneration, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-    });
+    // Step 1: Initiate video generation and get a request ID (use webhook proxy to avoid CORS)
+    const initialResult = await fetchViaWebhookProxy<{
+        request_id?: string;
+        Error?: string;
+    }>(Constance.endpoints.videoGeneration, payload);
 
-    // We assume error responses are also JSON, so we parse the body first.
-    const initialResult = await initialResponse.json();
-
-    // Check for an error payload OR a non-200 status code
-    if (!initialResponse.ok || (initialResult && initialResult.Error)) {
-        const errorMessage = initialResult.Error || `Video generation initiation failed with status ${initialResponse.status}`;
-        throw new VideoGenerationError(errorMessage);
+    // Check for an error payload
+    if (initialResult && initialResult.Error) {
+        throw new VideoGenerationError(initialResult.Error);
     }
 
     if (!initialResult.request_id) {

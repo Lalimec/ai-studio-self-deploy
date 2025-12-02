@@ -1,4 +1,5 @@
 import { Constance } from './endpoints';
+import { fetchViaWebhookProxy } from './apiUtils';
 
 /**
  * Converts a File object to a data URL.
@@ -34,24 +35,12 @@ export const uploadVideoToGCS = async (videoFile: File): Promise<string> => {
         filename: videoFile.name
     };
 
-    const response = await fetch(Constance.endpoints.videoUpload, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-    });
+    // Use webhook proxy to avoid CORS issues
+    const result = await fetchViaWebhookProxy<{ file_url?: string; error?: string; message?: string }>(
+        Constance.endpoints.videoUpload,
+        payload
+    );
 
-    if (!response.ok) {
-        let errorMsg = `Video upload failed with status ${response.status}.`;
-        try {
-            const errorBody = await response.json();
-            errorMsg = errorBody.error || errorBody.message || errorMsg;
-        } catch (e) {
-            // response was not json, or something else went wrong
-        }
-        throw new Error(errorMsg);
-    }
-
-    const result = await response.json();
     if (result && result.file_url) {
         return result.file_url;
     }

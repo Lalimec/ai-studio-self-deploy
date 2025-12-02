@@ -1,5 +1,6 @@
 // This service uses an n8n webhook to stitch multiple videos together.
 import { Constance } from './endpoints';
+import { fetchBinaryViaWebhookProxy } from './apiUtils';
 
 type ProgressCallback = (progress: number, message: string) => void;
 
@@ -16,22 +17,16 @@ export async function stitchVideos(videoUrls: string[], onProgress: ProgressCall
 
     onProgress(10, "Sending request to stitching service...");
 
-    const response = await fetch(Constance.endpoints.videoStitcher, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ video_urls: videoUrls }),
-    });
-
-    if (!response.ok) {
-        const errorText = await response.text();
-        console.error("Stitching service error response:", errorText);
-        throw new Error(`Stitching service failed with status ${response.status}.`);
-    }
+    // Use webhook proxy to avoid CORS issues
+    const response = await fetchBinaryViaWebhookProxy(
+        Constance.endpoints.videoStitcher,
+        { video_urls: videoUrls }
+    );
 
     onProgress(50, "Stitching in progress... this can take a moment.");
-    
+
     const contentType = response.headers.get('content-type');
-    
+
     if (contentType && contentType.includes('application/json')) {
         const result = await response.json();
         const stitchedUrl = result.url || result.stitched_video_url;
@@ -39,7 +34,7 @@ export async function stitchVideos(videoUrls: string[], onProgress: ProgressCall
         if (!stitchedUrl || typeof stitchedUrl !== 'string') {
             throw new Error("Stitching service did not return a valid video URL in the JSON response.");
         }
-        
+
         onProgress(75, "Downloading stitched video...");
 
         const videoResponse = await fetch(stitchedUrl);
