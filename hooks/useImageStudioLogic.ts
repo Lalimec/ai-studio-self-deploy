@@ -522,7 +522,8 @@ export const useImageStudioLogic = (
         const originalFile = appFile.file;
         const shortId = appFile.id;
         let baseName = originalFile.name.substring(0, originalFile.name.lastIndexOf('.'));
-        const extension = originalFile.name.substring(originalFile.name.lastIndexOf('.') + 1) || 'png';
+        // Extract extension from generated image URL (not from uploaded file)
+        const extension = result.url?.split('.').pop()?.split('?')[0] || 'png';
         if (baseName.startsWith('cropped_')) baseName = baseName.substring(8);
         const sanitizedBaseName = sanitizeFilename(baseName);
 
