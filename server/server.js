@@ -54,6 +54,9 @@ const proxyLimiter = rateLimit({
 // Apply the rate limiter to the /api-proxy route before the main proxy logic
 app.use('/api-proxy', proxyLimiter);
 
+// Apply the rate limiter to the /webhook-proxy route
+app.use('/webhook-proxy', proxyLimiter);
+
 // Proxy route for Gemini API calls (HTTP)
 app.use('/api-proxy', async (req, res, next) => {
     console.log(req.ip);
@@ -223,6 +226,111 @@ app.use('/api-proxy', async (req, res, next) => {
     }
 });
 
+// Proxy route for n8n webhook calls (HTTP)
+// This prevents CORS issues by making server-to-server requests
+app.use('/webhook-proxy', async (req, res) => {
+    // Handle OPTIONS request for CORS preflight
+    if (req.method === 'OPTIONS') {
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+        res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Target-URL, X-Response-Type');
+        res.setHeader('Access-Control-Max-Age', '86400');
+        return res.sendStatus(200);
+    }
+
+    // Set CORS headers for the response
+    res.setHeader('Access-Control-Allow-Origin', '*');
+
+    // Get the target URL from the header
+    const targetUrl = req.headers['x-target-url'];
+
+    if (!targetUrl) {
+        console.error('Webhook proxy: Missing X-Target-URL header');
+        return res.status(400).json({ error: 'Missing X-Target-URL header' });
+    }
+
+    // Validate that the target URL is an allowed n8n webhook domain
+    try {
+        const urlObj = new URL(targetUrl);
+        const allowedHosts = ['n8n.cemil.al']; // Add more allowed hosts as needed
+
+        if (!allowedHosts.includes(urlObj.hostname)) {
+            console.error(`Webhook proxy: Target host not allowed: ${urlObj.hostname}`);
+            return res.status(403).json({ error: 'Target host not allowed' });
+        }
+    } catch (urlError) {
+        console.error('Webhook proxy: Invalid target URL:', urlError);
+        return res.status(400).json({ error: 'Invalid target URL' });
+    }
+
+    // Check if client expects binary response (e.g., video stitcher)
+    const expectBinary = req.headers['x-response-type'] === 'binary';
+
+    console.log(`Webhook Proxy: Forwarding ${req.method} request to ${targetUrl}${expectBinary ? ' (binary)' : ''}`);
+
+    try {
+        const axiosConfig = {
+            method: req.method,
+            url: targetUrl,
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            timeout: 300000, // 5 minute timeout for long-running operations
+            validateStatus: function (status) {
+                return true; // Accept any status code, we'll pass it through
+            },
+            // Use arraybuffer for binary responses, otherwise default
+            responseType: expectBinary ? 'arraybuffer' : 'json',
+        };
+
+        // Include request body for POST/PUT/PATCH methods
+        if (['POST', 'PUT', 'PATCH'].includes(req.method.toUpperCase())) {
+            axiosConfig.data = req.body;
+        }
+
+        const apiResponse = await axios(axiosConfig);
+
+        console.log(`Webhook Proxy: Response status ${apiResponse.status} from ${targetUrl}`);
+
+        // Pass through response headers
+        for (const header in apiResponse.headers) {
+            // Skip headers that might cause issues
+            if (!['transfer-encoding', 'content-encoding', 'content-length'].includes(header.toLowerCase())) {
+                res.setHeader(header, apiResponse.headers[header]);
+            }
+        }
+
+        res.status(apiResponse.status);
+
+        // Handle response based on content type
+        const contentType = apiResponse.headers['content-type'] || '';
+
+        if (expectBinary || contentType.includes('video/') || contentType.includes('application/octet-stream')) {
+            // Binary response - send as buffer
+            res.setHeader('Content-Type', contentType || 'application/octet-stream');
+            res.send(Buffer.from(apiResponse.data));
+        } else {
+            // JSON response
+            res.json(apiResponse.data);
+        }
+
+    } catch (error) {
+        console.error('Webhook proxy error:', error.message);
+
+        if (error.code === 'ECONNREFUSED') {
+            return res.status(503).json({ error: 'Webhook service unavailable' });
+        }
+        if (error.code === 'ETIMEDOUT' || error.code === 'ECONNABORTED') {
+            return res.status(504).json({ error: 'Webhook request timed out' });
+        }
+
+        return res.status(500).json({
+            error: 'Webhook proxy error',
+            message: error.message
+        });
+    }
+});
+
 const webSocketInterceptorScriptTag = `<script src="/public/websocket-interceptor.js" defer></script>`;
 
 // Prepare service worker registration script content
@@ -297,6 +405,7 @@ const server = app.listen(port, () => {
     console.log(`Server listening on port ${port}`);
     console.log(`HTTP proxy active on /api-proxy/**`);
     console.log(`WebSocket proxy active on /api-proxy/**`);
+    console.log(`Webhook proxy active on /webhook-proxy`);
 });
 
 // Create WebSocket server and attach it to the HTTP server

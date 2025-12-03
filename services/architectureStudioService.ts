@@ -14,7 +14,7 @@ import {
     COLOR_SCHEMES,
     TIDY_OPTIONS
 } from '../architectureConstants';
-import { processWithConcurrency } from './apiUtils';
+import { processWithConcurrency, fetchViaWebhookProxy } from './apiUtils';
 import { dataUrlToBlob } from './geminiClient';
 import { Constance } from './endpoints';
 import { generateFigureImage } from './geminiService';
@@ -454,44 +454,33 @@ export const regenerateSingleArchitecturalStyle = async (
  * Generates a depth map for a single architecture image
  * @param imageSrc - The source data URL of the image
  * @param publicUrl - Optional cached public URL to avoid re-uploading
+ * @param filename - Optional filename for the uploaded image
  * @returns The depth map image as a data URL
  */
 export const generateDepthMap = async (
   imageSrc: string,
-  publicUrl?: string
+  publicUrl?: string,
+  filename?: string
 ): Promise<string> => {
   try {
     // Upload image if we don't have a cached public URL
     let imageUrl = publicUrl;
     if (!imageUrl) {
-      imageUrl = await uploadImageFromDataUrl(imageSrc);
+      imageUrl = await uploadImageFromDataUrl(imageSrc, filename);
     }
 
-    // Call depth map endpoint
+    // Call depth map endpoint using webhook proxy to avoid CORS issues
     const payload = {
       image_url: imageUrl,
       num_inference_steps: 5,
       ensemble_size: 5,
     };
 
-    const response = await fetch(Constance.endpoints.image.depthMap, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) {
-      let errorMsg = `Depth map generation failed with status ${response.status}.`;
-      try {
-        const errorBody = await response.json();
-        errorMsg = errorBody.error || errorBody.message || errorMsg;
-      } catch (e) {
-        // response was not json
-      }
-      throw new Error(errorMsg);
-    }
-
-    const result = await response.json();
+    const result = await fetchViaWebhookProxy<{
+      images?: string[];
+      error?: string;
+      message?: string;
+    }>(Constance.endpoints.image.depthMap, payload);
 
     // Extract depth map from response (same pattern as Flux/Seedream)
     if (result && Array.isArray(result.images) && result.images.length > 0 && typeof result.images[0] === 'string') {

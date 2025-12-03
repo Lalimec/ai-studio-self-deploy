@@ -3,12 +3,12 @@ import {
     BabyGenerationOptions, BabyAge, BabyGender, GeneratedBabyImage, Toast as ToastType, ParentImageState, ImageForVideoProcessing, DownloadSettings, NanoBananaModel, NanoBananaResolution
 } from '../types';
 import {
-    generateBabyImages, prepareBabyVideoPrompts, generateVideoPromptForBabyImage
+    generateBabyImages, generateVideoPromptForBabyImage
 } from '../services/babyStudioService';
-import { dataUrlToBlob } from '../services/geminiClient';
+import { dataUrlToBlob, imageUrlToBase64 } from '../services/geminiClient';
 import { uploadImageFromDataUrl } from '../services/imageUploadService';
-import { generateAllVideos, generateSingleVideoForImage, generateVideoPromptForImage, VideoTask } from '../services/videoService';
-import { getTimestamp, generateSetId, sanitizeFilename } from '../services/imageUtils';
+import { generateAllVideos, generateSingleVideoForImage, generateVideoPromptForImage, prepareVideoPrompts, VideoTask } from '../services/videoService';
+import { getTimestamp, generateSetId, sanitizeFilename, getExtensionFromDataUrl } from '../services/imageUtils';
 import { logUserAction } from '../services/loggingService';
 import { downloadBulkImages, downloadImageWithMetadata } from '../services/downloadService';
 
@@ -186,14 +186,17 @@ export const useBabyStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
         addToast(`Preparing ${totalToPrepare} video prompts...`, "info");
 
         try {
-            const babyPromises = prepareBabyVideoPrompts(unpreparedBabies,
+            // Use unified prepareVideoPrompts with baby-specific prompt generator
+            const babyPromises = prepareVideoPrompts(unpreparedBabies,
                 (filename, prompt) => setGeneratedImages(prev => prev.map(img => img.filename === filename ? { ...img, videoPrompt: prompt, isPreparing: false } : img)),
-                (error) => addToast(error, 'error')
+                (error) => addToast(error, 'error'),
+                { promptGenerator: generateVideoPromptForBabyImage, concurrency: 6 }
             );
 
             const parentPromises = unpreparedParents.map(async (parent) => {
                 try {
-                    const imageBlob = dataUrlToBlob(parent.croppedSrc!);
+                    // Use imageUrlToBase64 to handle both data URLs and HTTPS URLs
+                    const imageBlob = await imageUrlToBase64(parent.croppedSrc!);
                     const prompt = await generateVideoPromptForImage(imageBlob);
                     const setParent = parent.id === 'parent1' ? setParent1 : setParent2;
                     setParent(p => ({ ...p, videoPrompt: prompt, isPreparing: false }));
@@ -379,7 +382,8 @@ export const useBabyStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
         setGeneratedImages(prev => prev.map(img => img.filename === filename ? { ...img, isPreparing: true } : img));
         addToast(`Preparing video prompt...`, 'info');
         try {
-            const imageBlob = dataUrlToBlob(image.src);
+            // Use imageUrlToBase64 to handle both data URLs and HTTPS URLs
+            const imageBlob = await imageUrlToBase64(image.src);
             const prompt = await generateVideoPromptForBabyImage(imageBlob);
             setGeneratedImages(prev => prev.map(img => img.filename === filename ? { ...img, videoPrompt: prompt, isPreparing: false } : img));
             addToast("Video prompt ready!", "success");
@@ -429,7 +433,8 @@ export const useBabyStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
         setParent(p => ({ ...p, isPreparing: true }));
         addToast(`Preparing video prompt for ${parentId}...`, 'info');
         try {
-            const imageBlob = dataUrlToBlob(parent.croppedSrc);
+            // Use imageUrlToBase64 to handle both data URLs and HTTPS URLs
+            const imageBlob = await imageUrlToBase64(parent.croppedSrc);
             const prompt = await generateVideoPromptForImage(imageBlob);
             setParent(p => ({ ...p, videoPrompt: prompt, isPreparing: false }));
             addToast(`Video prompt for ${parentId} is ready!`, "success");
@@ -457,10 +462,11 @@ export const useBabyStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
             if (!publicUrl) {
                 throw new Error("Failed to get public URL for the parent image.");
             }
+            const fallbackFilename = parent.croppedSrc ? `${parentId}.${getExtensionFromDataUrl(parent.croppedSrc)}` : `${parentId}.jpg`;
             const videoSrc = await generateSingleVideoForImage({
                 startImageUrl: publicUrl,
                 videoPrompt: parent.videoPrompt,
-                filename: parent.filename || `${parentId}.jpg`,
+                filename: parent.filename || fallbackFilename,
             });
             setParent(p => ({ ...p, videoSrc, isGeneratingVideo: false, videoGenerationFailed: false }));
             addToast(`Video for ${parentId} generated!`, "success");
@@ -485,10 +491,11 @@ export const useBabyStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
             const parentIdString = parentId === 'parent1' ? 'parent-01' : 'parent-02';
             const baseName = `${sessionId}_${parentIdString}_${sanitizedBaseFilename}_${timestamp}`;
 
+            const ext = getExtensionFromDataUrl(parentToDownload.croppedSrc);
             try {
                 await downloadImageWithMetadata({
                     imageUrl: parentToDownload.croppedSrc,
-                    filename: `${baseName}.jpg`,
+                    filename: `${baseName}.${ext}`,
                     metadata: {
                         type: "parent_image",
                         id: parentToDownload.id,
@@ -517,11 +524,12 @@ export const useBabyStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
             }
 
             const baseName = image.filename.substring(0, image.filename.lastIndexOf('.'));
+            const ext = getExtensionFromDataUrl(image.src);
 
             try {
                 await downloadImageWithMetadata({
                     imageUrl: image.src,
-                    filename: `${baseName}.jpg`,
+                    filename: `${baseName}.${ext}`,
                     metadata: {
                         type: "generated_baby_image",
                         description: image.description,
@@ -553,10 +561,11 @@ export const useBabyStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
                 const baseFilename = originalFilename.substring(0, originalFilename.lastIndexOf('.')) || originalFilename;
                 const sanitizedBaseFilename = sanitizeFilename(baseFilename);
                 const baseName = `${sessionId}_parent-01_${sanitizedBaseFilename}_${timestamp}`;
+                const parent1Ext = getExtensionFromDataUrl(parent1.croppedSrc);
 
                 images.push({
                     imageUrl: parent1.croppedSrc,
-                    filename: `${baseName}.jpg`,
+                    filename: `${baseName}.${parent1Ext}`,
                     metadata: {
                         type: "parent_image",
                         id: parent1.id,
@@ -574,10 +583,11 @@ export const useBabyStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
                 const baseFilename = originalFilename.substring(0, originalFilename.lastIndexOf('.')) || originalFilename;
                 const sanitizedBaseFilename = sanitizeFilename(baseFilename);
                 const baseName = `${sessionId}_parent-02_${sanitizedBaseFilename}_${timestamp}`;
+                const parent2Ext = getExtensionFromDataUrl(parent2.croppedSrc);
 
                 images.push({
                     imageUrl: parent2.croppedSrc,
-                    filename: `${baseName}.jpg`,
+                    filename: `${baseName}.${parent2Ext}`,
                     metadata: {
                         type: "parent_image",
                         id: parent2.id,
@@ -593,9 +603,10 @@ export const useBabyStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
             // Add baby images
             for (const image of generatedImages) {
                 const baseName = image.filename.substring(0, image.filename.lastIndexOf('.'));
+                const babyExt = getExtensionFromDataUrl(image.src);
                 images.push({
                     imageUrl: image.src,
-                    filename: `${baseName}.jpg`,
+                    filename: `${baseName}.${babyExt}`,
                     metadata: {
                         type: "generated_baby_image",
                         description: image.description,

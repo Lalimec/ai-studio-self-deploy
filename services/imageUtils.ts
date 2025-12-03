@@ -52,6 +52,24 @@ export const getExtensionFromDataUrl = (dataUrl: string): string => {
 };
 
 /**
+ * Extracts the file extension from a MIME type string.
+ * Useful when you have a Blob and need to determine its extension.
+ * @param mimeType - MIME type string (e.g., "image/png", "image/jpeg")
+ * @returns File extension ('png', 'jpg', 'webp', etc.)
+ */
+export const getExtensionFromMimeType = (mimeType: string): string => {
+    if (!mimeType) return 'jpg'; // Default fallback
+
+    const type = mimeType.toLowerCase();
+    if (type.includes('jpeg') || type.includes('jpg')) return 'jpg';
+    if (type.includes('png')) return 'png';
+    if (type.includes('webp')) return 'webp';
+    if (type.includes('gif')) return 'gif';
+
+    return 'jpg'; // Default fallback
+};
+
+/**
  * Sanitizes a filename by removing only filesystem-reserved characters while preserving Unicode.
  *
  * **Unicode-Friendly**: Preserves non-Latin characters (Arabic, Chinese, Cyrillic, etc.)

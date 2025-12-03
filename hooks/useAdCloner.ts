@@ -1,9 +1,9 @@
 import React, { useState, useCallback } from 'react';
 import { AdImageState, AdSubjectImageState, AdClonerSettings, AdClonerGenerationResult, Toast, AdClonerVariation, VariationState } from '../types';
 import { researchAdContext, generateAdPrompts, generateAdVariationImage, refineAdImage, getNewAdVariations, enhanceAdInstructions } from '../services/adClonerService';
-import { dataUrlToBlob } from '../services/geminiClient';
+import { dataUrlToBlob, imageUrlToBase64 } from '../services/geminiClient';
 import { enhancePrompt, generatePromptVariation, translateToEnglish } from '../services/geminiService';
-import { generateSetId, getTimestamp, sanitizeFilename } from '../services/imageUtils';
+import { generateSetId, getTimestamp, sanitizeFilename, getExtensionFromDataUrl } from '../services/imageUtils';
 import { processWithConcurrency } from '../services/apiUtils';
 import { ActiveCropper } from '../App';
 import { logUserAction } from '../services/loggingService';
@@ -98,7 +98,8 @@ export const useAdCloner = ({ addToast, setConfirmAction, withMultiDownloadWarni
         setIsResearching(true);
         addToast("Researching ad context...", "info");
         try {
-            const adImageBlob = dataUrlToBlob(adImage.croppedSrc);
+            // Use imageUrlToBase64 to handle both data URLs and HTTPS URLs
+            const adImageBlob = await imageUrlToBase64(adImage.croppedSrc);
             const context = await researchAdContext(adImageBlob);
             setResearchContext(context);
             addToast("Ad research complete!", "success");
@@ -178,15 +179,16 @@ export const useAdCloner = ({ addToast, setConfirmAction, withMultiDownloadWarni
         setVariationState(index, { isLoading: true });
         if (!isBatch) addToast(`Generating image for Variation ${index + 1}...`, 'info');
         try {
+            // Use imageUrlToBase64 to handle both data URLs and HTTPS URLs
             const imageSources: { base64: string; mimeType: string; }[] = [];
             if (adImage.croppedSrc) {
-                imageSources.push(dataUrlToBlob(adImage.croppedSrc));
+                imageSources.push(await imageUrlToBase64(adImage.croppedSrc));
             }
-            subjectImages.forEach(img => {
+            for (const img of subjectImages) {
                 if (img.croppedSrc) {
-                    imageSources.push(dataUrlToBlob(img.croppedSrc));
+                    imageSources.push(await imageUrlToBase64(img.croppedSrc));
                 }
-            });
+            }
             const imageUrl = await generateAdVariationImage({
                 imageSources,
                 instructionalPrompt: generationResult.variations[index].prompt,
@@ -272,9 +274,10 @@ export const useAdCloner = ({ addToast, setConfirmAction, withMultiDownloadWarni
         setVariationState(index, { isLoading: true });
         addToast(`Applying edits to Variation ${index + 1}...`, 'info');
         try {
-            const imageSources: { base64: string; mimeType: string; }[] = [dataUrlToBlob(currentImageSrc)];
+            // Use imageUrlToBase64 to handle both data URLs and HTTPS URLs (currentImageSrc can be HTTPS)
+            const imageSources: { base64: string; mimeType: string; }[] = [await imageUrlToBase64(currentImageSrc)];
             if (state.refineImage.src) {
-                imageSources.push(dataUrlToBlob(state.refineImage.src));
+                imageSources.push(await imageUrlToBase64(state.refineImage.src));
             }
             const imageUrl = await refineAdImage({
                 imageSources,
@@ -373,10 +376,11 @@ export const useAdCloner = ({ addToast, setConfirmAction, withMultiDownloadWarni
         });
     };
 
-    const getDownloadFilename = useCallback((variationIndex: number, imageIndex: number, variationTitle: string): string => {
+    const getDownloadFilename = useCallback((variationIndex: number, imageIndex: number, variationTitle: string, imageSrc?: string): string => {
         const timestamp = getTimestamp();
         const cleanTitle = sanitizeFilename(variationTitle.split('||')[0].trim()).substring(0, 50);
-        return `${sessionId}_${cleanTitle}_var${variationIndex + 1}_gen${imageIndex + 1}_${timestamp}.jpg`;
+        const ext = imageSrc ? getExtensionFromDataUrl(imageSrc) : 'jpg';
+        return `${sessionId}_${cleanTitle}_var${variationIndex + 1}_gen${imageIndex + 1}_${timestamp}.${ext}`;
     }, [sessionId]);
 
     const handleDownloadAll = () => {
@@ -396,8 +400,9 @@ export const useAdCloner = ({ addToast, setConfirmAction, withMultiDownloadWarni
 
                 // Add original ad image
                 if (adImage.croppedSrc) {
+                    const adExt = getExtensionFromDataUrl(adImage.croppedSrc);
                     files.push({
-                        filename: `${sessionId}_original_ad_${baseTitle}_${timestamp}.jpg`,
+                        filename: `${sessionId}_original_ad_${baseTitle}_${timestamp}.${adExt}`,
                         content: adImage.croppedSrc.split(',')[1],
                         base64: true,
                     });
@@ -406,8 +411,9 @@ export const useAdCloner = ({ addToast, setConfirmAction, withMultiDownloadWarni
                 // Add subject images
                 subjectImages.forEach((img, i) => {
                     if (img.croppedSrc) {
+                        const subjExt = getExtensionFromDataUrl(img.croppedSrc);
                         files.push({
-                            filename: `subject_${i + 1}.jpg`,
+                            filename: `subject_${i + 1}.${subjExt}`,
                             content: img.croppedSrc.split(',')[1],
                             base64: true,
                         });
@@ -434,7 +440,7 @@ export const useAdCloner = ({ addToast, setConfirmAction, withMultiDownloadWarni
                     const index = parseInt(indexStr, 10);
                     const variation = generationResult.variations[index];
                     const activeImageSrc = state.imageHistory[state.activeImageIndex];
-                    const filename = getDownloadFilename(index, state.activeImageIndex, variation.title);
+                    const filename = getDownloadFilename(index, state.activeImageIndex, variation.title, activeImageSrc);
 
                     const response = await fetch(activeImageSrc);
                     const blob = await response.blob();
@@ -485,7 +491,7 @@ export const useAdCloner = ({ addToast, setConfirmAction, withMultiDownloadWarni
                 // Add all images in the variation's history
                 for (let i = 0; i < state.imageHistory.length; i++) {
                     const imgSrc = state.imageHistory[i];
-                    const filename = getDownloadFilename(index, i, variation.title);
+                    const filename = getDownloadFilename(index, i, variation.title, imgSrc);
                     const response = await fetch(imgSrc);
                     const blob = await response.blob();
                     files.push({

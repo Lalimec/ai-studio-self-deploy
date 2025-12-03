@@ -3,15 +3,15 @@ import {
     GenerationOptions, Gender, PoseStyle, ColorOption, GeneratedImage, Toast as ToastType, AdornmentOption, DownloadSettings, OriginalImageState, NanoBananaModel, NanoBananaResolution
 } from '../types';
 import {
-    generateHairstyles, regenerateSingleHairstyle
+    generateHairstyles, regenerateSingleHairstyle, generateHairVideoPrompt
 } from '../services/hairStudioService';
 import {
     prepareVideoPrompts,
-    generateVideoPromptForImage, enhanceVideoPromptForImage, VideoTask
+    enhanceVideoPromptForImage, VideoTask
 } from '../services/videoService';
-import { dataUrlToBlob } from '../services/geminiClient';
+import { imageUrlToBase64 } from '../services/geminiClient';
 import { generateAllVideos, generateSingleVideoForImage } from '../services/videoService';
-import { getTimestamp, generateSetId } from '../services/imageUtils';
+import { getTimestamp, generateSetId, getExtensionFromDataUrl } from '../services/imageUtils';
 import { logUserAction } from '../services/loggingService';
 import { uploadImageFromDataUrl } from '../services/imageUploadService';
 import { downloadBulkImages, downloadImageWithMetadata } from '../services/downloadService';
@@ -85,7 +85,8 @@ export const useHairStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
                 const timestamp = getTimestamp();
                 const baseFilename = originalFile?.name.split('.').slice(0, -1).join('.') || 'image';
                 const sanitizedFilename = baseFilename.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 40);
-                const filename = `${newSessionId}_${sanitizedFilename}_original_${timestamp}.jpg`;
+                const ext = getExtensionFromDataUrl(croppedImageDataUrl);
+                const filename = `${newSessionId}_${sanitizedFilename}_original_${timestamp}.${ext}`;
 
                 setOriginalImage({
                     file: originalFile,
@@ -269,8 +270,10 @@ export const useHairStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
         setGeneratedImages(prev => prev.map(img => img.filename === filename ? { ...img, isPreparing: true } : img));
         addToast(`Preparing video prompt...`, 'info');
         try {
-            const imageBlob = dataUrlToBlob(image.src);
-            const prompt = await generateVideoPromptForImage(imageBlob);
+            // Use imageUrlToBase64 to handle both data URLs and HTTPS URLs
+            const imageBlob = await imageUrlToBase64(image.src);
+            // Use hair-specific video prompt generator
+            const prompt = await generateHairVideoPrompt(imageBlob);
             setGeneratedImages(prev => prev.map(img => img.filename === filename ? { ...img, videoPrompt: prompt, isPreparing: false } : img));
             addToast("Video prompt ready!", "success");
         } catch (err) {
@@ -328,22 +331,44 @@ export const useHairStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
         }
         addToast(`Preparing ${totalCount} video prompts...`, "info");
         try {
-            // Prepare original image if needed
-            if (needsOriginalPrep) {
-                try {
-                    const imageBlob = dataUrlToBlob(originalImage.croppedSrc!);
-                    const prompt = await generateVideoPromptForImage(imageBlob);
-                    setOriginalImage(prev => ({ ...prev, videoPrompt: prompt, isPreparing: false }));
-                } catch (error) {
-                    console.error('Failed to generate video prompt for original image:', error);
-                    addToast(`Failed on original image: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
-                    setOriginalImage(prev => ({ ...prev, isPreparing: false }));
-                }
+            // Build unified array of all images to prepare with identifiers
+            type PrepareableImage = { src: string; id: string; type: 'generated' | 'original' };
+            const allImagesToPrepare: PrepareableImage[] = [];
+
+            // Add unprepared generated images
+            unpreparedImages.forEach(img => {
+                allImagesToPrepare.push({ src: img.src, id: img.filename, type: 'generated' });
+            });
+
+            // Add original image if needed
+            if (needsOriginalPrep && originalImage.croppedSrc) {
+                allImagesToPrepare.push({ src: originalImage.croppedSrc, id: '__original__', type: 'original' });
             }
 
-            await prepareVideoPrompts(unpreparedImages,
-                (filename, prompt) => setGeneratedImages(prev => prev.map(img => img.filename === filename ? { ...img, videoPrompt: prompt, isPreparing: false } : img)),
-                (errorMessage) => addToast(errorMessage, 'error')
+            // Use unified prepareVideoPrompts with hair-specific prompt generator
+            await prepareVideoPrompts(
+                allImagesToPrepare,
+                (identifier, videoPrompt) => {
+                    if (identifier === '__original__') {
+                        setOriginalImage(prev => ({ ...prev, videoPrompt, isPreparing: false }));
+                    } else {
+                        setGeneratedImages(prev => prev.map(img => img.filename === identifier ? { ...img, videoPrompt, isPreparing: false } : img));
+                    }
+                },
+                (errorMessage) => {
+                    addToast(errorMessage, 'error');
+                    // Extract identifier from error message to clear isPreparing
+                    const match = errorMessage.match(/Failed on (.*?):/);
+                    if (match) {
+                        const failedId = match[1];
+                        if (failedId === '__original__') {
+                            setOriginalImage(prev => ({ ...prev, isPreparing: false }));
+                        } else {
+                            setGeneratedImages(prev => prev.map(img => img.filename === failedId ? { ...img, isPreparing: false } : img));
+                        }
+                    }
+                },
+                { promptGenerator: generateHairVideoPrompt, concurrency: 6 }
             );
             addToast("Video prompt preparation complete!", "success");
         } catch (err) {
@@ -408,7 +433,7 @@ export const useHairStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
                 try {
                     let publicUrl = originalImage.publicUrl;
                     if (!publicUrl) {
-                        publicUrl = await uploadImageFromDataUrl(originalImage.croppedSrc);
+                        publicUrl = await uploadImageFromDataUrl(originalImage.croppedSrc, originalImage.filename);
                         setOriginalImage(prev => ({ ...prev, publicUrl }));
                     }
                     videoTasks.push({
@@ -480,8 +505,10 @@ export const useHairStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
         setOriginalImage(prev => ({ ...prev, isPreparing: true }));
         addToast(`Preparing video prompt for original image...`, 'info');
         try {
-            const imageBlob = dataUrlToBlob(originalImage.croppedSrc);
-            const prompt = await generateVideoPromptForImage(imageBlob);
+            // Use imageUrlToBase64 to handle both data URLs and HTTPS URLs
+            const imageBlob = await imageUrlToBase64(originalImage.croppedSrc);
+            // Use hair-specific video prompt generator
+            const prompt = await generateHairVideoPrompt(imageBlob);
             setOriginalImage(prev => ({ ...prev, videoPrompt: prompt, isPreparing: false }));
             addToast("Video prompt for original image ready!", "success");
         } catch (err) {
@@ -502,7 +529,7 @@ export const useHairStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
         try {
             let publicUrl = originalImage.publicUrl;
             if (!publicUrl) {
-                publicUrl = await uploadImageFromDataUrl(originalImage.croppedSrc);
+                publicUrl = await uploadImageFromDataUrl(originalImage.croppedSrc, originalImage.filename);
                 setOriginalImage(prev => ({ ...prev, publicUrl }));
             }
 
@@ -532,11 +559,12 @@ export const useHairStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
             logUserAction('DOWNLOAD_HAIR_ORIGINAL', { filename: originalImage.filename, sessionId });
 
             const baseName = originalImage.filename.substring(0, originalImage.filename.lastIndexOf('.'));
+            const ext = getExtensionFromDataUrl(originalImage.croppedSrc);
 
             try {
                 await downloadImageWithMetadata({
                     imageUrl: originalImage.croppedSrc,
-                    filename: `${baseName}.jpg`,
+                    filename: `${baseName}.${ext}`,
                     prompt: 'Original uploaded image before any transformations',
                     metadata: {
                         type: "original_hair_image",
@@ -566,11 +594,12 @@ export const useHairStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
             }
 
             const baseName = image.filename.substring(0, image.filename.lastIndexOf('.'));
+            const ext = getExtensionFromDataUrl(image.src);
 
             try {
                 await downloadImageWithMetadata({
                     imageUrl: image.src,
-                    filename: `${baseName}.jpg`,
+                    filename: `${baseName}.${ext}`,
                     prompt: image.imageGenerationPrompt,
                     metadata: {
                         type: "generated_hairstyle",
@@ -608,9 +637,10 @@ export const useHairStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
                 // Add original image if available
                 if (originalImage.croppedSrc && originalImage.filename) {
                     const baseName = originalImage.filename.substring(0, originalImage.filename.lastIndexOf('.'));
+                    const origExt = getExtensionFromDataUrl(originalImage.croppedSrc);
                     images.push({
                         imageUrl: originalImage.croppedSrc,
-                        filename: `${baseName}.jpg`,
+                        filename: `${baseName}.${origExt}`,
                         prompt: 'Original uploaded image before any transformations',
                         metadata: {
                             type: "original_hair_image",
@@ -624,9 +654,10 @@ export const useHairStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
                 // Add generated images
                 generatedImages.forEach(image => {
                     const baseName = image.filename.substring(0, image.filename.lastIndexOf('.'));
+                    const imgExt = getExtensionFromDataUrl(image.src);
                     images.push({
                         imageUrl: image.src,
-                        filename: `${baseName}.jpg`,
+                        filename: `${baseName}.${imgExt}`,
                         prompt: image.imageGenerationPrompt,
                         metadata: {
                             type: "generated_hairstyle",

@@ -431,8 +431,8 @@ export const useNanoBananaProStudio = (
                     }
                 );
 
-                // generateFigureImage returns string[] for nano-banana-pro
-                const urls = result as string[];
+                // generateFigureImage returns string (single) or string[] (multiple)
+                const urls = Array.isArray(result) ? result : [result];
 
                 // Distribute URLs to the pre-created result keys
                 urls.forEach((url, idx) => {
@@ -668,10 +668,14 @@ export const useNanoBananaProStudio = (
 
     const handleRetryOne = useCallback(async (key: string) => {
         const result = generationResults.find(r => r.key === key);
-        if (!result) return;
+        if (!result || result.status === 'pending') return;
 
         logUserAction('RETRY_ONE_IMAGE_NANOBANANAPRO', { key });
+
+        // Clear error state and set loading - do this synchronously for immediate visual feedback
         setGenerationResults(prev => prev.map(r => r.key === key ? { ...r, status: 'pending', error: undefined } : r));
+        setProgress({ completed: 0, total: 1 });
+        setIsLoading(true);
 
         try {
             // Ensure files have cached publicUrls
@@ -693,18 +697,22 @@ export const useNanoBananaProStudio = (
                     resolution: resolution
                 }
             );
-            const urls = urlResult as string[];
+            // Handle both string and string[] return types
+            const urls = Array.isArray(urlResult) ? urlResult : [urlResult];
 
-            if (urls.length > 0) {
+            if (urls.length > 0 && urls[0]) {
                 handleSuccess(key, urls[0]);
+                setProgress({ completed: 1, total: 1 });
             } else {
                 handleFail(key, new Error("No image returned"));
             }
         } catch (e) {
             handleFail(key, e);
+        } finally {
+            setIsLoading(false);
         }
 
-    }, [generationResults, imageFiles, aspectRatio, outputFormat, resolution, handleSuccess, handleFail]);
+    }, [generationResults, imageFiles, aspectRatio, outputFormat, resolution, handleSuccess, handleFail, ensurePublicUrls]);
 
     const handleRetryAll = useCallback(async () => {
         // Placeholder

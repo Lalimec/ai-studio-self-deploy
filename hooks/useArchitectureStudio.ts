@@ -20,11 +20,12 @@ import {
 } from '../services/architectureStudioService';
 import {
     enhanceVideoPromptForImage,
-    VideoTask
+    VideoTask,
+    prepareVideoPrompts
 } from '../services/videoService';
-import { dataUrlToBlob } from '../services/geminiClient';
+import { imageUrlToBase64 } from '../services/geminiClient';
 import { generateAllVideos, generateSingleVideoForImage } from '../services/videoService';
-import { getTimestamp, generateSetId } from '../services/imageUtils';
+import { getTimestamp, generateSetId, getExtensionFromDataUrl } from '../services/imageUtils';
 import { logUserAction } from '../services/loggingService';
 import { uploadImageFromDataUrl } from '../services/imageUploadService';
 import { downloadBulkImages, downloadImageWithMetadata } from '../services/downloadService';
@@ -121,7 +122,8 @@ export const useArchitectureStudio = ({
                 const timestamp = getTimestamp();
                 const baseFilename = originalFile?.name.split('.').slice(0, -1).join('.') || 'image';
                 const sanitizedFilename = baseFilename.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 40);
-                const filename = `${newSessionId}_${sanitizedFilename}_original_${timestamp}.jpg`;
+                const ext = getExtensionFromDataUrl(croppedImageDataUrl);
+                const filename = `${newSessionId}_${sanitizedFilename}_original_${timestamp}.${ext}`;
 
                 setOriginalImage({
                     file: originalFile,
@@ -517,7 +519,8 @@ export const useArchitectureStudio = ({
         setGeneratedImages(prev => prev.map(img => img.filename === filename ? { ...img, isPreparing: true } : img));
         addToast(`Preparing video prompt...`, 'info');
         try {
-            const imageBlob = dataUrlToBlob(image.src);
+            // Use imageUrlToBase64 to handle both data URLs and HTTPS URLs from webhooks
+            const imageBlob = await imageUrlToBase64(image.src);
             const prompt = await generateArchitecturalVideoPrompt(imageBlob);
             setGeneratedImages(prev => prev.map(img => img.filename === filename ? { ...img, videoPrompt: prompt, isPreparing: false } : img));
             addToast("Video prompt ready!", "success");
@@ -594,55 +597,69 @@ export const useArchitectureStudio = ({
 
         addToast(`Preparing ${totalCount} video prompts...`, "info");
         try {
-            // Use architectural video prompt generation instead of the generic people-focused one
-            const processSingleTask = async (image: GeneratedArchitectureImage) => {
-                try {
-                    const imageBlob = dataUrlToBlob(image.src);
-                    const videoPrompt = await generateArchitecturalVideoPrompt(imageBlob);
-                    setGeneratedImages(prev => prev.map(img => img.filename === image.filename ? { ...img, videoPrompt, isPreparing: false } : img));
-                } catch (error) {
-                    console.error(`Failed to generate video prompt for "${image.filename}":`, error);
-                    addToast(`Failed on ${image.filename}: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
-                    setGeneratedImages(prev => prev.map(img => img.filename === image.filename ? { ...img, isPreparing: false } : img));
-                }
-            };
+            // Build unified array of all images to prepare with identifiers
+            // Format: { src, id } where id helps route the callback to correct state
+            type PrepareableImage = { src: string; id: string; type: 'generated' | 'original' | 'transformed' };
+            const allImagesToPrepare: PrepareableImage[] = [];
 
-            // Prepare original image if needed
-            if (needsOriginalPrep) {
-                try {
-                    const imageBlob = dataUrlToBlob(originalImage.croppedSrc!);
-                    const videoPrompt = await generateArchitecturalVideoPrompt(imageBlob);
-                    setOriginalImage(prev => ({ ...prev, videoPrompt, isPreparing: false }));
-                } catch (error) {
-                    console.error('Failed to generate video prompt for original image:', error);
-                    addToast(`Failed on original image: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
-                    setOriginalImage(prev => ({ ...prev, isPreparing: false }));
-                }
+            // Add unprepared generated images
+            unpreparedImages.forEach(img => {
+                allImagesToPrepare.push({ src: img.src, id: img.filename, type: 'generated' });
+            });
+
+            // Add original image if needed
+            if (needsOriginalPrep && originalImage.croppedSrc) {
+                allImagesToPrepare.push({ src: originalImage.croppedSrc, id: '__original__', type: 'original' });
             }
 
-            // Prepare transformed versions
-            for (const type of unpreparedTransformed) {
+            // Add transformed versions
+            unpreparedTransformed.forEach(type => {
                 const version = transformedVersions[type];
                 if (version?.croppedSrc) {
-                    try {
-                        const imageBlob = dataUrlToBlob(version.croppedSrc);
-                        const videoPrompt = await generateArchitecturalVideoPrompt(imageBlob);
+                    allImagesToPrepare.push({ src: version.croppedSrc, id: `__transformed_${type}__`, type: 'transformed' });
+                }
+            });
+
+            // Use unified prepareVideoPrompts with architectural prompt generator
+            await prepareVideoPrompts(
+                allImagesToPrepare,
+                (identifier, videoPrompt) => {
+                    // Route to correct state based on identifier
+                    if (identifier === '__original__') {
+                        setOriginalImage(prev => ({ ...prev, videoPrompt, isPreparing: false }));
+                    } else if (identifier.startsWith('__transformed_')) {
+                        const type = identifier.replace('__transformed_', '').replace('__', '') as TransformationType;
                         setTransformedVersions(prev => ({
                             ...prev,
                             [type]: prev[type] ? { ...prev[type], videoPrompt, isPreparing: false } : prev[type]
                         }));
-                    } catch (error) {
-                        console.error(`Failed to generate video prompt for ${type} version:`, error);
-                        addToast(`Failed on ${type} version: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
-                        setTransformedVersions(prev => ({
-                            ...prev,
-                            [type]: prev[type] ? { ...prev[type], isPreparing: false } : prev[type]
-                        }));
+                    } else {
+                        // It's a generated image filename
+                        setGeneratedImages(prev => prev.map(img => img.filename === identifier ? { ...img, videoPrompt, isPreparing: false } : img));
                     }
-                }
-            }
+                },
+                (errorMessage) => {
+                    addToast(errorMessage, 'error');
+                    // Extract identifier from error message to clear isPreparing
+                    const match = errorMessage.match(/Failed on (.*?):/);
+                    if (match) {
+                        const failedId = match[1];
+                        if (failedId === '__original__') {
+                            setOriginalImage(prev => ({ ...prev, isPreparing: false }));
+                        } else if (failedId.startsWith('__transformed_')) {
+                            const type = failedId.replace('__transformed_', '').replace('__', '') as TransformationType;
+                            setTransformedVersions(prev => ({
+                                ...prev,
+                                [type]: prev[type] ? { ...prev[type], isPreparing: false } : prev[type]
+                            }));
+                        } else {
+                            setGeneratedImages(prev => prev.map(img => img.filename === failedId ? { ...img, isPreparing: false } : img));
+                        }
+                    }
+                },
+                { promptGenerator: generateArchitecturalVideoPrompt, concurrency: 6 }
+            );
 
-            await processWithConcurrency(unpreparedImages, processSingleTask, 6);
             addToast("Video prompt preparation complete!", "success");
         } catch (err) {
             addToast(err instanceof Error ? err.message : 'An unknown error occurred during preparation.', 'error');
@@ -738,7 +755,7 @@ export const useArchitectureStudio = ({
                 try {
                     let publicUrl = originalImage.publicUrl;
                     if (!publicUrl) {
-                        publicUrl = await uploadImageFromDataUrl(originalImage.croppedSrc);
+                        publicUrl = await uploadImageFromDataUrl(originalImage.croppedSrc, originalImage.filename);
                         setOriginalImage(prev => ({ ...prev, publicUrl }));
                     }
                     videoTasks.push({
@@ -758,7 +775,7 @@ export const useArchitectureStudio = ({
                     try {
                         let publicUrl = version.publicUrl;
                         if (!publicUrl) {
-                            publicUrl = await uploadImageFromDataUrl(version.croppedSrc);
+                            publicUrl = await uploadImageFromDataUrl(version.croppedSrc, version.filename);
                             setTransformedVersions(prev => ({
                                 ...prev,
                                 [type]: prev[type] ? { ...prev[type], publicUrl } : prev[type]
@@ -875,7 +892,7 @@ export const useArchitectureStudio = ({
         try {
             // Ensure we have a public URL (use cached one if available)
             const publicUrl = await ensurePublicUrl(filename);
-            const depthMapSrc = await generateDepthMap(image.src, publicUrl || undefined);
+            const depthMapSrc = await generateDepthMap(image.src, publicUrl || undefined, image.filename);
             setGeneratedImages(prev => prev.map(img => img.filename === filename ? { ...img, depthMapSrc, isGeneratingDepthMap: false, depthMapGenerationFailed: false, publicUrl } : img));
             addToast("Depth map generated!", "success");
         } catch (err) {
@@ -964,10 +981,10 @@ export const useArchitectureStudio = ({
                 try {
                     let publicUrl = originalImage.publicUrl;
                     if (!publicUrl) {
-                        publicUrl = await uploadImageFromDataUrl(originalImage.croppedSrc);
+                        publicUrl = await uploadImageFromDataUrl(originalImage.croppedSrc, originalImage.filename);
                         setOriginalImage(prev => ({ ...prev, publicUrl }));
                     }
-                    const depthMapSrc = await generateDepthMap(originalImage.croppedSrc, publicUrl || undefined);
+                    const depthMapSrc = await generateDepthMap(originalImage.croppedSrc, publicUrl || undefined, originalImage.filename);
                     setOriginalImage(prev => ({ ...prev, depthMapSrc, isGeneratingDepthMap: false, depthMapGenerationFailed: false, publicUrl }));
                     successCount++;
                 } catch (err) {
@@ -984,13 +1001,13 @@ export const useArchitectureStudio = ({
                     try {
                         let publicUrl = version.publicUrl;
                         if (!publicUrl) {
-                            publicUrl = await uploadImageFromDataUrl(version.croppedSrc);
+                            publicUrl = await uploadImageFromDataUrl(version.croppedSrc, version.filename);
                             setTransformedVersions(prev => ({
                                 ...prev,
                                 [type]: prev[type] ? { ...prev[type], publicUrl } : prev[type]
                             }));
                         }
-                        const depthMapSrc = await generateDepthMap(version.croppedSrc, publicUrl);
+                        const depthMapSrc = await generateDepthMap(version.croppedSrc, publicUrl, version.filename);
                         setTransformedVersions(prev => ({
                             ...prev,
                             [type]: prev[type] ? { ...prev[type], depthMapSrc, isGeneratingDepthMap: false, depthMapGenerationFailed: false, publicUrl } : prev[type]
@@ -1012,7 +1029,7 @@ export const useArchitectureStudio = ({
                 try {
                     // Ensure we have a public URL
                     const publicUrl = await ensurePublicUrl(image.filename);
-                    const depthMapSrc = await generateDepthMap(image.src, publicUrl || undefined);
+                    const depthMapSrc = await generateDepthMap(image.src, publicUrl || undefined, image.filename);
                     setGeneratedImages(prev => prev.map(img => img.filename === image.filename ? { ...img, depthMapSrc, isGeneratingDepthMap: false, depthMapGenerationFailed: false, publicUrl } : img));
                     successCount++;
                 } catch (err) {
@@ -1058,7 +1075,8 @@ export const useArchitectureStudio = ({
         setOriginalImage(prev => ({ ...prev, isPreparing: true }));
         addToast(`Preparing video prompt for original image...`, 'info');
         try {
-            const imageBlob = dataUrlToBlob(originalImage.croppedSrc);
+            // Use imageUrlToBase64 to handle both data URLs and HTTPS URLs
+            const imageBlob = await imageUrlToBase64(originalImage.croppedSrc);
             const prompt = await generateArchitecturalVideoPrompt(imageBlob);
             setOriginalImage(prev => ({ ...prev, videoPrompt: prompt, isPreparing: false }));
             addToast("Video prompt for original image ready!", "success");
@@ -1080,7 +1098,7 @@ export const useArchitectureStudio = ({
         try {
             let publicUrl = originalImage.publicUrl;
             if (!publicUrl) {
-                publicUrl = await uploadImageFromDataUrl(originalImage.croppedSrc);
+                publicUrl = await uploadImageFromDataUrl(originalImage.croppedSrc, originalImage.filename);
                 setOriginalImage(prev => ({ ...prev, publicUrl }));
             }
 
@@ -1107,11 +1125,11 @@ export const useArchitectureStudio = ({
         try {
             let publicUrl = originalImage.publicUrl;
             if (!publicUrl) {
-                publicUrl = await uploadImageFromDataUrl(originalImage.croppedSrc);
+                publicUrl = await uploadImageFromDataUrl(originalImage.croppedSrc, originalImage.filename);
                 setOriginalImage(prev => ({ ...prev, publicUrl }));
             }
 
-            const depthMapSrc = await generateDepthMap(originalImage.croppedSrc, publicUrl);
+            const depthMapSrc = await generateDepthMap(originalImage.croppedSrc, publicUrl, originalImage.filename);
             setOriginalImage(prev => ({ ...prev, depthMapSrc, isGeneratingDepthMap: false }));
             addToast("Depth map for original image generated!", "success");
         } catch (err) {
@@ -1132,11 +1150,12 @@ export const useArchitectureStudio = ({
             logUserAction('DOWNLOAD_ARCHITECTURE_ORIGINAL', { filename: originalImage.filename, sessionId });
 
             const baseName = originalImage.filename.substring(0, originalImage.filename.lastIndexOf('.'));
+            const ext = getExtensionFromDataUrl(originalImage.croppedSrc);
 
             try {
                 await downloadImageWithMetadata({
                     imageUrl: originalImage.croppedSrc,
-                    filename: `${baseName}.jpg`,
+                    filename: `${baseName}.${ext}`,
                     prompt: 'Original uploaded image before any transformations',
                     metadata: {
                         type: "original_architecture_image",
@@ -1168,11 +1187,12 @@ export const useArchitectureStudio = ({
             }
 
             const baseName = image.filename.substring(0, image.filename.lastIndexOf('.'));
+            const ext = getExtensionFromDataUrl(image.src);
 
             try {
                 await downloadImageWithMetadata({
                     imageUrl: image.src,
-                    filename: `${baseName}.jpg`,
+                    filename: `${baseName}.${ext}`,
                     prompt: image.imageGenerationPrompt,
                     metadata: {
                         type: "generated_architecture",
@@ -1214,9 +1234,10 @@ export const useArchitectureStudio = ({
                 // Add original image if available
                 if (originalImage.croppedSrc && originalImage.filename) {
                     const baseName = originalImage.filename.substring(0, originalImage.filename.lastIndexOf('.'));
+                    const origExt = getExtensionFromDataUrl(originalImage.croppedSrc);
                     images.push({
                         imageUrl: originalImage.croppedSrc,
-                        filename: `${baseName}.jpg`,
+                        filename: `${baseName}.${origExt}`,
                         prompt: 'Original uploaded image before any transformations',
                         metadata: {
                             type: "original_architecture_image",
@@ -1235,9 +1256,10 @@ export const useArchitectureStudio = ({
                     const transformed = transformedVersions[type];
                     if (transformed && transformed.croppedSrc && transformed.filename) {
                         const baseName = transformed.filename.substring(0, transformed.filename.lastIndexOf('.'));
+                        const transExt = getExtensionFromDataUrl(transformed.croppedSrc);
                         images.push({
                             imageUrl: transformed.croppedSrc,
-                            filename: `${baseName}.jpg`,
+                            filename: `${baseName}.${transExt}`,
                             prompt: `${type} transformation`,
                             metadata: {
                                 type: `architecture_${type}`,
@@ -1256,9 +1278,10 @@ export const useArchitectureStudio = ({
                 // Add generated images
                 generatedImages.forEach(image => {
                     const baseName = image.filename.substring(0, image.filename.lastIndexOf('.'));
+                    const imgExt = getExtensionFromDataUrl(image.src);
                     images.push({
                         imageUrl: image.src,
-                        filename: `${baseName}.jpg`,
+                        filename: `${baseName}.${imgExt}`,
                         prompt: image.imageGenerationPrompt,
                         metadata: {
                             type: "generated_architecture",
@@ -1312,7 +1335,8 @@ export const useArchitectureStudio = ({
         addToast(`Preparing video prompt for ${versionLabel} version...`, 'info');
 
         try {
-            const imageBlob = dataUrlToBlob(targetImage.croppedSrc);
+            // Use imageUrlToBase64 to handle both data URLs and HTTPS URLs from webhooks
+            const imageBlob = await imageUrlToBase64(targetImage.croppedSrc);
             const prompt = await generateArchitecturalVideoPrompt(imageBlob);
 
             if (isOriginal) {
@@ -1365,7 +1389,7 @@ export const useArchitectureStudio = ({
         try {
             let publicUrl = targetImage.publicUrl;
             if (!publicUrl) {
-                publicUrl = await uploadImageFromDataUrl(targetImage.croppedSrc);
+                publicUrl = await uploadImageFromDataUrl(targetImage.croppedSrc, targetImage.filename);
 
                 if (isOriginal) {
                     setOriginalImage(prev => ({ ...prev, publicUrl }));
@@ -1430,7 +1454,7 @@ export const useArchitectureStudio = ({
         try {
             let publicUrl = targetImage.publicUrl;
             if (!publicUrl) {
-                publicUrl = await uploadImageFromDataUrl(targetImage.croppedSrc);
+                publicUrl = await uploadImageFromDataUrl(targetImage.croppedSrc, targetImage.filename);
 
                 if (isOriginal) {
                     setOriginalImage(prev => ({ ...prev, publicUrl }));
@@ -1442,7 +1466,7 @@ export const useArchitectureStudio = ({
                 }
             }
 
-            const depthMapSrc = await generateDepthMap(targetImage.croppedSrc, publicUrl);
+            const depthMapSrc = await generateDepthMap(targetImage.croppedSrc, publicUrl, targetImage.filename);
 
             if (isOriginal) {
                 setOriginalImage(prev => ({ ...prev, depthMapSrc, isGeneratingDepthMap: false }));
@@ -1482,11 +1506,12 @@ export const useArchitectureStudio = ({
             logUserAction('DOWNLOAD_ARCHITECTURE_VERSION', { version: versionLabel, filename: targetImage.filename, sessionId });
 
             const baseName = targetImage.filename.substring(0, targetImage.filename.lastIndexOf('.'));
+            const ext = getExtensionFromDataUrl(targetImage.croppedSrc);
 
             try {
                 await downloadImageWithMetadata({
                     imageUrl: targetImage.croppedSrc,
-                    filename: `${baseName}.jpg`,
+                    filename: `${baseName}.${ext}`,
                     prompt: isOriginal ? 'Original uploaded image before any transformations' : `${versionLabel} transformation`,
                     metadata: {
                         type: `architecture_${versionLabel}`,

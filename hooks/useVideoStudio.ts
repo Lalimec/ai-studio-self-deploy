@@ -13,7 +13,7 @@ import {
     rewriteVideoPromptForImage,
     VideoTask,
 } from '../services/videoService';
-import { dataUrlToBlob } from '../services/geminiClient';
+import { dataUrlToBlob, imageUrlToBase64 } from '../services/geminiClient';
 import { uploadImageFromDataUrl } from '../services/imageUploadService';
 import { generateSetId, generateShortId, getTimestamp, getExtensionFromDataUrl } from '../services/imageUtils';
 import { logUserAction } from '../services/loggingService';
@@ -106,7 +106,8 @@ export const useVideoStudio = ({ addToast, setConfirmAction, setDownloadProgress
         setStudioImages(prev => prev.map(img => img.id === id ? { ...img, isPreparing: true } : img));
         addToast("Generating new prompt...", "info");
         try {
-            const imageBlob = dataUrlToBlob(image.src);
+            // Use imageUrlToBase64 to handle both data URLs and HTTPS URLs
+            const imageBlob = await imageUrlToBase64(image.src);
             const prompt = await generateVideoPromptForImage(imageBlob, generalPrompt);
             setStudioImages(prev => prev.map(img => img.id === id ? { ...img, videoPrompt: prompt, isPreparing: false } : img));
             addToast("New prompt generated!", "success");
@@ -115,14 +116,15 @@ export const useVideoStudio = ({ addToast, setConfirmAction, setDownloadProgress
             setStudioImages(prev => prev.map(img => img.id === id ? { ...img, isPreparing: false } : img));
         }
     };
-    
+
     const handleEnhancePrompt = async (id: string, currentPrompt: string) => {
         const image = studioImages.find(img => img.id === id);
         if (!image || image.isPreparing || image.isGeneratingVideo || !currentPrompt) return;
         setStudioImages(prev => prev.map(img => img.id === id ? { ...img, isPreparing: true } : img));
         addToast("Enhancing prompt...", "info");
         try {
-            const imageBlob = dataUrlToBlob(image.src);
+            // Use imageUrlToBase64 to handle both data URLs and HTTPS URLs
+            const imageBlob = await imageUrlToBase64(image.src);
             const newPrompt = await enhanceVideoPromptForImage(imageBlob, currentPrompt);
             setStudioImages(prev => prev.map(img => img.id === id ? { ...img, videoPrompt: newPrompt, isPreparing: false } : img));
             addToast("Prompt enhanced!", "success");
@@ -332,7 +334,8 @@ export const useVideoStudio = ({ addToast, setConfirmAction, setDownloadProgress
                 const processRewrite = async (image: StudioImage) => {
                     if (!image.videoPrompt) return;
                     try {
-                        const imageBlob = dataUrlToBlob(image.src);
+                        // Use imageUrlToBase64 to handle both data URLs and HTTPS URLs
+                        const imageBlob = await imageUrlToBase64(image.src);
                         const newPrompt = await rewriteVideoPromptForImage(imageBlob, image.videoPrompt, generalPrompt);
                         setStudioImages(prev => prev.map(img => img.id === image.id ? { ...img, videoPrompt: newPrompt, isPreparing: false } : img));
                     } catch (err) {

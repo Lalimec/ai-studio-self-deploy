@@ -6,14 +6,15 @@ import {
     StoryboardScene,
     DownloadSettings
 } from '../types';
-import { 
-    analyzeVideo, generateAnalysis, generateAdConcept, generateImage, 
-    fileToGenerativePart, parseTimestamp, fixMalformedJson, 
+import {
+    analyzeVideo, generateAnalysis, generateAdConcept, generateImage,
+    fileToGenerativePart, parseTimestamp, fixMalformedJson,
     parseAnalysisResponse,
     formatTimeWithMS
 } from '../services/videoAnalyzerService';
 import { imageModels, analysisModels } from '../constants';
 import { logUserAction } from '../services/loggingService';
+import { getExtensionFromMimeType } from '../services/imageUtils';
 import { mockVideoAnalysisData, mockExtractedFrames } from '../components/videoAnalyzer/mockData';
 
 declare const JSZip: any;
@@ -522,7 +523,8 @@ export const useVideoAnalyzerStudio = ({ addToast, setConfirmAction, setDownload
                     const imagePromises = scene.generated_images.map(async (imgUrl, i) => {
                         const response = await fetch(imgUrl);
                         const blob = await response.blob();
-                        variationsFolder?.file(`variation_${i + 1}.jpg`, blob);
+                        const ext = getExtensionFromMimeType(blob.type);
+                        variationsFolder?.file(`variation_${i + 1}.${ext}`, blob);
                     });
                     await Promise.all(imagePromises);
                 }
@@ -619,7 +621,8 @@ export const useVideoAnalyzerStudio = ({ addToast, setConfirmAction, setDownload
                                 const variationPromises = scene.generated_images.map(async (imgUrl, j) => {
                                     const response = await fetch(imgUrl);
                                     const blob = await response.blob();
-                                    variationsFolder?.file(`variation_${j + 1}.jpg`, blob);
+                                    const ext = getExtensionFromMimeType(blob.type);
+                                    variationsFolder?.file(`variation_${j + 1}.${ext}`, blob);
                                 });
                                 await Promise.all(variationPromises);
                             }
@@ -641,7 +644,8 @@ export const useVideoAnalyzerStudio = ({ addToast, setConfirmAction, setDownload
                                 if (ad.generatedImages && ad.generatedImages[0]) {
                                     const response = await fetch(ad.generatedImages[0]);
                                     const blob = await response.blob();
-                                    conceptFolder.file('image.jpg', blob);
+                                    const ext = getExtensionFromMimeType(blob.type);
+                                    conceptFolder.file(`image.${ext}`, blob);
                                 }
                             }
                         });

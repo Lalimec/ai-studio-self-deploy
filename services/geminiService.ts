@@ -8,6 +8,134 @@ import { GoogleGenAI, Modality, GenerateContentResponse } from '@google/genai';
 import { ai } from './geminiClient';
 import { Constance } from './endpoints';
 import { uploadImageFromDataUrl } from './imageUploadService';
+import { fetchViaWebhookProxy } from './apiUtils';
+import { getExtensionFromMimeType } from './imageUtils';
+
+// ============================================================================
+// Nano Banana Pro Async Generation (similar to Video generation pattern)
+// ============================================================================
+
+const NANO_BANANA_POLLING_INTERVAL_MS = 10000; // 10 seconds between polls
+const NANO_BANANA_MAX_POLLING_ATTEMPTS = 30; // 5 minutes timeout (30 attempts × 10 seconds = 300s)
+
+// Custom error classes for Nano Banana Pro generation
+export class NanoBananaProTimeoutError extends Error {
+    requestId: string;
+    attemptsMade: number;
+
+    constructor(requestId: string, attemptsMade: number) {
+        const minutes = (attemptsMade * NANO_BANANA_POLLING_INTERVAL_MS) / 1000 / 60;
+        super(`Image generation polling timed out after ${minutes.toFixed(1)} minutes. The image may still be processing.`);
+        this.name = 'NanoBananaProTimeoutError';
+        this.requestId = requestId;
+        this.attemptsMade = attemptsMade;
+    }
+}
+
+export class NanoBananaProGenerationError extends Error {
+    constructor(message: string) {
+        super(message);
+        this.name = 'NanoBananaProGenerationError';
+    }
+}
+
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+/**
+ * Polls the Nano Banana status endpoint until images are ready or timeout.
+ * @param requestId - The request ID from the initial generation call
+ * @param startAttempt - Starting attempt number (for resume capability)
+ * @param statusEndpoint - The status endpoint to poll (defaults to nanoBananaProStatus)
+ * @returns Array of image URLs
+ */
+const pollForNanoBananaResult = async (
+    requestId: string,
+    startAttempt: number = 0,
+    statusEndpoint: string = Constance.endpoints.nanoBananaProStatus
+): Promise<string[]> => {
+    for (let attempt = startAttempt; attempt < NANO_BANANA_MAX_POLLING_ATTEMPTS; attempt++) {
+        // Wait AFTER the first attempt, not before (so we check immediately first)
+        if (attempt > startAttempt) {
+            await delay(NANO_BANANA_POLLING_INTERVAL_MS);
+        }
+
+        try {
+            const result = await fetchViaWebhookProxy<{
+                images?: string[];
+                image?: string | string[];
+                url?: string;
+                urls?: string[];
+                Error?: string;
+                error?: string;
+                status?: string;
+            }>(
+                statusEndpoint,
+                { id: requestId },
+                { maxRetries: 1 } // Don't retry much within polling since we already have polling retries
+            );
+
+            // Handle multiple possible field names for images
+            const images = result.images || result.image || result.url || result.urls;
+
+            // Convert to array if single string
+            const imageArray = images
+                ? (Array.isArray(images) ? images : [images])
+                : null;
+
+            if (imageArray && imageArray.length > 0 && imageArray[0]) {
+                console.log(`Nano Banana: Successfully received ${imageArray.length} image(s)`);
+                return imageArray; // Success - return all images
+            }
+
+            if (result.Error || result.error) {
+                throw new NanoBananaProGenerationError(result.Error || result.error || 'Unknown error');
+            }
+
+            // Check for failure status
+            const failureStatuses = ['failed', 'error', 'failed_permanently', 'cancelled'];
+            if (result.status && failureStatuses.includes(result.status.toLowerCase())) {
+                throw new NanoBananaProGenerationError(`Image generation failed with status: ${result.status}`);
+            }
+
+            // If status is 'generating', 'pending', 'processing', or undefined, continue polling...
+            console.log(`Nano Banana: Polling attempt ${attempt + 1}/${NANO_BANANA_MAX_POLLING_ATTEMPTS}, status: ${result.status || 'pending'}, response keys: ${Object.keys(result).join(', ')}`);
+
+        } catch (error) {
+            // Don't wrap our custom errors
+            if (error instanceof NanoBananaProGenerationError || error instanceof NanoBananaProTimeoutError) {
+                throw error;
+            }
+
+            // Distinguish between transient errors and definitive failures
+            if (error instanceof SyntaxError || error instanceof TypeError) {
+                console.warn(`Polling attempt ${attempt + 1} encountered a transient error. Retrying...`, error);
+                if (attempt === NANO_BANANA_MAX_POLLING_ATTEMPTS - 1) {
+                    throw new NanoBananaProTimeoutError(requestId, attempt + 1);
+                }
+                continue; // Retry on transient errors
+            }
+            // Re-throw other errors
+            throw new NanoBananaProGenerationError(error instanceof Error ? error.message : String(error));
+        }
+    }
+    throw new NanoBananaProTimeoutError(requestId, NANO_BANANA_MAX_POLLING_ATTEMPTS);
+};
+
+/**
+ * Resume polling for a timed-out Nano Banana request.
+ * @param requestId - The request ID to resume polling for
+ * @param attemptsMade - Number of attempts already made (optional)
+ * @param statusEndpoint - The status endpoint to use (defaults to nanoBananaProStatus)
+ */
+export const resumeNanoBananaPolling = async (
+    requestId: string,
+    attemptsMade: number = 0,
+    statusEndpoint: string = Constance.endpoints.nanoBananaProStatus
+): Promise<string[]> => {
+    return pollForNanoBananaResult(requestId, attemptsMade, statusEndpoint);
+};
+
+// ============================================================================
 
 /**
  * Detects the image format from base64-encoded data by examining the magic bytes.
@@ -180,7 +308,8 @@ export const generateFigureImage = async (
                     return source.publicUrl; // Use cached URL
                 }
                 const dataUrl = `data:${source.mimeType};base64,${source.base64}`;
-                return uploadImageFromDataUrl(dataUrl, `upload-${Date.now()}-${index}.jpg`);
+                const ext = getExtensionFromMimeType(source.mimeType);
+                return uploadImageFromDataUrl(dataUrl, `upload-${Date.now()}-${index}.${ext}`);
             })
         );
 
@@ -189,6 +318,7 @@ export const generateFigureImage = async (
         let returnsMultipleImages = false;
 
         if (model === Constance.models.image.nanoBananaPro) {
+            // Nano Banana Pro uses async generation with polling (like video)
             payload = {
                 prompt,
                 num_images: options.num_images || 1,
@@ -198,8 +328,31 @@ export const generateFigureImage = async (
                 image_urls: publicUrls,
             };
             endpoint = Constance.endpoints.image.nanoBananaPro;
-            returnsMultipleImages = true;
-        } else if (model === Constance.models.image.seedream) {
+
+            // Step 1: Initiate generation and get request_id
+            const initialResult = await fetchViaWebhookProxy<{
+                request_id?: string;
+                Error?: string;
+            }>(endpoint, payload);
+
+            if (initialResult.Error) {
+                throw new NanoBananaProGenerationError(initialResult.Error);
+            }
+
+            if (!initialResult.request_id) {
+                throw new NanoBananaProGenerationError('API response did not contain a request_id.');
+            }
+
+            console.log(`Nano Banana Pro: Generation initiated, request_id: ${initialResult.request_id}`);
+
+            // Step 2: Poll for results
+            const imageUrls = await pollForNanoBananaResult(initialResult.request_id);
+
+            // Return the image URLs directly (they're already public URLs)
+            return imageUrls.length === 1 ? imageUrls[0] : imageUrls;
+        }
+
+        if (model === Constance.models.image.seedream) {
             if (publicUrls.length > 1) throw new Error(`${model} only supports one input image.`);
 
             // Determine image_size format based on preset
@@ -237,12 +390,35 @@ export const generateFigureImage = async (
             }
             endpoint = Constance.endpoints.image.flux;
         } else if (model === Constance.models.image.nanoBanana && useNanoBananaWebhook) {
+            // Nano Banana webhook uses async generation with polling (like video)
             payload = {
                 prompt,
                 image_urls: publicUrls,
                 aspect_ratio: options.aspectRatio || 'auto',
             };
             endpoint = Constance.endpoints.image.nanoBanana;
+
+            // Step 1: Initiate generation and get request_id
+            const initialResult = await fetchViaWebhookProxy<{
+                request_id?: string;
+                Error?: string;
+            }>(endpoint, payload);
+
+            if (initialResult.Error) {
+                throw new NanoBananaProGenerationError(initialResult.Error);
+            }
+
+            if (!initialResult.request_id) {
+                throw new NanoBananaProGenerationError('API response did not contain a request_id.');
+            }
+
+            console.log(`Nano Banana: Generation initiated, request_id: ${initialResult.request_id}`);
+
+            // Step 2: Poll for results using the nanoBananaStatus endpoint
+            const imageUrls = await pollForNanoBananaResult(initialResult.request_id, 0, Constance.endpoints.nanoBananaStatus);
+
+            // Return the first image URL (nano-banana returns single image)
+            return imageUrls[0];
         } else if (model === Constance.models.image.qwen) {
             if (publicUrls.length > 1) throw new Error(`${model} only supports one input image.`);
             payload = {
@@ -257,28 +433,13 @@ export const generateFigureImage = async (
                 acceleration: 'regular',
             };
             endpoint = Constance.endpoints.image.qwen;
-        } else {
+        } else if (!endpoint) {
+            // Only throw if no handler was matched (endpoint not set)
             throw new Error(`Model ${model} requires an external API call, but no handler is implemented.`);
         }
 
-        const response = await fetch(endpoint, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-        });
-
-        if (!response.ok) {
-            let errorMsg = `Image generation failed with status ${response.status}.`;
-            try {
-                const errorBody = await response.json();
-                errorMsg = errorBody.error || errorBody.message || errorMsg;
-            } catch (e) {
-                // response was not json
-            }
-            throw new Error(errorMsg);
-        }
-
-        const result = await response.json();
+        // Use webhook proxy to avoid CORS issues
+        const result = await fetchViaWebhookProxy(endpoint, payload);
 
         // All external models are expected to return an 'images' array
         if (result && Array.isArray(result.images) && result.images.length > 0) {

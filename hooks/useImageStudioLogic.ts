@@ -702,16 +702,18 @@ export const useImageStudioLogic = (
                             resolution: resolution,
                         }
                     );
-                    const imageUrls = result as string[];
-                    imageUrl = imageUrls[0]; // Take first image from array
+                    // Handle both string and string[] return types
+                    imageUrl = Array.isArray(result) ? result[0] : result;
                 } else {
-                    imageUrl = await generateFigureImage(
+                    const result = await generateFigureImage(
                         model,
                         finalPrompt,
                         [imageSource],
                         { width, height, imageSizePreset, aspectRatio: aspectRatio || undefined },
                         useNanoBananaWebhook
                     );
+                    // Handle both string and string[] return types
+                    imageUrl = Array.isArray(result) ? result[0] : result;
                 }
 
                 return { url: imageUrl, originalImageIndex: imageIndex, originalPromptIndex: promptIndex, prompt: finalPrompt, batchTimestamp: timestamp };
@@ -804,7 +806,11 @@ export const useImageStudioLogic = (
         if (!toRetry || toRetry.status === 'pending') return;
 
         logUserAction('RETRY_ONE_IMAGE_IMAGESTUDIO', { key, setId });
+
+        // Clear error state and set loading - do this synchronously for immediate visual feedback
         setGenerationResults(prev => prev.map(r => r.key === key ? { ...r, status: 'pending', error: undefined, modelResponse: undefined } : r));
+        setProgress({ completed: 0, total: 1 });
+        setIsLoading(true);
 
         // Ensure files have cached publicUrls before retrying
         try {
@@ -812,6 +818,7 @@ export const useImageStudioLogic = (
         } catch (error) {
             addToast(`Failed to upload images: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
             setGenerationResults(prev => prev.map(r => r.key === key ? { ...r, status: 'error', error: error instanceof Error ? error.message : 'Upload failed' } : r));
+            setIsLoading(false);
             return;
         }
 
@@ -821,8 +828,11 @@ export const useImageStudioLogic = (
         try {
             const result = await task();
             handleSuccess(result);
+            setProgress({ completed: 1, total: 1 });
         } catch (error) {
             handleFail(error);
+        } finally {
+            setIsLoading(false);
         }
     }, [generationResults, getActivePrompts, createGenerationTask, handleSuccess, handleFail, setId, ensurePublicUrls, addToast]);
 
