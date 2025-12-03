@@ -2,7 +2,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { StudioImage, TimelinePair, Toast as ToastType, TimelinePairWithImages, ImageForVideoProcessing } from '../types';
 import { translateTextToEnglish, generateTimelineTransitionPrompt, prepareAllTimelinePrompts, enhanceGeneralPrompt } from '../services/timelineStudioService';
-import { dataUrlToBlob } from '../services/geminiClient';
+import { dataUrlToBlob, imageUrlToBase64 } from '../services/geminiClient';
 import { uploadImageFromDataUrl } from '../services/imageUploadService';
 import { generateAllVideos, generateSingleVideoForImage, VideoTask } from '../services/videoService';
 import { generateSetId, generateShortId, getTimestamp, getExtensionFromDataUrl } from '../services/imageUtils';
@@ -254,8 +254,9 @@ export const useTimelineStudio = ({ addToast, setConfirmAction, setDownloadProgr
         setTimelinePairs(prev => prev.map(p => p.id === pairId ? { ...p, isPreparing: true } : p));
         addToast("Enhancing transition prompt...", "info");
         try {
-            const startImageBlob = dataUrlToBlob(startImage.src);
-            const endImageBlob = dataUrlToBlob(endImage.src);
+            // Use imageUrlToBase64 to handle both data URLs and HTTPS URLs
+            const startImageBlob = await imageUrlToBase64(startImage.src);
+            const endImageBlob = await imageUrlToBase64(endImage.src);
             const newPrompt = await generateTimelineTransitionPrompt(startImageBlob, endImageBlob, pair.videoPrompt);
             setTimelinePairs(prev => prev.map(p => p.id === pairId ? { ...p, videoPrompt: newPrompt, isPreparing: false } : p));
             addToast("Prompt enhanced!", "success");

@@ -22,7 +22,7 @@ import {
     enhanceVideoPromptForImage,
     VideoTask
 } from '../services/videoService';
-import { dataUrlToBlob } from '../services/geminiClient';
+import { dataUrlToBlob, imageUrlToBase64 } from '../services/geminiClient';
 import { generateAllVideos, generateSingleVideoForImage } from '../services/videoService';
 import { getTimestamp, generateSetId, getExtensionFromDataUrl } from '../services/imageUtils';
 import { logUserAction } from '../services/loggingService';
@@ -518,7 +518,8 @@ export const useArchitectureStudio = ({
         setGeneratedImages(prev => prev.map(img => img.filename === filename ? { ...img, isPreparing: true } : img));
         addToast(`Preparing video prompt...`, 'info');
         try {
-            const imageBlob = dataUrlToBlob(image.src);
+            // Use imageUrlToBase64 to handle both data URLs and HTTPS URLs from webhooks
+            const imageBlob = await imageUrlToBase64(image.src);
             const prompt = await generateArchitecturalVideoPrompt(imageBlob);
             setGeneratedImages(prev => prev.map(img => img.filename === filename ? { ...img, videoPrompt: prompt, isPreparing: false } : img));
             addToast("Video prompt ready!", "success");
@@ -598,7 +599,8 @@ export const useArchitectureStudio = ({
             // Use architectural video prompt generation instead of the generic people-focused one
             const processSingleTask = async (image: GeneratedArchitectureImage) => {
                 try {
-                    const imageBlob = dataUrlToBlob(image.src);
+                    // Use imageUrlToBase64 to handle both data URLs and HTTPS URLs from webhooks
+                    const imageBlob = await imageUrlToBase64(image.src);
                     const videoPrompt = await generateArchitecturalVideoPrompt(imageBlob);
                     setGeneratedImages(prev => prev.map(img => img.filename === image.filename ? { ...img, videoPrompt, isPreparing: false } : img));
                 } catch (error) {
@@ -611,7 +613,8 @@ export const useArchitectureStudio = ({
             // Prepare original image if needed
             if (needsOriginalPrep) {
                 try {
-                    const imageBlob = dataUrlToBlob(originalImage.croppedSrc!);
+                    // Use imageUrlToBase64 to handle both data URLs and HTTPS URLs
+                    const imageBlob = await imageUrlToBase64(originalImage.croppedSrc!);
                     const videoPrompt = await generateArchitecturalVideoPrompt(imageBlob);
                     setOriginalImage(prev => ({ ...prev, videoPrompt, isPreparing: false }));
                 } catch (error) {
@@ -626,7 +629,8 @@ export const useArchitectureStudio = ({
                 const version = transformedVersions[type];
                 if (version?.croppedSrc) {
                     try {
-                        const imageBlob = dataUrlToBlob(version.croppedSrc);
+                        // Use imageUrlToBase64 to handle both data URLs and HTTPS URLs from webhooks
+                        const imageBlob = await imageUrlToBase64(version.croppedSrc);
                         const videoPrompt = await generateArchitecturalVideoPrompt(imageBlob);
                         setTransformedVersions(prev => ({
                             ...prev,
@@ -1059,7 +1063,8 @@ export const useArchitectureStudio = ({
         setOriginalImage(prev => ({ ...prev, isPreparing: true }));
         addToast(`Preparing video prompt for original image...`, 'info');
         try {
-            const imageBlob = dataUrlToBlob(originalImage.croppedSrc);
+            // Use imageUrlToBase64 to handle both data URLs and HTTPS URLs
+            const imageBlob = await imageUrlToBase64(originalImage.croppedSrc);
             const prompt = await generateArchitecturalVideoPrompt(imageBlob);
             setOriginalImage(prev => ({ ...prev, videoPrompt: prompt, isPreparing: false }));
             addToast("Video prompt for original image ready!", "success");
@@ -1318,7 +1323,8 @@ export const useArchitectureStudio = ({
         addToast(`Preparing video prompt for ${versionLabel} version...`, 'info');
 
         try {
-            const imageBlob = dataUrlToBlob(targetImage.croppedSrc);
+            // Use imageUrlToBase64 to handle both data URLs and HTTPS URLs from webhooks
+            const imageBlob = await imageUrlToBase64(targetImage.croppedSrc);
             const prompt = await generateArchitecturalVideoPrompt(imageBlob);
 
             if (isOriginal) {
