@@ -31,9 +31,10 @@ export async function fetchViaWebhookProxy<T = any>(
         method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
         maxRetries?: number;
         retryDelay?: number;
+        timeout?: number; // Timeout in milliseconds (default: 5 minutes)
     } = {}
 ): Promise<T> {
-    const { method = 'POST', maxRetries = 3, retryDelay = 1000 } = options;
+    const { method = 'POST', maxRetries = 3, retryDelay = 1000, timeout = 300000 } = options;
 
     const useProxy = isWebhookProxyAvailable();
     const url = useProxy ? '/webhook-proxy' : targetUrl;
@@ -50,12 +51,19 @@ export async function fetchViaWebhookProxy<T = any>(
     let lastError: Error | null = null;
 
     for (let attempt = 0; attempt < maxRetries; attempt++) {
+        // Create AbortController for timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), timeout);
+
         try {
             const response = await fetch(url, {
                 method,
                 headers,
                 body: method !== 'GET' ? JSON.stringify(payload) : undefined,
+                signal: controller.signal,
             });
+
+            clearTimeout(timeoutId);
 
             if (!response.ok) {
                 let errorMsg = `Request failed with status ${response.status}.`;
@@ -70,7 +78,18 @@ export async function fetchViaWebhookProxy<T = any>(
 
             return await response.json() as T;
         } catch (error) {
+            clearTimeout(timeoutId);
             lastError = error as Error;
+
+            // Check if it's an abort (timeout) error
+            if (error instanceof Error && error.name === 'AbortError') {
+                console.warn(`Request timed out after ${timeout}ms on attempt ${attempt + 1}/${maxRetries}`);
+                if (attempt < maxRetries - 1) {
+                    await new Promise(resolve => setTimeout(resolve, retryDelay * Math.pow(2, attempt)));
+                    continue;
+                }
+                throw new Error(`Request timed out after ${timeout / 1000} seconds`);
+            }
 
             // Check if it's a network/CORS error (TypeError with "fetch" in message)
             const isNetworkError = error instanceof TypeError &&
@@ -107,9 +126,10 @@ export async function fetchBinaryViaWebhookProxy(
         method?: 'POST';
         maxRetries?: number;
         retryDelay?: number;
+        timeout?: number; // Timeout in milliseconds (default: 5 minutes)
     } = {}
 ): Promise<Response> {
-    const { method = 'POST', maxRetries = 3, retryDelay = 1000 } = options;
+    const { method = 'POST', maxRetries = 3, retryDelay = 1000, timeout = 300000 } = options;
 
     const useProxy = isWebhookProxyAvailable();
     const url = useProxy ? '/webhook-proxy' : targetUrl;
@@ -127,12 +147,19 @@ export async function fetchBinaryViaWebhookProxy(
     let lastError: Error | null = null;
 
     for (let attempt = 0; attempt < maxRetries; attempt++) {
+        // Create AbortController for timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), timeout);
+
         try {
             const response = await fetch(url, {
                 method,
                 headers,
                 body: JSON.stringify(payload),
+                signal: controller.signal,
             });
+
+            clearTimeout(timeoutId);
 
             if (!response.ok) {
                 // Try to get error message from response
@@ -148,7 +175,18 @@ export async function fetchBinaryViaWebhookProxy(
 
             return response;
         } catch (error) {
+            clearTimeout(timeoutId);
             lastError = error as Error;
+
+            // Check if it's an abort (timeout) error
+            if (error instanceof Error && error.name === 'AbortError') {
+                console.warn(`Request timed out after ${timeout}ms on attempt ${attempt + 1}/${maxRetries}`);
+                if (attempt < maxRetries - 1) {
+                    await new Promise(resolve => setTimeout(resolve, retryDelay * Math.pow(2, attempt)));
+                    continue;
+                }
+                throw new Error(`Request timed out after ${timeout / 1000} seconds`);
+            }
 
             const isNetworkError = error instanceof TypeError &&
                 (error.message.includes('fetch') || error.message.includes('network') || error.message.includes('Failed'));
