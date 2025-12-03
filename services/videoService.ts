@@ -1,6 +1,6 @@
 import { ImageForVideoProcessing, GeneratedImage, StudioImage, GeneratedBabyImage } from '../types';
 import { processWithConcurrency, fetchViaWebhookProxy } from './apiUtils';
-import { ai, dataUrlToBlob as dataUrlToBlobUtil } from './geminiClient';
+import { ai, dataUrlToBlob as dataUrlToBlobUtil, imageUrlToBase64 } from './geminiClient';
 import { GenerateContentResponse } from '@google/genai';
 import { Constance } from './endpoints';
 
@@ -291,7 +291,8 @@ export const prepareVideoPrompts = async (
   const processSingleTask = async (task: (GeneratedImage | StudioImage | GeneratedBabyImage)) => {
     const filename = 'id' in task ? task.id : task.filename;
     try {
-      const imageBlob = dataUrlToBlob(task.src);
+      // Use imageUrlToBase64 to handle both data URLs and HTTPS URLs from webhooks
+      const imageBlob = await imageUrlToBase64(task.src);
       const videoPrompt = await generateVideoPromptForImage(imageBlob, guidance);
       onProgress(filename, videoPrompt);
     } catch (error) {

@@ -10,7 +10,7 @@ import {
     BABY_ACTIONS
 } from '../constants';
 import { processWithConcurrency } from './apiUtils';
-import { ai, dataUrlToBlob } from './geminiClient';
+import { ai, dataUrlToBlob, imageUrlToBase64 } from './geminiClient';
 import { ImageForVideoProcessing } from '../types';
 import { Constance } from './endpoints';
 import { generateFigureImage } from './geminiService';
@@ -242,7 +242,8 @@ export const prepareBabyVideoPrompts = async (
 ): Promise<void> => {
   const processSingleTask = async (task: GeneratedBabyImage) => {
     try {
-      const imageBlob = dataUrlToBlob(task.src);
+      // Use imageUrlToBase64 to handle both data URLs and HTTPS URLs from webhooks
+      const imageBlob = await imageUrlToBase64(task.src);
       const videoPrompt = await generateVideoPromptForBabyImage(imageBlob);
       onProgress(task.filename, videoPrompt);
     } catch (error) {

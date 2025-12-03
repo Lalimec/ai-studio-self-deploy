@@ -1,6 +1,6 @@
 import { TimelinePairWithImages } from '../types';
 import { processWithConcurrency } from './apiUtils';
-import { ai, dataUrlToBlob } from './geminiClient';
+import { ai, dataUrlToBlob, imageUrlToBase64 } from './geminiClient';
 import { Constance } from './endpoints';
 
 const parseGenerationError = (error: Error, task: { filename: string }): string => {
@@ -69,8 +69,9 @@ export const prepareAllTimelinePrompts = async (
 ): Promise<void> => {
   const processSingleTask = async (task: TimelinePairWithImages) => {
     try {
-      const startImageBlob = dataUrlToBlob(task.startImage.src);
-      const endImageBlob = dataUrlToBlob(task.endImage.src);
+      // Use imageUrlToBase64 to handle both data URLs and HTTPS URLs from webhooks
+      const startImageBlob = await imageUrlToBase64(task.startImage.src);
+      const endImageBlob = await imageUrlToBase64(task.endImage.src);
       const videoPrompt = await generateTimelineTransitionPrompt(startImageBlob, endImageBlob, generalPrompt);
       onProgress(task.id, videoPrompt);
     } catch (error) {
