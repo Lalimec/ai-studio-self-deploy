@@ -209,9 +209,6 @@ export const downloadImageWithMetadata = async (
         finalBlob = new Blob([byteArray], { type: mimeType });
     } else if (imageUrl) {
         finalBlob = await fetch(imageUrl).then((res) => res.blob());
-        // CRITICAL: Correct filename extension to match actual MIME type
-        // This ensures PNG files from CDN URLs get .png extension, not .jpg
-        filename = correctFileExtension(filename, finalBlob.type);
     } else {
         throw new Error('Must provide imageUrl, imageBlob, or imageBase64');
     }
@@ -395,8 +392,6 @@ export const downloadBulkImages = async (
             finalBlob = new Blob([byteArray], { type: mimeType });
         } else if (imageUrl) {
             finalBlob = await fetch(imageUrl).then((res) => res.blob());
-            // CRITICAL: Correct filename extension to match actual MIME type
-            filename = correctFileExtension(filename, finalBlob.type);
         } else {
             throw new Error(`Image ${filename}: Must provide imageUrl, imageBlob, or imageBase64`);
         }
