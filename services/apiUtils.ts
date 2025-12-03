@@ -1,4 +1,50 @@
 /**
+ * Custom error class for webhook timeout errors.
+ * Provides clear error messages and stores request details for retry capability.
+ */
+export class WebhookTimeoutError extends Error {
+    targetUrl: string;
+    payload: any;
+    timeoutMs: number;
+    attemptsMade: number;
+
+    constructor(targetUrl: string, payload: any, timeoutMs: number, attemptsMade: number) {
+        const timeoutSeconds = timeoutMs / 1000;
+        const minutes = Math.floor(timeoutSeconds / 60);
+        const seconds = timeoutSeconds % 60;
+        const timeStr = minutes > 0
+            ? `${minutes} minute${minutes > 1 ? 's' : ''}${seconds > 0 ? ` ${seconds}s` : ''}`
+            : `${seconds} seconds`;
+
+        super(`Request timed out after ${timeStr}. The server may still be processing your request. You can try again.`);
+        this.name = 'WebhookTimeoutError';
+        this.targetUrl = targetUrl;
+        this.payload = payload;
+        this.timeoutMs = timeoutMs;
+        this.attemptsMade = attemptsMade;
+    }
+}
+
+/**
+ * Custom error class for webhook network errors (CORS, connection failures, etc.)
+ */
+export class WebhookNetworkError extends Error {
+    targetUrl: string;
+    payload: any;
+    attemptsMade: number;
+    originalError: Error;
+
+    constructor(targetUrl: string, payload: any, attemptsMade: number, originalError: Error) {
+        super(`Network error after ${attemptsMade} attempt${attemptsMade > 1 ? 's' : ''}: ${originalError.message}. This may be a connection issue. Please try again.`);
+        this.name = 'WebhookNetworkError';
+        this.targetUrl = targetUrl;
+        this.payload = payload;
+        this.attemptsMade = attemptsMade;
+        this.originalError = originalError;
+    }
+}
+
+/**
  * Checks if the webhook proxy is available (production environment with server).
  * The proxy is available when service worker is registered (which only happens when
  * the server injects the registration script).
@@ -88,7 +134,8 @@ export async function fetchViaWebhookProxy<T = any>(
                     await new Promise(resolve => setTimeout(resolve, retryDelay * Math.pow(2, attempt)));
                     continue;
                 }
-                throw new Error(`Request timed out after ${timeout / 1000} seconds`);
+                // Throw our custom timeout error with retry context
+                throw new WebhookTimeoutError(targetUrl, payload, timeout, attempt + 1);
             }
 
             // Check if it's a network/CORS error (TypeError with "fetch" in message)
@@ -100,6 +147,11 @@ export async function fetchViaWebhookProxy<T = any>(
                 console.warn(`Network error on attempt ${attempt + 1}/${maxRetries}, retrying in ${retryDelay * Math.pow(2, attempt)}ms...`);
                 await new Promise(resolve => setTimeout(resolve, retryDelay * Math.pow(2, attempt)));
                 continue;
+            }
+
+            // For network errors on last attempt, throw our custom network error
+            if (isNetworkError && error instanceof Error) {
+                throw new WebhookNetworkError(targetUrl, payload, attempt + 1, error);
             }
 
             // For non-network errors or last attempt, throw immediately
@@ -185,7 +237,8 @@ export async function fetchBinaryViaWebhookProxy(
                     await new Promise(resolve => setTimeout(resolve, retryDelay * Math.pow(2, attempt)));
                     continue;
                 }
-                throw new Error(`Request timed out after ${timeout / 1000} seconds`);
+                // Throw our custom timeout error with retry context
+                throw new WebhookTimeoutError(targetUrl, payload, timeout, attempt + 1);
             }
 
             const isNetworkError = error instanceof TypeError &&
@@ -195,6 +248,11 @@ export async function fetchBinaryViaWebhookProxy(
                 console.warn(`Network error on attempt ${attempt + 1}/${maxRetries}, retrying...`);
                 await new Promise(resolve => setTimeout(resolve, retryDelay * Math.pow(2, attempt)));
                 continue;
+            }
+
+            // For network errors on last attempt, throw our custom network error
+            if (isNetworkError && error instanceof Error) {
+                throw new WebhookNetworkError(targetUrl, payload, attempt + 1, error);
             }
 
             break;
