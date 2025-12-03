@@ -487,7 +487,7 @@ export const useBabyStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
 
             try {
                 await downloadImageWithMetadata({
-                    imageBase64: parentToDownload.croppedSrc,
+                    imageUrl: parentToDownload.croppedSrc,
                     filename: `${baseName}.jpg`,
                     metadata: {
                         type: "parent_image",
@@ -520,7 +520,7 @@ export const useBabyStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
 
             try {
                 await downloadImageWithMetadata({
-                    imageBase64: image.src,
+                    imageUrl: image.src,
                     filename: `${baseName}.jpg`,
                     metadata: {
                         type: "generated_baby_image",
@@ -555,7 +555,7 @@ export const useBabyStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
                 const baseName = `${sessionId}_parent-01_${sanitizedBaseFilename}_${timestamp}`;
 
                 images.push({
-                    imageBase64: parent1.croppedSrc,
+                    imageUrl: parent1.croppedSrc,
                     filename: `${baseName}.jpg`,
                     metadata: {
                         type: "parent_image",
@@ -576,7 +576,7 @@ export const useBabyStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
                 const baseName = `${sessionId}_parent-02_${sanitizedBaseFilename}_${timestamp}`;
 
                 images.push({
-                    imageBase64: parent2.croppedSrc,
+                    imageUrl: parent2.croppedSrc,
                     filename: `${baseName}.jpg`,
                     metadata: {
                         type: "parent_image",
@@ -594,7 +594,7 @@ export const useBabyStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
             for (const image of generatedImages) {
                 const baseName = image.filename.substring(0, image.filename.lastIndexOf('.'));
                 images.push({
-                    imageBase64: image.src,
+                    imageUrl: image.src,
                     filename: `${baseName}.jpg`,
                     metadata: {
                         type: "generated_baby_image",
