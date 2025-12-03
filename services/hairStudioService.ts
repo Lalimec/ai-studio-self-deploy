@@ -296,3 +296,48 @@ export const regenerateSingleHairstyle = async (
   const { imageUrl, promptText } = await generateSingleImage(imageSource, task, { gender: options.gender, aspectRatio: options.aspectRatio }, useNanoBananaWebhook, model, resolution);
   return { imageUrl, hairstyle: task.hairstyle, color: task.color || 'original', filename: task.filename, imageGenerationPrompt: promptText };
 };
+
+/**
+ * Generates a video prompt specifically for hair studio images.
+ * Focuses on hair-related movements that showcase the hairstyle.
+ * Compatible with the unified VideoPromptGenerator type.
+ *
+ * @param imageBlob - The image blob with base64 and mimeType
+ * @param guidance - Optional high-level instruction (can be used to customize the prompt)
+ * @returns A descriptive video prompt for hair animation
+ */
+export const generateHairVideoPrompt = async (
+  imageBlob: { base64: string, mimeType: string },
+  guidance?: string
+): Promise<string> => {
+  let prompt = `Analyze the person and their hairstyle in this image. Create a short, descriptive video prompt (around 25-35 words) for an AI video generator. The camera should be 'stationary' or 'static'.
+
+Focus on subtle, natural movements that SHOWCASE THE HAIRSTYLE:
+- Running fingers gently through the hair
+- A light head turn or tilt to show different angles of the hairstyle
+- Gentle hair flip or toss
+- Wind softly blowing through the hair
+- Tucking hair behind the ear
+- Smoothing or adjusting the hairstyle
+- Subtle head movement that makes the hair sway naturally
+
+The movement should highlight the hair's texture, volume, and style. Keep the mood natural and elegant.`;
+
+  if (guidance && guidance.trim()) {
+    prompt += ` IMPORTANT: The prompt must also adhere to this high-level instruction: "${guidance}".`;
+  }
+
+  prompt += ` Example: 'A person gently runs their fingers through their flowing auburn hair while slightly tilting their head, soft natural light highlighting the hair's texture and color, camera stationary.'`;
+
+  const response = await ai.models.generateContent({
+    model: Constance.models.text.flash,
+    contents: {
+      parts: [
+        { inlineData: { data: imageBlob.base64, mimeType: imageBlob.mimeType } },
+        { text: prompt },
+      ]
+    },
+  });
+
+  return response.text;
+};

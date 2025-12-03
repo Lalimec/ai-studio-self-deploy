@@ -234,13 +234,28 @@ export const generateVideoPromptForImage = async (
     imageBlob: { base64: string, mimeType: string },
     guidance?: string
 ): Promise<string> => {
-  let prompt = `Analyze the person, their clothing, and the setting in this image. Create a short, descriptive video prompt (around 25-35 words) for an AI video generator. The camera should be 'stationary' or 'static'. Focus on subtle, natural movements, like a gentle smile, a shift in gaze, or a slight head turn. The style should be natural and engaging.`;
+  // Build a generic prompt that works for ANY image type (people, objects, landscapes, animals, etc.)
+  let prompt: string;
 
   if (guidance && guidance.trim()) {
-      prompt += ` IMPORTANT: The prompt must also adhere to this high-level instruction: "${guidance}".`;
-  }
+    // When user provides guidance, focus on that instruction
+    prompt = `Analyze this image carefully. Create a short, descriptive video prompt (around 25-35 words) for an AI video generator that will animate this static image.
 
-  prompt += ` Example: 'A person with brown hair smiles gently while looking at the camera, with soft light on their face, camera remains stationary.'`;
+IMPORTANT: The video prompt MUST adhere to this instruction: "${guidance}"
+
+Based on the image content, describe subtle, natural movements appropriate for the subject matter. The camera should typically be 'stationary' or 'static' unless the instruction suggests otherwise. Generate ONLY the video prompt.`;
+  } else {
+    // No guidance - analyze the image and create an appropriate prompt
+    prompt = `Analyze this image and identify its main subject (person, object, landscape, animal, etc.). Create a short, descriptive video prompt (around 25-35 words) for an AI video generator that will animate this static image.
+
+Consider the image content and suggest appropriate subtle movements:
+- For people: facial expressions, head movements, body language
+- For landscapes/nature: wind, clouds, water movement, light changes
+- For objects: subtle movement, light reflections, environmental effects
+- For animals: natural behaviors, movements typical of the species
+
+The camera should be 'stationary' or 'static'. The style should be natural and cinematic. Generate ONLY the video prompt.`;
+  }
 
   const response: GenerateContentResponse = await ai.models.generateContent({
     model: Constance.models.text.flash,
