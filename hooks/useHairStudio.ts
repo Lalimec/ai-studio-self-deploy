@@ -535,7 +535,7 @@ export const useHairStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
 
             try {
                 await downloadImageWithMetadata({
-                    imageBase64: originalImage.croppedSrc,
+                    imageUrl: originalImage.croppedSrc,
                     filename: `${baseName}.jpg`,
                     prompt: 'Original uploaded image before any transformations',
                     metadata: {
@@ -569,7 +569,7 @@ export const useHairStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
 
             try {
                 await downloadImageWithMetadata({
-                    imageBase64: image.src,
+                    imageUrl: image.src,
                     filename: `${baseName}.jpg`,
                     prompt: image.imageGenerationPrompt,
                     metadata: {
@@ -609,7 +609,7 @@ export const useHairStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
                 if (originalImage.croppedSrc && originalImage.filename) {
                     const baseName = originalImage.filename.substring(0, originalImage.filename.lastIndexOf('.'));
                     images.push({
-                        imageBase64: originalImage.croppedSrc,
+                        imageUrl: originalImage.croppedSrc,
                         filename: `${baseName}.jpg`,
                         prompt: 'Original uploaded image before any transformations',
                         metadata: {
@@ -625,7 +625,7 @@ export const useHairStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
                 generatedImages.forEach(image => {
                     const baseName = image.filename.substring(0, image.filename.lastIndexOf('.'));
                     images.push({
-                        imageBase64: image.src,
+                        imageUrl: image.src,
                         filename: `${baseName}.jpg`,
                         prompt: image.imageGenerationPrompt,
                         metadata: {
