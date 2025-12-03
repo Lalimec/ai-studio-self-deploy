@@ -3,7 +3,7 @@ import { useState, useCallback } from 'react';
 import { UpscalerImage, UpscalerSettings, Toast as ToastType, DownloadSettings } from '../types';
 import { upscaleImage, upscaleAllImages, getDefaultUpscalerSettings, UpscaleTask, calculateScaleForTarget } from '../services/upscalerService';
 import { uploadImageFromDataUrl } from '../services/imageUploadService';
-import { generateSetId, generateShortId, getTimestamp, getExtensionFromDataUrl } from '../services/imageUtils';
+import { generateSetId, generateShortId, getTimestamp, getExtensionFromDataUrl, getExtensionFromMimeType } from '../services/imageUtils';
 import { logUserAction } from '../services/loggingService';
 
 declare const JSZip: any;
@@ -248,7 +248,7 @@ export const useUpscalerStudio = ({
                 // Add upscaled image if available
                 if (image.upscaledSrc) {
                     const upscaledBlob = await fetch(image.upscaledSrc).then(res => res.blob());
-                    const upscaledExt = image.upscaledSrc.includes('.png') ? 'png' : 'jpg';
+                    const upscaledExt = getExtensionFromMimeType(upscaledBlob.type);
                     zip.file(`${baseName}_upscaled.${upscaledExt}`, upscaledBlob);
                     setDownloadProgress({ visible: true, message: 'Adding upscaled image...', progress: 50 });
                 }
@@ -307,7 +307,7 @@ export const useUpscalerStudio = ({
                     // Add upscaled image if available
                     if (image.upscaledSrc) {
                         const upscaledBlob = await fetch(image.upscaledSrc).then(res => res.blob());
-                        const upscaledExt = image.upscaledSrc.includes('.png') ? 'png' : 'jpg';
+                        const upscaledExt = getExtensionFromMimeType(upscaledBlob.type);
                         zip.file(`${baseName}_upscaled.${upscaledExt}`, upscaledBlob);
                     }
 

@@ -6,28 +6,18 @@ import {
     StoryboardScene,
     DownloadSettings
 } from '../types';
-import { 
-    analyzeVideo, generateAnalysis, generateAdConcept, generateImage, 
-    fileToGenerativePart, parseTimestamp, fixMalformedJson, 
+import {
+    analyzeVideo, generateAnalysis, generateAdConcept, generateImage,
+    fileToGenerativePart, parseTimestamp, fixMalformedJson,
     parseAnalysisResponse,
     formatTimeWithMS
 } from '../services/videoAnalyzerService';
 import { imageModels, analysisModels } from '../constants';
 import { logUserAction } from '../services/loggingService';
+import { getExtensionFromMimeType } from '../services/imageUtils';
 import { mockVideoAnalysisData, mockExtractedFrames } from '../components/videoAnalyzer/mockData';
 
 declare const JSZip: any;
-
-// Helper to get extension from blob MIME type
-const getExtensionFromMimeType = (mimeType: string): string => {
-    if (!mimeType) return 'jpg';
-    const type = mimeType.toLowerCase();
-    if (type.includes('jpeg') || type.includes('jpg')) return 'jpg';
-    if (type.includes('png')) return 'png';
-    if (type.includes('webp')) return 'webp';
-    if (type.includes('gif')) return 'gif';
-    return 'jpg'; // Default fallback
-};
 
 type VideoAnalyzerHookProps = {
     addToast: (message: string, type: Toast['type']) => void;
