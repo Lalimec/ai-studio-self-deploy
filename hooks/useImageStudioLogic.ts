@@ -702,8 +702,8 @@ export const useImageStudioLogic = (
                             resolution: resolution,
                         }
                     );
-                    const imageUrls = result as string[];
-                    imageUrl = imageUrls[0]; // Take first image from array
+                    // Handle both string and string[] return types
+                    imageUrl = Array.isArray(result) ? result[0] : result;
                 } else {
                     const result = await generateFigureImage(
                         model,

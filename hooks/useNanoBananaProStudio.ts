@@ -431,8 +431,8 @@ export const useNanoBananaProStudio = (
                     }
                 );
 
-                // generateFigureImage returns string[] for nano-banana-pro
-                const urls = result as string[];
+                // generateFigureImage returns string (single) or string[] (multiple)
+                const urls = Array.isArray(result) ? result : [result];
 
                 // Distribute URLs to the pre-created result keys
                 urls.forEach((url, idx) => {
