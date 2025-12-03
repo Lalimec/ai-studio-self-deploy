@@ -417,9 +417,7 @@ export const generateFigureImage = async (
 
             // Return the first image URL (nano-banana returns single image)
             return imageUrls[0];
-        }
-
-        if (model === Constance.models.image.qwen) {
+        } else if (model === Constance.models.image.qwen) {
             if (publicUrls.length > 1) throw new Error(`${model} only supports one input image.`);
             payload = {
                 prompt,
@@ -433,7 +431,8 @@ export const generateFigureImage = async (
                 acceleration: 'regular',
             };
             endpoint = Constance.endpoints.image.qwen;
-        } else {
+        } else if (!endpoint) {
+            // Only throw if no handler was matched (endpoint not set)
             throw new Error(`Model ${model} requires an external API call, but no handler is implemented.`);
         }
 

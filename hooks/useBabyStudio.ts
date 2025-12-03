@@ -5,7 +5,7 @@ import {
 import {
     generateBabyImages, prepareBabyVideoPrompts, generateVideoPromptForBabyImage
 } from '../services/babyStudioService';
-import { dataUrlToBlob } from '../services/geminiClient';
+import { dataUrlToBlob, imageUrlToBase64 } from '../services/geminiClient';
 import { uploadImageFromDataUrl } from '../services/imageUploadService';
 import { generateAllVideos, generateSingleVideoForImage, generateVideoPromptForImage, VideoTask } from '../services/videoService';
 import { getTimestamp, generateSetId, sanitizeFilename, getExtensionFromDataUrl } from '../services/imageUtils';
@@ -193,7 +193,8 @@ export const useBabyStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
 
             const parentPromises = unpreparedParents.map(async (parent) => {
                 try {
-                    const imageBlob = dataUrlToBlob(parent.croppedSrc!);
+                    // Use imageUrlToBase64 to handle both data URLs and HTTPS URLs
+                    const imageBlob = await imageUrlToBase64(parent.croppedSrc!);
                     const prompt = await generateVideoPromptForImage(imageBlob);
                     const setParent = parent.id === 'parent1' ? setParent1 : setParent2;
                     setParent(p => ({ ...p, videoPrompt: prompt, isPreparing: false }));
@@ -379,7 +380,8 @@ export const useBabyStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
         setGeneratedImages(prev => prev.map(img => img.filename === filename ? { ...img, isPreparing: true } : img));
         addToast(`Preparing video prompt...`, 'info');
         try {
-            const imageBlob = dataUrlToBlob(image.src);
+            // Use imageUrlToBase64 to handle both data URLs and HTTPS URLs
+            const imageBlob = await imageUrlToBase64(image.src);
             const prompt = await generateVideoPromptForBabyImage(imageBlob);
             setGeneratedImages(prev => prev.map(img => img.filename === filename ? { ...img, videoPrompt: prompt, isPreparing: false } : img));
             addToast("Video prompt ready!", "success");
@@ -429,7 +431,8 @@ export const useBabyStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
         setParent(p => ({ ...p, isPreparing: true }));
         addToast(`Preparing video prompt for ${parentId}...`, 'info');
         try {
-            const imageBlob = dataUrlToBlob(parent.croppedSrc);
+            // Use imageUrlToBase64 to handle both data URLs and HTTPS URLs
+            const imageBlob = await imageUrlToBase64(parent.croppedSrc);
             const prompt = await generateVideoPromptForImage(imageBlob);
             setParent(p => ({ ...p, videoPrompt: prompt, isPreparing: false }));
             addToast(`Video prompt for ${parentId} is ready!`, "success");

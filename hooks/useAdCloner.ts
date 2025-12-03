@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { AdImageState, AdSubjectImageState, AdClonerSettings, AdClonerGenerationResult, Toast, AdClonerVariation, VariationState } from '../types';
 import { researchAdContext, generateAdPrompts, generateAdVariationImage, refineAdImage, getNewAdVariations, enhanceAdInstructions } from '../services/adClonerService';
-import { dataUrlToBlob } from '../services/geminiClient';
+import { dataUrlToBlob, imageUrlToBase64 } from '../services/geminiClient';
 import { enhancePrompt, generatePromptVariation, translateToEnglish } from '../services/geminiService';
 import { generateSetId, getTimestamp, sanitizeFilename, getExtensionFromDataUrl } from '../services/imageUtils';
 import { processWithConcurrency } from '../services/apiUtils';
@@ -98,7 +98,8 @@ export const useAdCloner = ({ addToast, setConfirmAction, withMultiDownloadWarni
         setIsResearching(true);
         addToast("Researching ad context...", "info");
         try {
-            const adImageBlob = dataUrlToBlob(adImage.croppedSrc);
+            // Use imageUrlToBase64 to handle both data URLs and HTTPS URLs
+            const adImageBlob = await imageUrlToBase64(adImage.croppedSrc);
             const context = await researchAdContext(adImageBlob);
             setResearchContext(context);
             addToast("Ad research complete!", "success");
@@ -178,15 +179,16 @@ export const useAdCloner = ({ addToast, setConfirmAction, withMultiDownloadWarni
         setVariationState(index, { isLoading: true });
         if (!isBatch) addToast(`Generating image for Variation ${index + 1}...`, 'info');
         try {
+            // Use imageUrlToBase64 to handle both data URLs and HTTPS URLs
             const imageSources: { base64: string; mimeType: string; }[] = [];
             if (adImage.croppedSrc) {
-                imageSources.push(dataUrlToBlob(adImage.croppedSrc));
+                imageSources.push(await imageUrlToBase64(adImage.croppedSrc));
             }
-            subjectImages.forEach(img => {
+            for (const img of subjectImages) {
                 if (img.croppedSrc) {
-                    imageSources.push(dataUrlToBlob(img.croppedSrc));
+                    imageSources.push(await imageUrlToBase64(img.croppedSrc));
                 }
-            });
+            }
             const imageUrl = await generateAdVariationImage({
                 imageSources,
                 instructionalPrompt: generationResult.variations[index].prompt,
@@ -272,9 +274,10 @@ export const useAdCloner = ({ addToast, setConfirmAction, withMultiDownloadWarni
         setVariationState(index, { isLoading: true });
         addToast(`Applying edits to Variation ${index + 1}...`, 'info');
         try {
-            const imageSources: { base64: string; mimeType: string; }[] = [dataUrlToBlob(currentImageSrc)];
+            // Use imageUrlToBase64 to handle both data URLs and HTTPS URLs (currentImageSrc can be HTTPS)
+            const imageSources: { base64: string; mimeType: string; }[] = [await imageUrlToBase64(currentImageSrc)];
             if (state.refineImage.src) {
-                imageSources.push(dataUrlToBlob(state.refineImage.src));
+                imageSources.push(await imageUrlToBase64(state.refineImage.src));
             }
             const imageUrl = await refineAdImage({
                 imageSources,

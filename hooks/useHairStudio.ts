@@ -9,7 +9,7 @@ import {
     prepareVideoPrompts,
     generateVideoPromptForImage, enhanceVideoPromptForImage, VideoTask
 } from '../services/videoService';
-import { dataUrlToBlob } from '../services/geminiClient';
+import { dataUrlToBlob, imageUrlToBase64 } from '../services/geminiClient';
 import { generateAllVideos, generateSingleVideoForImage } from '../services/videoService';
 import { getTimestamp, generateSetId, getExtensionFromDataUrl } from '../services/imageUtils';
 import { logUserAction } from '../services/loggingService';
@@ -270,7 +270,8 @@ export const useHairStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
         setGeneratedImages(prev => prev.map(img => img.filename === filename ? { ...img, isPreparing: true } : img));
         addToast(`Preparing video prompt...`, 'info');
         try {
-            const imageBlob = dataUrlToBlob(image.src);
+            // Use imageUrlToBase64 to handle both data URLs and HTTPS URLs
+            const imageBlob = await imageUrlToBase64(image.src);
             const prompt = await generateVideoPromptForImage(imageBlob);
             setGeneratedImages(prev => prev.map(img => img.filename === filename ? { ...img, videoPrompt: prompt, isPreparing: false } : img));
             addToast("Video prompt ready!", "success");
@@ -332,7 +333,8 @@ export const useHairStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
             // Prepare original image if needed
             if (needsOriginalPrep) {
                 try {
-                    const imageBlob = dataUrlToBlob(originalImage.croppedSrc!);
+                    // Use imageUrlToBase64 to handle both data URLs and HTTPS URLs
+                    const imageBlob = await imageUrlToBase64(originalImage.croppedSrc!);
                     const prompt = await generateVideoPromptForImage(imageBlob);
                     setOriginalImage(prev => ({ ...prev, videoPrompt: prompt, isPreparing: false }));
                 } catch (error) {
@@ -481,7 +483,8 @@ export const useHairStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
         setOriginalImage(prev => ({ ...prev, isPreparing: true }));
         addToast(`Preparing video prompt for original image...`, 'info');
         try {
-            const imageBlob = dataUrlToBlob(originalImage.croppedSrc);
+            // Use imageUrlToBase64 to handle both data URLs and HTTPS URLs
+            const imageBlob = await imageUrlToBase64(originalImage.croppedSrc);
             const prompt = await generateVideoPromptForImage(imageBlob);
             setOriginalImage(prev => ({ ...prev, videoPrompt: prompt, isPreparing: false }));
             addToast("Video prompt for original image ready!", "success");
