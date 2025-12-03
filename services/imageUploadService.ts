@@ -3,13 +3,20 @@ import { fetchViaWebhookProxy } from './apiUtils';
 
 /**
  * Uploads an image from a data URL to a cloud bucket via a webhook.
- * @param dataUrl The data URL of the image to upload.
+ * If the input is already an HTTPS URL (from webhook-generated images), returns it as-is.
+ * @param imageUrl The data URL or HTTPS URL of the image.
  * @param filename An optional filename for the uploaded image.
- * @returns A promise that resolves to the public URL of the uploaded image.
+ * @returns A promise that resolves to the public URL of the image.
  */
-export const uploadImageFromDataUrl = async (dataUrl: string, filename?: string): Promise<string> => {
+export const uploadImageFromDataUrl = async (imageUrl: string, filename?: string): Promise<string> => {
+    // If it's already an HTTPS URL (from webhook-generated images), return as-is
+    if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+        return imageUrl;
+    }
+
+    // It's a data URL - upload to GCS
     const payload = {
-        image_url: dataUrl,
+        image_url: imageUrl,
         filename: filename
     };
 
