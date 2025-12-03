@@ -41,12 +41,17 @@ export class NanoBananaProGenerationError extends Error {
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 /**
- * Polls the Nano Banana Pro status endpoint until images are ready or timeout.
+ * Polls the Nano Banana status endpoint until images are ready or timeout.
  * @param requestId - The request ID from the initial generation call
  * @param startAttempt - Starting attempt number (for resume capability)
+ * @param statusEndpoint - The status endpoint to poll (defaults to nanoBananaProStatus)
  * @returns Array of image URLs
  */
-const pollForNanoBananaResult = async (requestId: string, startAttempt: number = 0): Promise<string[]> => {
+const pollForNanoBananaResult = async (
+    requestId: string,
+    startAttempt: number = 0,
+    statusEndpoint: string = Constance.endpoints.nanoBananaProStatus
+): Promise<string[]> => {
     for (let attempt = startAttempt; attempt < NANO_BANANA_MAX_POLLING_ATTEMPTS; attempt++) {
         await delay(NANO_BANANA_POLLING_INTERVAL_MS);
 
@@ -57,7 +62,7 @@ const pollForNanoBananaResult = async (requestId: string, startAttempt: number =
                 error?: string;
                 status?: string;
             }>(
-                Constance.endpoints.nanoBananaProStatus,
+                statusEndpoint,
                 { id: requestId },
                 { maxRetries: 1 } // Don't retry much within polling since we already have polling retries
             );
@@ -99,12 +104,17 @@ const pollForNanoBananaResult = async (requestId: string, startAttempt: number =
 };
 
 /**
- * Resume polling for a timed-out Nano Banana Pro request.
+ * Resume polling for a timed-out Nano Banana request.
  * @param requestId - The request ID to resume polling for
  * @param attemptsMade - Number of attempts already made (optional)
+ * @param statusEndpoint - The status endpoint to use (defaults to nanoBananaProStatus)
  */
-export const resumeNanoBananaProPolling = async (requestId: string, attemptsMade: number = 0): Promise<string[]> => {
-    return pollForNanoBananaResult(requestId, attemptsMade);
+export const resumeNanoBananaPolling = async (
+    requestId: string,
+    attemptsMade: number = 0,
+    statusEndpoint: string = Constance.endpoints.nanoBananaProStatus
+): Promise<string[]> => {
+    return pollForNanoBananaResult(requestId, attemptsMade, statusEndpoint);
 };
 
 // ============================================================================
@@ -361,13 +371,38 @@ export const generateFigureImage = async (
             }
             endpoint = Constance.endpoints.image.flux;
         } else if (model === Constance.models.image.nanoBanana && useNanoBananaWebhook) {
+            // Nano Banana webhook uses async generation with polling (like video)
             payload = {
                 prompt,
                 image_urls: publicUrls,
                 aspect_ratio: options.aspectRatio || 'auto',
             };
             endpoint = Constance.endpoints.image.nanoBanana;
-        } else if (model === Constance.models.image.qwen) {
+
+            // Step 1: Initiate generation and get request_id
+            const initialResult = await fetchViaWebhookProxy<{
+                request_id?: string;
+                Error?: string;
+            }>(endpoint, payload);
+
+            if (initialResult.Error) {
+                throw new NanoBananaProGenerationError(initialResult.Error);
+            }
+
+            if (!initialResult.request_id) {
+                throw new NanoBananaProGenerationError('API response did not contain a request_id.');
+            }
+
+            console.log(`Nano Banana: Generation initiated, request_id: ${initialResult.request_id}`);
+
+            // Step 2: Poll for results using the nanoBananaStatus endpoint
+            const imageUrls = await pollForNanoBananaResult(initialResult.request_id, 0, Constance.endpoints.nanoBananaStatus);
+
+            // Return the first image URL (nano-banana returns single image)
+            return imageUrls[0];
+        }
+
+        if (model === Constance.models.image.qwen) {
             if (publicUrls.length > 1) throw new Error(`${model} only supports one input image.`);
             payload = {
                 prompt,
