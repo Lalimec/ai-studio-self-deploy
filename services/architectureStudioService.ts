@@ -454,17 +454,19 @@ export const regenerateSingleArchitecturalStyle = async (
  * Generates a depth map for a single architecture image
  * @param imageSrc - The source data URL of the image
  * @param publicUrl - Optional cached public URL to avoid re-uploading
+ * @param filename - Optional filename for the uploaded image
  * @returns The depth map image as a data URL
  */
 export const generateDepthMap = async (
   imageSrc: string,
-  publicUrl?: string
+  publicUrl?: string,
+  filename?: string
 ): Promise<string> => {
   try {
     // Upload image if we don't have a cached public URL
     let imageUrl = publicUrl;
     if (!imageUrl) {
-      imageUrl = await uploadImageFromDataUrl(imageSrc);
+      imageUrl = await uploadImageFromDataUrl(imageSrc, filename);
     }
 
     // Call depth map endpoint using webhook proxy to avoid CORS issues

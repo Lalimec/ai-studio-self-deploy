@@ -411,7 +411,7 @@ export const useHairStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
                 try {
                     let publicUrl = originalImage.publicUrl;
                     if (!publicUrl) {
-                        publicUrl = await uploadImageFromDataUrl(originalImage.croppedSrc);
+                        publicUrl = await uploadImageFromDataUrl(originalImage.croppedSrc, originalImage.filename);
                         setOriginalImage(prev => ({ ...prev, publicUrl }));
                     }
                     videoTasks.push({
@@ -506,7 +506,7 @@ export const useHairStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
         try {
             let publicUrl = originalImage.publicUrl;
             if (!publicUrl) {
-                publicUrl = await uploadImageFromDataUrl(originalImage.croppedSrc);
+                publicUrl = await uploadImageFromDataUrl(originalImage.croppedSrc, originalImage.filename);
                 setOriginalImage(prev => ({ ...prev, publicUrl }));
             }
 

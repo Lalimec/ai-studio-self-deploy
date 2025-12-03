@@ -743,7 +743,7 @@ export const useArchitectureStudio = ({
                 try {
                     let publicUrl = originalImage.publicUrl;
                     if (!publicUrl) {
-                        publicUrl = await uploadImageFromDataUrl(originalImage.croppedSrc);
+                        publicUrl = await uploadImageFromDataUrl(originalImage.croppedSrc, originalImage.filename);
                         setOriginalImage(prev => ({ ...prev, publicUrl }));
                     }
                     videoTasks.push({
@@ -763,7 +763,7 @@ export const useArchitectureStudio = ({
                     try {
                         let publicUrl = version.publicUrl;
                         if (!publicUrl) {
-                            publicUrl = await uploadImageFromDataUrl(version.croppedSrc);
+                            publicUrl = await uploadImageFromDataUrl(version.croppedSrc, version.filename);
                             setTransformedVersions(prev => ({
                                 ...prev,
                                 [type]: prev[type] ? { ...prev[type], publicUrl } : prev[type]
@@ -880,7 +880,7 @@ export const useArchitectureStudio = ({
         try {
             // Ensure we have a public URL (use cached one if available)
             const publicUrl = await ensurePublicUrl(filename);
-            const depthMapSrc = await generateDepthMap(image.src, publicUrl || undefined);
+            const depthMapSrc = await generateDepthMap(image.src, publicUrl || undefined, image.filename);
             setGeneratedImages(prev => prev.map(img => img.filename === filename ? { ...img, depthMapSrc, isGeneratingDepthMap: false, depthMapGenerationFailed: false, publicUrl } : img));
             addToast("Depth map generated!", "success");
         } catch (err) {
@@ -969,10 +969,10 @@ export const useArchitectureStudio = ({
                 try {
                     let publicUrl = originalImage.publicUrl;
                     if (!publicUrl) {
-                        publicUrl = await uploadImageFromDataUrl(originalImage.croppedSrc);
+                        publicUrl = await uploadImageFromDataUrl(originalImage.croppedSrc, originalImage.filename);
                         setOriginalImage(prev => ({ ...prev, publicUrl }));
                     }
-                    const depthMapSrc = await generateDepthMap(originalImage.croppedSrc, publicUrl || undefined);
+                    const depthMapSrc = await generateDepthMap(originalImage.croppedSrc, publicUrl || undefined, originalImage.filename);
                     setOriginalImage(prev => ({ ...prev, depthMapSrc, isGeneratingDepthMap: false, depthMapGenerationFailed: false, publicUrl }));
                     successCount++;
                 } catch (err) {
@@ -989,13 +989,13 @@ export const useArchitectureStudio = ({
                     try {
                         let publicUrl = version.publicUrl;
                         if (!publicUrl) {
-                            publicUrl = await uploadImageFromDataUrl(version.croppedSrc);
+                            publicUrl = await uploadImageFromDataUrl(version.croppedSrc, version.filename);
                             setTransformedVersions(prev => ({
                                 ...prev,
                                 [type]: prev[type] ? { ...prev[type], publicUrl } : prev[type]
                             }));
                         }
-                        const depthMapSrc = await generateDepthMap(version.croppedSrc, publicUrl);
+                        const depthMapSrc = await generateDepthMap(version.croppedSrc, publicUrl, version.filename);
                         setTransformedVersions(prev => ({
                             ...prev,
                             [type]: prev[type] ? { ...prev[type], depthMapSrc, isGeneratingDepthMap: false, depthMapGenerationFailed: false, publicUrl } : prev[type]
@@ -1017,7 +1017,7 @@ export const useArchitectureStudio = ({
                 try {
                     // Ensure we have a public URL
                     const publicUrl = await ensurePublicUrl(image.filename);
-                    const depthMapSrc = await generateDepthMap(image.src, publicUrl || undefined);
+                    const depthMapSrc = await generateDepthMap(image.src, publicUrl || undefined, image.filename);
                     setGeneratedImages(prev => prev.map(img => img.filename === image.filename ? { ...img, depthMapSrc, isGeneratingDepthMap: false, depthMapGenerationFailed: false, publicUrl } : img));
                     successCount++;
                 } catch (err) {
@@ -1086,7 +1086,7 @@ export const useArchitectureStudio = ({
         try {
             let publicUrl = originalImage.publicUrl;
             if (!publicUrl) {
-                publicUrl = await uploadImageFromDataUrl(originalImage.croppedSrc);
+                publicUrl = await uploadImageFromDataUrl(originalImage.croppedSrc, originalImage.filename);
                 setOriginalImage(prev => ({ ...prev, publicUrl }));
             }
 
@@ -1113,11 +1113,11 @@ export const useArchitectureStudio = ({
         try {
             let publicUrl = originalImage.publicUrl;
             if (!publicUrl) {
-                publicUrl = await uploadImageFromDataUrl(originalImage.croppedSrc);
+                publicUrl = await uploadImageFromDataUrl(originalImage.croppedSrc, originalImage.filename);
                 setOriginalImage(prev => ({ ...prev, publicUrl }));
             }
 
-            const depthMapSrc = await generateDepthMap(originalImage.croppedSrc, publicUrl);
+            const depthMapSrc = await generateDepthMap(originalImage.croppedSrc, publicUrl, originalImage.filename);
             setOriginalImage(prev => ({ ...prev, depthMapSrc, isGeneratingDepthMap: false }));
             addToast("Depth map for original image generated!", "success");
         } catch (err) {
@@ -1377,7 +1377,7 @@ export const useArchitectureStudio = ({
         try {
             let publicUrl = targetImage.publicUrl;
             if (!publicUrl) {
-                publicUrl = await uploadImageFromDataUrl(targetImage.croppedSrc);
+                publicUrl = await uploadImageFromDataUrl(targetImage.croppedSrc, targetImage.filename);
 
                 if (isOriginal) {
                     setOriginalImage(prev => ({ ...prev, publicUrl }));
@@ -1442,7 +1442,7 @@ export const useArchitectureStudio = ({
         try {
             let publicUrl = targetImage.publicUrl;
             if (!publicUrl) {
-                publicUrl = await uploadImageFromDataUrl(targetImage.croppedSrc);
+                publicUrl = await uploadImageFromDataUrl(targetImage.croppedSrc, targetImage.filename);
 
                 if (isOriginal) {
                     setOriginalImage(prev => ({ ...prev, publicUrl }));
@@ -1454,7 +1454,7 @@ export const useArchitectureStudio = ({
                 }
             }
 
-            const depthMapSrc = await generateDepthMap(targetImage.croppedSrc, publicUrl);
+            const depthMapSrc = await generateDepthMap(targetImage.croppedSrc, publicUrl, targetImage.filename);
 
             if (isOriginal) {
                 setOriginalImage(prev => ({ ...prev, depthMapSrc, isGeneratingDepthMap: false }));

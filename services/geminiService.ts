@@ -9,6 +9,7 @@ import { ai } from './geminiClient';
 import { Constance } from './endpoints';
 import { uploadImageFromDataUrl } from './imageUploadService';
 import { fetchViaWebhookProxy } from './apiUtils';
+import { getExtensionFromMimeType } from './imageUtils';
 
 // ============================================================================
 // Nano Banana Pro Async Generation (similar to Video generation pattern)
@@ -307,7 +308,8 @@ export const generateFigureImage = async (
                     return source.publicUrl; // Use cached URL
                 }
                 const dataUrl = `data:${source.mimeType};base64,${source.base64}`;
-                return uploadImageFromDataUrl(dataUrl, `upload-${Date.now()}-${index}.jpg`);
+                const ext = getExtensionFromMimeType(source.mimeType);
+                return uploadImageFromDataUrl(dataUrl, `upload-${Date.now()}-${index}.${ext}`);
             })
         );
 
