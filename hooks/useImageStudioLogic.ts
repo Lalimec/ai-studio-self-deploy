@@ -705,13 +705,15 @@ export const useImageStudioLogic = (
                     const imageUrls = result as string[];
                     imageUrl = imageUrls[0]; // Take first image from array
                 } else {
-                    imageUrl = await generateFigureImage(
+                    const result = await generateFigureImage(
                         model,
                         finalPrompt,
                         [imageSource],
                         { width, height, imageSizePreset, aspectRatio: aspectRatio || undefined },
                         useNanoBananaWebhook
                     );
+                    // Handle both string and string[] return types
+                    imageUrl = Array.isArray(result) ? result[0] : result;
                 }
 
                 return { url: imageUrl, originalImageIndex: imageIndex, originalPromptIndex: promptIndex, prompt: finalPrompt, batchTimestamp: timestamp };

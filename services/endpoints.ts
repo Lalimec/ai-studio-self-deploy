@@ -28,6 +28,9 @@ export const endpoints = {
   videoGeneration: 'https://n8n.cemil.al/webhook/fbe9280c-07a6-451c-abdd-cf261c501856/higgsfield/video-seedance-v1-pro/image-to-video',
   videoStatus: 'https://n8n.cemil.al/webhook/cddfdbbb-8b1a-40c0-9a4b-8fee6dcf3747/higgsfield/check/video-seedance-v1-pro/image-to-video',
 
+  // Nano Banana Pro Status Check (async generation like video)
+  nanoBananaProStatus: 'https://n8n.cemil.al/webhook/7c6e2f5c-24aa-4650-9152-3d718bd69f8c/higgsfield/check/edit-nano-banana-pro',
+
   // Video Stitching (ffmpeg)
   videoStitcher: 'https://n8n.cemil.al/webhook/5533f0bb-064a-4757-adcb-56793505fdf3/ffmpeg/stitch',
 
@@ -88,6 +91,41 @@ export const schemas = {
       },
       success: {
         videos: ['string (URL to video)'],
+      },
+      error: {
+        Error: 'string',
+        status: 'string (e.g., "failed")',
+      },
+    },
+  },
+  nanoBananaProGeneration: {
+    request: {
+      prompt: 'string',
+      image_urls: ['string (public URLs)'],
+      aspect_ratio: 'string (e.g., "16:9", "auto")',
+      num_images: 'number (default: 1)',
+      output_format: 'string (default: "jpeg")',
+      resolution: 'string ("1K", "2K", "4K", default: "1K")',
+    },
+    response: {
+      success: {
+        request_id: 'string',
+      },
+      error: {
+        Error: 'string',
+      },
+    },
+  },
+  nanoBananaProStatus: {
+    request: {
+      id: 'string (request_id from generation)',
+    },
+    response: {
+      pending: {
+        status: '"generating"',
+      },
+      success: {
+        images: ['string (URL to generated image)'],
       },
       error: {
         Error: 'string',
