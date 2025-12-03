@@ -14,8 +14,8 @@ import { fetchViaWebhookProxy } from './apiUtils';
 // Nano Banana Pro Async Generation (similar to Video generation pattern)
 // ============================================================================
 
-const NANO_BANANA_POLLING_INTERVAL_MS = 5000; // 5 seconds between polls
-const NANO_BANANA_MAX_POLLING_ATTEMPTS = 60; // 5 minutes timeout (60 attempts × 5 seconds = 300s)
+const NANO_BANANA_POLLING_INTERVAL_MS = 10000; // 10 seconds between polls
+const NANO_BANANA_MAX_POLLING_ATTEMPTS = 30; // 5 minutes timeout (30 attempts × 10 seconds = 300s)
 
 // Custom error classes for Nano Banana Pro generation
 export class NanoBananaProTimeoutError extends Error {
