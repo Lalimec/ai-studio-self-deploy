@@ -5,8 +5,9 @@
  */
 // service-worker.js
 
-// Define the target URL that we want to intercept and proxy.
-const TARGET_URL_PREFIX = 'https://generativelanguage.googleapis.com';
+// Define the target URLs that we want to intercept and proxy.
+const GEMINI_API_PREFIX = 'https://generativelanguage.googleapis.com';
+const N8N_WEBHOOK_PREFIX = 'https://n8n.cemil.al';
 
 // Installation event:
 self.addEventListener('install', (event) => {
@@ -35,10 +36,11 @@ self.addEventListener('fetch', (event) => {
   try {
     const requestUrl = event.request.url;
 
-    if (requestUrl.startsWith(TARGET_URL_PREFIX)) {
-      console.log(`Service Worker: Intercepting request to ${requestUrl}`);
+    // Handle Gemini API requests
+    if (requestUrl.startsWith(GEMINI_API_PREFIX)) {
+      console.log(`Service Worker: Intercepting Gemini request to ${requestUrl}`);
 
-      const remainingPathAndQuery = requestUrl.substring(TARGET_URL_PREFIX.length);
+      const remainingPathAndQuery = requestUrl.substring(GEMINI_API_PREFIX.length);
       const proxyUrl = `${self.location.origin}/api-proxy${remainingPathAndQuery}`;
 
       console.log(`Service Worker: Proxying to ${proxyUrl}`);
@@ -133,11 +135,55 @@ self.addEventListener('fetch', (event) => {
         });
 
       event.respondWith(promise);
-
-    } else {
-      // If the request URL doesn't match our target, let it proceed as normal.
-      event.respondWith(fetch(event.request));
+      return;
     }
+
+    // Handle n8n webhook requests
+    if (requestUrl.startsWith(N8N_WEBHOOK_PREFIX)) {
+      console.log(`Service Worker: Intercepting n8n webhook request to ${requestUrl}`);
+
+      const proxyUrl = `${self.location.origin}/webhook-proxy`;
+
+      // Construct headers for the webhook proxy
+      const newHeaders = new Headers();
+      newHeaders.set('Content-Type', 'application/json');
+      newHeaders.set('X-Target-URL', requestUrl); // Pass original URL to proxy
+
+      const requestOptions = {
+        method: event.request.method,
+        headers: newHeaders,
+        body: event.request.body,
+        mode: 'cors',
+        credentials: 'same-origin',
+      };
+
+      // Only set duplex if there's a body and it's a relevant method
+      if (event.request.method !== 'GET' && event.request.method !== 'HEAD' && event.request.body) {
+        requestOptions.duplex = 'half';
+      }
+
+      const promise = fetch(new Request(proxyUrl, requestOptions))
+        .then((response) => {
+          console.log(`Service Worker: Successfully proxied n8n request, Status: ${response.status}`);
+          return response;
+        })
+        .catch((error) => {
+          console.error(`Service Worker: Error proxying n8n request. Message: ${error.message}`);
+          return new Response(
+            JSON.stringify({ error: 'n8n proxy failed', details: error.message }),
+            {
+              status: 502,
+              headers: { 'Content-Type': 'application/json' }
+            }
+          );
+        });
+
+      event.respondWith(promise);
+      return;
+    }
+
+    // If the request URL doesn't match any target, let it proceed as normal.
+    // Don't call respondWith - let the browser handle it naturally
   } catch (error) {
     // Log more error details for unhandled errors too
     console.error('Service Worker: Unhandled error in fetch event handler. Message:', error.message, 'Name:', error.name, 'Stack:', error.stack);
