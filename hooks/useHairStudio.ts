@@ -11,7 +11,7 @@ import {
 } from '../services/videoService';
 import { dataUrlToBlob } from '../services/geminiClient';
 import { generateAllVideos, generateSingleVideoForImage } from '../services/videoService';
-import { getTimestamp, generateSetId } from '../services/imageUtils';
+import { getTimestamp, generateSetId, getExtensionFromDataUrl } from '../services/imageUtils';
 import { logUserAction } from '../services/loggingService';
 import { uploadImageFromDataUrl } from '../services/imageUploadService';
 import { downloadBulkImages, downloadImageWithMetadata } from '../services/downloadService';
@@ -85,7 +85,8 @@ export const useHairStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
                 const timestamp = getTimestamp();
                 const baseFilename = originalFile?.name.split('.').slice(0, -1).join('.') || 'image';
                 const sanitizedFilename = baseFilename.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 40);
-                const filename = `${newSessionId}_${sanitizedFilename}_original_${timestamp}.jpg`;
+                const ext = getExtensionFromDataUrl(croppedImageDataUrl);
+                const filename = `${newSessionId}_${sanitizedFilename}_original_${timestamp}.${ext}`;
 
                 setOriginalImage({
                     file: originalFile,
@@ -532,11 +533,12 @@ export const useHairStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
             logUserAction('DOWNLOAD_HAIR_ORIGINAL', { filename: originalImage.filename, sessionId });
 
             const baseName = originalImage.filename.substring(0, originalImage.filename.lastIndexOf('.'));
+            const ext = getExtensionFromDataUrl(originalImage.croppedSrc);
 
             try {
                 await downloadImageWithMetadata({
                     imageUrl: originalImage.croppedSrc,
-                    filename: `${baseName}.jpg`,
+                    filename: `${baseName}.${ext}`,
                     prompt: 'Original uploaded image before any transformations',
                     metadata: {
                         type: "original_hair_image",
@@ -566,11 +568,12 @@ export const useHairStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
             }
 
             const baseName = image.filename.substring(0, image.filename.lastIndexOf('.'));
+            const ext = getExtensionFromDataUrl(image.src);
 
             try {
                 await downloadImageWithMetadata({
                     imageUrl: image.src,
-                    filename: `${baseName}.jpg`,
+                    filename: `${baseName}.${ext}`,
                     prompt: image.imageGenerationPrompt,
                     metadata: {
                         type: "generated_hairstyle",
@@ -608,9 +611,10 @@ export const useHairStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
                 // Add original image if available
                 if (originalImage.croppedSrc && originalImage.filename) {
                     const baseName = originalImage.filename.substring(0, originalImage.filename.lastIndexOf('.'));
+                    const origExt = getExtensionFromDataUrl(originalImage.croppedSrc);
                     images.push({
                         imageUrl: originalImage.croppedSrc,
-                        filename: `${baseName}.jpg`,
+                        filename: `${baseName}.${origExt}`,
                         prompt: 'Original uploaded image before any transformations',
                         metadata: {
                             type: "original_hair_image",
@@ -624,9 +628,10 @@ export const useHairStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
                 // Add generated images
                 generatedImages.forEach(image => {
                     const baseName = image.filename.substring(0, image.filename.lastIndexOf('.'));
+                    const imgExt = getExtensionFromDataUrl(image.src);
                     images.push({
                         imageUrl: image.src,
-                        filename: `${baseName}.jpg`,
+                        filename: `${baseName}.${imgExt}`,
                         prompt: image.imageGenerationPrompt,
                         metadata: {
                             type: "generated_hairstyle",

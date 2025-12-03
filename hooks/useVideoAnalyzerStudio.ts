@@ -18,6 +18,17 @@ import { mockVideoAnalysisData, mockExtractedFrames } from '../components/videoA
 
 declare const JSZip: any;
 
+// Helper to get extension from blob MIME type
+const getExtensionFromMimeType = (mimeType: string): string => {
+    if (!mimeType) return 'jpg';
+    const type = mimeType.toLowerCase();
+    if (type.includes('jpeg') || type.includes('jpg')) return 'jpg';
+    if (type.includes('png')) return 'png';
+    if (type.includes('webp')) return 'webp';
+    if (type.includes('gif')) return 'gif';
+    return 'jpg'; // Default fallback
+};
+
 type VideoAnalyzerHookProps = {
     addToast: (message: string, type: Toast['type']) => void;
     setConfirmAction: (action: any) => void;
@@ -522,7 +533,8 @@ export const useVideoAnalyzerStudio = ({ addToast, setConfirmAction, setDownload
                     const imagePromises = scene.generated_images.map(async (imgUrl, i) => {
                         const response = await fetch(imgUrl);
                         const blob = await response.blob();
-                        variationsFolder?.file(`variation_${i + 1}.jpg`, blob);
+                        const ext = getExtensionFromMimeType(blob.type);
+                        variationsFolder?.file(`variation_${i + 1}.${ext}`, blob);
                     });
                     await Promise.all(imagePromises);
                 }
@@ -619,7 +631,8 @@ export const useVideoAnalyzerStudio = ({ addToast, setConfirmAction, setDownload
                                 const variationPromises = scene.generated_images.map(async (imgUrl, j) => {
                                     const response = await fetch(imgUrl);
                                     const blob = await response.blob();
-                                    variationsFolder?.file(`variation_${j + 1}.jpg`, blob);
+                                    const ext = getExtensionFromMimeType(blob.type);
+                                    variationsFolder?.file(`variation_${j + 1}.${ext}`, blob);
                                 });
                                 await Promise.all(variationPromises);
                             }
@@ -641,7 +654,8 @@ export const useVideoAnalyzerStudio = ({ addToast, setConfirmAction, setDownload
                                 if (ad.generatedImages && ad.generatedImages[0]) {
                                     const response = await fetch(ad.generatedImages[0]);
                                     const blob = await response.blob();
-                                    conceptFolder.file('image.jpg', blob);
+                                    const ext = getExtensionFromMimeType(blob.type);
+                                    conceptFolder.file(`image.${ext}`, blob);
                                 }
                             }
                         });

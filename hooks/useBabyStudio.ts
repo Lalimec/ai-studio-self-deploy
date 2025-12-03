@@ -8,7 +8,7 @@ import {
 import { dataUrlToBlob } from '../services/geminiClient';
 import { uploadImageFromDataUrl } from '../services/imageUploadService';
 import { generateAllVideos, generateSingleVideoForImage, generateVideoPromptForImage, VideoTask } from '../services/videoService';
-import { getTimestamp, generateSetId, sanitizeFilename } from '../services/imageUtils';
+import { getTimestamp, generateSetId, sanitizeFilename, getExtensionFromDataUrl } from '../services/imageUtils';
 import { logUserAction } from '../services/loggingService';
 import { downloadBulkImages, downloadImageWithMetadata } from '../services/downloadService';
 
@@ -457,10 +457,11 @@ export const useBabyStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
             if (!publicUrl) {
                 throw new Error("Failed to get public URL for the parent image.");
             }
+            const fallbackFilename = parent.croppedSrc ? `${parentId}.${getExtensionFromDataUrl(parent.croppedSrc)}` : `${parentId}.jpg`;
             const videoSrc = await generateSingleVideoForImage({
                 startImageUrl: publicUrl,
                 videoPrompt: parent.videoPrompt,
-                filename: parent.filename || `${parentId}.jpg`,
+                filename: parent.filename || fallbackFilename,
             });
             setParent(p => ({ ...p, videoSrc, isGeneratingVideo: false, videoGenerationFailed: false }));
             addToast(`Video for ${parentId} generated!`, "success");
@@ -485,10 +486,11 @@ export const useBabyStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
             const parentIdString = parentId === 'parent1' ? 'parent-01' : 'parent-02';
             const baseName = `${sessionId}_${parentIdString}_${sanitizedBaseFilename}_${timestamp}`;
 
+            const ext = getExtensionFromDataUrl(parentToDownload.croppedSrc);
             try {
                 await downloadImageWithMetadata({
                     imageUrl: parentToDownload.croppedSrc,
-                    filename: `${baseName}.jpg`,
+                    filename: `${baseName}.${ext}`,
                     metadata: {
                         type: "parent_image",
                         id: parentToDownload.id,
@@ -517,11 +519,12 @@ export const useBabyStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
             }
 
             const baseName = image.filename.substring(0, image.filename.lastIndexOf('.'));
+            const ext = getExtensionFromDataUrl(image.src);
 
             try {
                 await downloadImageWithMetadata({
                     imageUrl: image.src,
-                    filename: `${baseName}.jpg`,
+                    filename: `${baseName}.${ext}`,
                     metadata: {
                         type: "generated_baby_image",
                         description: image.description,
@@ -553,10 +556,11 @@ export const useBabyStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
                 const baseFilename = originalFilename.substring(0, originalFilename.lastIndexOf('.')) || originalFilename;
                 const sanitizedBaseFilename = sanitizeFilename(baseFilename);
                 const baseName = `${sessionId}_parent-01_${sanitizedBaseFilename}_${timestamp}`;
+                const parent1Ext = getExtensionFromDataUrl(parent1.croppedSrc);
 
                 images.push({
                     imageUrl: parent1.croppedSrc,
-                    filename: `${baseName}.jpg`,
+                    filename: `${baseName}.${parent1Ext}`,
                     metadata: {
                         type: "parent_image",
                         id: parent1.id,
@@ -574,10 +578,11 @@ export const useBabyStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
                 const baseFilename = originalFilename.substring(0, originalFilename.lastIndexOf('.')) || originalFilename;
                 const sanitizedBaseFilename = sanitizeFilename(baseFilename);
                 const baseName = `${sessionId}_parent-02_${sanitizedBaseFilename}_${timestamp}`;
+                const parent2Ext = getExtensionFromDataUrl(parent2.croppedSrc);
 
                 images.push({
                     imageUrl: parent2.croppedSrc,
-                    filename: `${baseName}.jpg`,
+                    filename: `${baseName}.${parent2Ext}`,
                     metadata: {
                         type: "parent_image",
                         id: parent2.id,
@@ -593,9 +598,10 @@ export const useBabyStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
             // Add baby images
             for (const image of generatedImages) {
                 const baseName = image.filename.substring(0, image.filename.lastIndexOf('.'));
+                const babyExt = getExtensionFromDataUrl(image.src);
                 images.push({
                     imageUrl: image.src,
-                    filename: `${baseName}.jpg`,
+                    filename: `${baseName}.${babyExt}`,
                     metadata: {
                         type: "generated_baby_image",
                         description: image.description,
