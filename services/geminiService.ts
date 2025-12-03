@@ -61,6 +61,9 @@ const pollForNanoBananaResult = async (
         try {
             const result = await fetchViaWebhookProxy<{
                 images?: string[];
+                image?: string | string[];
+                url?: string;
+                urls?: string[];
                 Error?: string;
                 error?: string;
                 status?: string;
@@ -70,20 +73,31 @@ const pollForNanoBananaResult = async (
                 { maxRetries: 1 } // Don't retry much within polling since we already have polling retries
             );
 
-            if (result.images && Array.isArray(result.images) && result.images.length > 0) {
-                return result.images; // Success - return all images
+            // Handle multiple possible field names for images
+            const images = result.images || result.image || result.url || result.urls;
+
+            // Convert to array if single string
+            const imageArray = images
+                ? (Array.isArray(images) ? images : [images])
+                : null;
+
+            if (imageArray && imageArray.length > 0 && imageArray[0]) {
+                console.log(`Nano Banana: Successfully received ${imageArray.length} image(s)`);
+                return imageArray; // Success - return all images
             }
 
             if (result.Error || result.error) {
                 throw new NanoBananaProGenerationError(result.Error || result.error || 'Unknown error');
             }
 
-            if (result.status && result.status !== 'generating') {
+            // Check for failure status
+            const failureStatuses = ['failed', 'error', 'failed_permanently', 'cancelled'];
+            if (result.status && failureStatuses.includes(result.status.toLowerCase())) {
                 throw new NanoBananaProGenerationError(`Image generation failed with status: ${result.status}`);
             }
 
-            // If status is 'generating' or undefined, continue polling...
-            console.log(`Nano Banana: Polling attempt ${attempt + 1}/${NANO_BANANA_MAX_POLLING_ATTEMPTS}, status: ${result.status || 'pending'}`);
+            // If status is 'generating', 'pending', 'processing', or undefined, continue polling...
+            console.log(`Nano Banana: Polling attempt ${attempt + 1}/${NANO_BANANA_MAX_POLLING_ATTEMPTS}, status: ${result.status || 'pending'}, response keys: ${Object.keys(result).join(', ')}`);
 
         } catch (error) {
             // Don't wrap our custom errors
