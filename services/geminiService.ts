@@ -53,7 +53,10 @@ const pollForNanoBananaResult = async (
     statusEndpoint: string = Constance.endpoints.nanoBananaProStatus
 ): Promise<string[]> => {
     for (let attempt = startAttempt; attempt < NANO_BANANA_MAX_POLLING_ATTEMPTS; attempt++) {
-        await delay(NANO_BANANA_POLLING_INTERVAL_MS);
+        // Wait AFTER the first attempt, not before (so we check immediately first)
+        if (attempt > startAttempt) {
+            await delay(NANO_BANANA_POLLING_INTERVAL_MS);
+        }
 
         try {
             const result = await fetchViaWebhookProxy<{
@@ -80,7 +83,7 @@ const pollForNanoBananaResult = async (
             }
 
             // If status is 'generating' or undefined, continue polling...
-            console.log(`Nano Banana Pro: Polling attempt ${attempt + 1}/${NANO_BANANA_MAX_POLLING_ATTEMPTS}, status: ${result.status || 'pending'}`);
+            console.log(`Nano Banana: Polling attempt ${attempt + 1}/${NANO_BANANA_MAX_POLLING_ATTEMPTS}, status: ${result.status || 'pending'}`);
 
         } catch (error) {
             // Don't wrap our custom errors
