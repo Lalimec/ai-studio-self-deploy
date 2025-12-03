@@ -208,7 +208,19 @@ export const downloadImageWithMetadata = async (
         const byteArray = new Uint8Array(byteNumbers);
         finalBlob = new Blob([byteArray], { type: mimeType });
     } else if (imageUrl) {
+        // Handle both HTTPS URLs (from webhooks) and data URLs (from native Gemini)
+        // fetch() supports both and returns a blob with the correct MIME type
+        if (imageUrl.startsWith('data:')) {
+            // Data URL from native Gemini API - validate header for safety
+            const base64Data = imageUrl.split(',')[1];
+            if (!validateImageHeader(base64Data)) {
+                throw new Error(`Image "${filename}" has an invalid or corrupted header.`);
+            }
+        }
+
         finalBlob = await fetch(imageUrl).then((res) => res.blob());
+        // Correct the file extension based on the actual MIME type
+        filename = correctFileExtension(filename, finalBlob.type);
     } else {
         throw new Error('Must provide imageUrl, imageBlob, or imageBase64');
     }
@@ -391,7 +403,20 @@ export const downloadBulkImages = async (
             const byteArray = new Uint8Array(byteNumbers);
             finalBlob = new Blob([byteArray], { type: mimeType });
         } else if (imageUrl) {
+            // Handle both HTTPS URLs (from webhooks) and data URLs (from native Gemini)
+            if (imageUrl.startsWith('data:')) {
+                // Data URL from native Gemini API - validate header for safety
+                const base64Data = imageUrl.split(',')[1];
+                if (!validateImageHeader(base64Data)) {
+                    console.error(`Image "${filename}" has invalid header, skipping`);
+                    processedFiles++;
+                    continue;
+                }
+            }
+
             finalBlob = await fetch(imageUrl).then((res) => res.blob());
+            // Correct the file extension based on the actual MIME type
+            filename = correctFileExtension(filename, finalBlob.type);
         } else {
             throw new Error(`Image ${filename}: Must provide imageUrl, imageBlob, or imageBase64`);
         }

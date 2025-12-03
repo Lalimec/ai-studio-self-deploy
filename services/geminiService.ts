@@ -277,9 +277,10 @@ export const generateFigureImage = async (
 
                 // Check if response is a URL (all external models now return URLs instead of base64)
                 if (imageString.startsWith('http://') || imageString.startsWith('https://')) {
-                    // Fetch the image and convert to data URL
-                    // Default to image/jpeg (Nano Banana, Seedream, Flux, Qwen all generate JPEG by default)
-                    return await fetchImageAsDataUrl(imageString, 'image/jpeg');
+                    // Return the URL directly - no need to convert to base64
+                    // This is more efficient (smaller memory footprint, faster) and the download service
+                    // already handles URLs correctly, including MIME type detection
+                    return imageString;
                 }
 
                 // Otherwise, handle as base64 (legacy support for base64 responses)
