@@ -20,9 +20,10 @@ import {
 } from '../services/architectureStudioService';
 import {
     enhanceVideoPromptForImage,
-    VideoTask
+    VideoTask,
+    prepareVideoPrompts
 } from '../services/videoService';
-import { dataUrlToBlob, imageUrlToBase64 } from '../services/geminiClient';
+import { imageUrlToBase64 } from '../services/geminiClient';
 import { generateAllVideos, generateSingleVideoForImage } from '../services/videoService';
 import { getTimestamp, generateSetId, getExtensionFromDataUrl } from '../services/imageUtils';
 import { logUserAction } from '../services/loggingService';
@@ -596,58 +597,69 @@ export const useArchitectureStudio = ({
 
         addToast(`Preparing ${totalCount} video prompts...`, "info");
         try {
-            // Use architectural video prompt generation instead of the generic people-focused one
-            const processSingleTask = async (image: GeneratedArchitectureImage) => {
-                try {
-                    // Use imageUrlToBase64 to handle both data URLs and HTTPS URLs from webhooks
-                    const imageBlob = await imageUrlToBase64(image.src);
-                    const videoPrompt = await generateArchitecturalVideoPrompt(imageBlob);
-                    setGeneratedImages(prev => prev.map(img => img.filename === image.filename ? { ...img, videoPrompt, isPreparing: false } : img));
-                } catch (error) {
-                    console.error(`Failed to generate video prompt for "${image.filename}":`, error);
-                    addToast(`Failed on ${image.filename}: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
-                    setGeneratedImages(prev => prev.map(img => img.filename === image.filename ? { ...img, isPreparing: false } : img));
-                }
-            };
+            // Build unified array of all images to prepare with identifiers
+            // Format: { src, id } where id helps route the callback to correct state
+            type PrepareableImage = { src: string; id: string; type: 'generated' | 'original' | 'transformed' };
+            const allImagesToPrepare: PrepareableImage[] = [];
 
-            // Prepare original image if needed
-            if (needsOriginalPrep) {
-                try {
-                    // Use imageUrlToBase64 to handle both data URLs and HTTPS URLs
-                    const imageBlob = await imageUrlToBase64(originalImage.croppedSrc!);
-                    const videoPrompt = await generateArchitecturalVideoPrompt(imageBlob);
-                    setOriginalImage(prev => ({ ...prev, videoPrompt, isPreparing: false }));
-                } catch (error) {
-                    console.error('Failed to generate video prompt for original image:', error);
-                    addToast(`Failed on original image: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
-                    setOriginalImage(prev => ({ ...prev, isPreparing: false }));
-                }
+            // Add unprepared generated images
+            unpreparedImages.forEach(img => {
+                allImagesToPrepare.push({ src: img.src, id: img.filename, type: 'generated' });
+            });
+
+            // Add original image if needed
+            if (needsOriginalPrep && originalImage.croppedSrc) {
+                allImagesToPrepare.push({ src: originalImage.croppedSrc, id: '__original__', type: 'original' });
             }
 
-            // Prepare transformed versions
-            for (const type of unpreparedTransformed) {
+            // Add transformed versions
+            unpreparedTransformed.forEach(type => {
                 const version = transformedVersions[type];
                 if (version?.croppedSrc) {
-                    try {
-                        // Use imageUrlToBase64 to handle both data URLs and HTTPS URLs from webhooks
-                        const imageBlob = await imageUrlToBase64(version.croppedSrc);
-                        const videoPrompt = await generateArchitecturalVideoPrompt(imageBlob);
+                    allImagesToPrepare.push({ src: version.croppedSrc, id: `__transformed_${type}__`, type: 'transformed' });
+                }
+            });
+
+            // Use unified prepareVideoPrompts with architectural prompt generator
+            await prepareVideoPrompts(
+                allImagesToPrepare,
+                (identifier, videoPrompt) => {
+                    // Route to correct state based on identifier
+                    if (identifier === '__original__') {
+                        setOriginalImage(prev => ({ ...prev, videoPrompt, isPreparing: false }));
+                    } else if (identifier.startsWith('__transformed_')) {
+                        const type = identifier.replace('__transformed_', '').replace('__', '') as TransformationType;
                         setTransformedVersions(prev => ({
                             ...prev,
                             [type]: prev[type] ? { ...prev[type], videoPrompt, isPreparing: false } : prev[type]
                         }));
-                    } catch (error) {
-                        console.error(`Failed to generate video prompt for ${type} version:`, error);
-                        addToast(`Failed on ${type} version: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
-                        setTransformedVersions(prev => ({
-                            ...prev,
-                            [type]: prev[type] ? { ...prev[type], isPreparing: false } : prev[type]
-                        }));
+                    } else {
+                        // It's a generated image filename
+                        setGeneratedImages(prev => prev.map(img => img.filename === identifier ? { ...img, videoPrompt, isPreparing: false } : img));
                     }
-                }
-            }
+                },
+                (errorMessage) => {
+                    addToast(errorMessage, 'error');
+                    // Extract identifier from error message to clear isPreparing
+                    const match = errorMessage.match(/Failed on (.*?):/);
+                    if (match) {
+                        const failedId = match[1];
+                        if (failedId === '__original__') {
+                            setOriginalImage(prev => ({ ...prev, isPreparing: false }));
+                        } else if (failedId.startsWith('__transformed_')) {
+                            const type = failedId.replace('__transformed_', '').replace('__', '') as TransformationType;
+                            setTransformedVersions(prev => ({
+                                ...prev,
+                                [type]: prev[type] ? { ...prev[type], isPreparing: false } : prev[type]
+                            }));
+                        } else {
+                            setGeneratedImages(prev => prev.map(img => img.filename === failedId ? { ...img, isPreparing: false } : img));
+                        }
+                    }
+                },
+                { promptGenerator: generateArchitecturalVideoPrompt, concurrency: 6 }
+            );
 
-            await processWithConcurrency(unpreparedImages, processSingleTask, 6);
             addToast("Video prompt preparation complete!", "success");
         } catch (err) {
             addToast(err instanceof Error ? err.message : 'An unknown error occurred during preparation.', 'error');

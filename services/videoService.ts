@@ -13,6 +13,43 @@ export const textModel = Constance.models.text.flash;
 // FIX: Export the dataUrlToBlob utility for use in other hooks.
 export const dataUrlToBlob = dataUrlToBlobUtil;
 
+// ============================================================================
+// Unified Video Prompt Preparation - Single Source of Truth
+// ============================================================================
+
+/**
+ * Type for custom video prompt generators.
+ * All generators should have a consistent signature for interoperability.
+ */
+export type VideoPromptGenerator = (
+  imageBlob: { base64: string; mimeType: string },
+  guidance?: string
+) => Promise<string>;
+
+/**
+ * Generic image type that covers all studios.
+ * Requires 'src' and at least one identifier ('id' or 'filename').
+ */
+export type ImageWithSrc = {
+  src: string;
+  filename?: string;
+  id?: string;
+};
+
+/**
+ * Options for the unified prepareVideoPrompts function.
+ */
+export type PrepareVideoPromptsOptions = {
+  /** Optional high-level guidance to pass to the prompt generator */
+  guidance?: string;
+  /** Custom prompt generator function (defaults to generateVideoPromptForImage) */
+  promptGenerator?: VideoPromptGenerator;
+  /** Number of concurrent requests (defaults to 10) */
+  concurrency?: number;
+  /** Custom function to extract identifier from image (defaults to id || filename) */
+  getIdentifier?: (image: ImageWithSrc) => string;
+};
+
 // Custom error classes for better error handling
 export class VideoTimeoutError extends Error {
     requestId: string;
@@ -282,24 +319,55 @@ export const translateTextToEnglish = async (text: string): Promise<string> => {
     return response.text;
 };
 
-export const prepareVideoPrompts = async (
-  images: (GeneratedImage | StudioImage | GeneratedBabyImage)[],
-  onProgress: (filename: string, prompt: string) => void,
+/**
+ * Unified video prompt preparation function - Single Source of Truth.
+ *
+ * All studios should use this function for preparing video prompts.
+ * Custom prompt generators can be passed via options for studio-specific prompts.
+ *
+ * @example
+ * // Basic usage (uses default generateVideoPromptForImage)
+ * await prepareVideoPrompts(images, onProgress, onError);
+ *
+ * @example
+ * // With custom prompt generator (e.g., for Architecture Studio)
+ * await prepareVideoPrompts(images, onProgress, onError, {
+ *   promptGenerator: generateArchitecturalVideoPrompt
+ * });
+ *
+ * @example
+ * // With guidance
+ * await prepareVideoPrompts(images, onProgress, onError, {
+ *   guidance: 'slow, cinematic movements'
+ * });
+ */
+export const prepareVideoPrompts = async <T extends ImageWithSrc>(
+  images: T[],
+  onProgress: (identifier: string, prompt: string) => void,
   onError: (errorMessage: string) => void,
-  guidance?: string
+  options?: PrepareVideoPromptsOptions | string // string for backward compatibility (guidance)
 ): Promise<void> => {
-  const processSingleTask = async (task: (GeneratedImage | StudioImage | GeneratedBabyImage)) => {
-    const filename = 'id' in task ? task.id : task.filename;
+  // Handle backward compatibility: if options is a string, treat it as guidance
+  const opts: PrepareVideoPromptsOptions = typeof options === 'string'
+    ? { guidance: options }
+    : (options || {});
+
+  const generator = opts.promptGenerator || generateVideoPromptForImage;
+  const concurrency = opts.concurrency || 10;
+  const getIdentifier = opts.getIdentifier || ((img: ImageWithSrc) => img.id || img.filename || 'unknown');
+
+  const processSingleTask = async (task: T) => {
+    const identifier = getIdentifier(task);
     try {
       // Use imageUrlToBase64 to handle both data URLs and HTTPS URLs from webhooks
       const imageBlob = await imageUrlToBase64(task.src);
-      const videoPrompt = await generateVideoPromptForImage(imageBlob, guidance);
-      onProgress(filename, videoPrompt);
+      const videoPrompt = await generator(imageBlob, opts.guidance);
+      onProgress(identifier, videoPrompt);
     } catch (error) {
-      console.error(`Failed to generate video prompt for "${filename}":`, error);
-      onError(parseGenerationError(error as Error, { filename }));
+      console.error(`Failed to generate video prompt for "${identifier}":`, error);
+      onError(parseGenerationError(error as Error, { filename: identifier }));
     }
   };
 
-  await processWithConcurrency(images, processSingleTask, 10);
+  await processWithConcurrency(images, processSingleTask, concurrency);
 };

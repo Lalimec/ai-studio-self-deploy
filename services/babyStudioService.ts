@@ -217,10 +217,26 @@ export const generateBabyImages = async (
   await processWithConcurrency(tasks, processSingleTask, 4);
 };
 
+/**
+ * Generates a video prompt specifically for baby images.
+ * Focuses on subtle baby movements and heartwarming expressions.
+ * Compatible with the unified VideoPromptGenerator type.
+ *
+ * @param imageBlob - The image blob with base64 and mimeType
+ * @param guidance - Optional high-level instruction (can be used to customize the prompt)
+ * @returns A descriptive video prompt for baby animation
+ */
 export const generateVideoPromptForBabyImage = async (
-  imageBlob: { base64: string, mimeType: string }
+  imageBlob: { base64: string, mimeType: string },
+  guidance?: string
 ): Promise<string> => {
-  const prompt = `Analyze the baby, their clothing, and the setting in this image. Create a short, descriptive video prompt (around 25-35 words) for an AI video generator. The camera should be 'stationary' or 'static'. Focus on the baby's subtle, natural movements, like a gentle kick, a soft coo, a change in expression, or looking around curiously. The style should be sweet and heartwarming. Example: 'A happy baby in a white onesie gently kicks their feet while lying on a soft blanket, looking up with curious eyes, camera remains stationary.'`;
+  let prompt = `Analyze the baby, their clothing, and the setting in this image. Create a short, descriptive video prompt (around 25-35 words) for an AI video generator. The camera should be 'stationary' or 'static'. Focus on the baby's subtle, natural movements, like a gentle kick, a soft coo, a change in expression, or looking around curiously. The style should be sweet and heartwarming.`;
+
+  if (guidance && guidance.trim()) {
+    prompt += ` IMPORTANT: The prompt must also adhere to this high-level instruction: "${guidance}".`;
+  }
+
+  prompt += ` Example: 'A happy baby in a white onesie gently kicks their feet while lying on a soft blanket, looking up with curious eyes, camera remains stationary.'`;
 
   const response = await ai.models.generateContent({
     model: textModel,
@@ -235,23 +251,13 @@ export const generateVideoPromptForBabyImage = async (
   return response.text;
 };
 
-export const prepareBabyVideoPrompts = async (
-  images: GeneratedBabyImage[],
-  onProgress: (filename: string, prompt: string) => void,
-  onError: (errorMessage: string) => void
-): Promise<void> => {
-  const processSingleTask = async (task: GeneratedBabyImage) => {
-    try {
-      // Use imageUrlToBase64 to handle both data URLs and HTTPS URLs from webhooks
-      const imageBlob = await imageUrlToBase64(task.src);
-      const videoPrompt = await generateVideoPromptForBabyImage(imageBlob);
-      onProgress(task.filename, videoPrompt);
-    } catch (error) {
-      console.error(`Failed to generate video prompt for "${task.filename}":`, error);
-      const formattedError = parseGenerationError(error as Error, { filename: task.filename });
-      onError(formattedError);
-    }
-  };
-
-  await processWithConcurrency(images, processSingleTask, 6);
-};
+// NOTE: prepareBabyVideoPrompts has been removed in favor of the unified prepareVideoPrompts
+// from videoService.ts. Use it with the generateVideoPromptForBabyImage generator:
+//
+// import { prepareVideoPrompts } from './videoService';
+// import { generateVideoPromptForBabyImage } from './babyStudioService';
+//
+// await prepareVideoPrompts(images, onProgress, onError, {
+//   promptGenerator: generateVideoPromptForBabyImage,
+//   concurrency: 6
+// });

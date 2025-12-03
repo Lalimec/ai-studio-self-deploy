@@ -3,11 +3,11 @@ import {
     BabyGenerationOptions, BabyAge, BabyGender, GeneratedBabyImage, Toast as ToastType, ParentImageState, ImageForVideoProcessing, DownloadSettings, NanoBananaModel, NanoBananaResolution
 } from '../types';
 import {
-    generateBabyImages, prepareBabyVideoPrompts, generateVideoPromptForBabyImage
+    generateBabyImages, generateVideoPromptForBabyImage
 } from '../services/babyStudioService';
 import { dataUrlToBlob, imageUrlToBase64 } from '../services/geminiClient';
 import { uploadImageFromDataUrl } from '../services/imageUploadService';
-import { generateAllVideos, generateSingleVideoForImage, generateVideoPromptForImage, VideoTask } from '../services/videoService';
+import { generateAllVideos, generateSingleVideoForImage, generateVideoPromptForImage, prepareVideoPrompts, VideoTask } from '../services/videoService';
 import { getTimestamp, generateSetId, sanitizeFilename, getExtensionFromDataUrl } from '../services/imageUtils';
 import { logUserAction } from '../services/loggingService';
 import { downloadBulkImages, downloadImageWithMetadata } from '../services/downloadService';
@@ -186,9 +186,11 @@ export const useBabyStudio = ({ addToast, setConfirmAction, withMultiDownloadWar
         addToast(`Preparing ${totalToPrepare} video prompts...`, "info");
 
         try {
-            const babyPromises = prepareBabyVideoPrompts(unpreparedBabies,
+            // Use unified prepareVideoPrompts with baby-specific prompt generator
+            const babyPromises = prepareVideoPrompts(unpreparedBabies,
                 (filename, prompt) => setGeneratedImages(prev => prev.map(img => img.filename === filename ? { ...img, videoPrompt: prompt, isPreparing: false } : img)),
-                (error) => addToast(error, 'error')
+                (error) => addToast(error, 'error'),
+                { promptGenerator: generateVideoPromptForBabyImage, concurrency: 6 }
             );
 
             const parentPromises = unpreparedParents.map(async (parent) => {
