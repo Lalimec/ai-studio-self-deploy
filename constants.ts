@@ -1,17 +1,17 @@
 import { Hairstyle, HairstyleCategory, Beard, Accessory, AspectRatio } from './types';
 
 export const ASPECT_RATIO_OPTIONS: { label: string; value: AspectRatio }[] = [
-    { label: 'Auto', value: 'auto' },
-    { label: '1:1', value: '1:1' },
-    { label: '2:3', value: '2:3' },
-    { label: '3:2', value: '3:2' },
-    { label: '3:4', value: '3:4' },
-    { label: '4:3', value: '4:3' },
-    { label: '4:5', value: '4:5' },
-    { label: '5:4', value: '5:4' },
-    { label: '9:16', value: '9:16' },
-    { label: '16:9', value: '16:9' },
-    { label: '21:9', value: '21:9' },
+  { label: 'Auto', value: 'auto' },
+  { label: '1:1', value: '1:1' },
+  { label: '2:3', value: '2:3' },
+  { label: '3:2', value: '3:2' },
+  { label: '3:4', value: '3:4' },
+  { label: '4:3', value: '4:3' },
+  { label: '4:5', value: '4:5' },
+  { label: '5:4', value: '5:4' },
+  { label: '9:16', value: '9:16' },
+  { label: '16:9', value: '16:9' },
+  { label: '21:9', value: '21:9' },
 ];
 
 export const FEMALE_HAIRSTYLES: HairstyleCategory[] = [
@@ -578,8 +578,8 @@ export const BABY_CLOTHING_STYLES_BOY = [
       { id: 'formal_smart_boy', name: 'Smart Formal Wear', prompt: 'wearing a smart, formal outfit for a special occasion, like a little suit' },
       { id: 'suspenders', name: 'Suspenders & Bowtie', prompt: 'wearing a tiny shirt with suspenders and a bow tie' },
       { id: 'vest_set', name: 'Vest Set', prompt: 'wearing a neat vest set with tailored trousers' },
-      { id: 'polo_shirt', name: 'Polo Shirt & Shorts', prompt: 'wearing a classic polo shirt with khaki shorts'},
-      { id: 'newsboy_cap', name: 'Newsboy Cap Outfit', prompt: 'wearing a vintage-style outfit with a newsboy cap'}
+      { id: 'polo_shirt', name: 'Polo Shirt & Shorts', prompt: 'wearing a classic polo shirt with khaki shorts' },
+      { id: 'newsboy_cap', name: 'Newsboy Cap Outfit', prompt: 'wearing a vintage-style outfit with a newsboy cap' }
     ]
   }
 ];
@@ -591,8 +591,8 @@ export const BABY_CLOTHING_STYLES_GIRL = [
       { id: 'formal_smart_girl', name: 'Smart Formal Wear', prompt: 'wearing a smart, formal outfit for a special occasion, like a lovely dress' },
       { id: 'dress_frilly', name: 'Frilly Dress', prompt: 'wearing a beautiful, frilly party dress' },
       { id: 'tutu_set', name: 'Tulle Skirt Set', prompt: 'wearing a soft tulle skirt with a simple top' },
-      { id: 'floral_dress', name: 'Floral Sundress', prompt: 'wearing a light and airy floral sundress'},
-      { id: 'headband_bow', name: 'Outfit with Headband', prompt: 'wearing a cute outfit complemented by a matching headband with a bow'}
+      { id: 'floral_dress', name: 'Floral Sundress', prompt: 'wearing a light and airy floral sundress' },
+      { id: 'headband_bow', name: 'Outfit with Headband', prompt: 'wearing a cute outfit complemented by a matching headband with a bow' }
     ]
   }
 ];
@@ -664,30 +664,35 @@ export const FLUX_KONTEXT_PRO_RATIOS = [
   '21:9', '16:9', '4:3', '3:2', '1:1', '2:3', '3:4', '9:16', '9:21'
 ];
 
+// Seedream Higgsfield supported aspect ratios
+export const SEEDREAM_HIGGSFIELD_RATIOS = [
+  '1:1', '4:3', '16:9', '3:2', '21:9', '3:4', '9:16', '2:3'
+];
+
 // 2K Resolution Presets (consistent 4.19 MP based on 2048x2048)
 export const ASPECT_RATIO_PRESETS_2K = [
-    { label: '1:1', width: 2048, height: 2048 },
-    { label: '4:5', width: 1832, height: 2290 },
-    { label: '3:4', width: 1774, height: 2365 },
-    { label: '2:3', width: 1672, height: 2508 },
-    { label: '9:16', width: 1536, height: 2731 },
-    { label: '5:4', width: 2290, height: 1832 },
-    { label: '4:3', width: 2365, height: 1774 },
-    { label: '3:2', width: 2508, height: 1672 },
-    { label: '16:9', width: 2731, height: 1536 },
+  { label: '1:1', width: 2048, height: 2048 },
+  { label: '4:5', width: 1832, height: 2290 },
+  { label: '3:4', width: 1774, height: 2365 },
+  { label: '2:3', width: 1672, height: 2508 },
+  { label: '9:16', width: 1536, height: 2731 },
+  { label: '5:4', width: 2290, height: 1832 },
+  { label: '4:3', width: 2365, height: 1774 },
+  { label: '3:2', width: 2508, height: 1672 },
+  { label: '16:9', width: 2731, height: 1536 },
 ];
 
 // 4K Resolution Presets (consistent 16.78 MP based on 4096x4096)
 export const ASPECT_RATIO_PRESETS_4K = [
-    { label: '1:1', width: 4096, height: 4096 },
-    { label: '4:5', width: 3663, height: 4579 },
-    { label: '3:4', width: 3548, height: 4730 },
-    { label: '2:3', width: 3345, height: 5017 },
-    { label: '9:16', width: 3072, height: 5461 },
-    { label: '5:4', width: 4580, height: 3664 },
-    { label: '4:3', width: 4729, height: 3547 },
-    { label: '3:2', width: 5016, height: 3344 },
-    { label: '16:9', width: 5461, height: 3072 },
+  { label: '1:1', width: 4096, height: 4096 },
+  { label: '4:5', width: 3663, height: 4579 },
+  { label: '3:4', width: 3548, height: 4730 },
+  { label: '2:3', width: 3345, height: 5017 },
+  { label: '9:16', width: 3072, height: 5461 },
+  { label: '5:4', width: 4580, height: 3664 },
+  { label: '4:3', width: 4729, height: 3547 },
+  { label: '3:2', width: 5016, height: 3344 },
+  { label: '16:9', width: 5461, height: 3072 },
 ];
 
 // Legacy export for backward compatibility
@@ -698,17 +703,17 @@ export const ASPECT_RATIO_PRESETS = ASPECT_RATIO_PRESETS_2K;
 import { AnalysisModel, ImageModel } from './types';
 
 export const imageModels: { id: ImageModel; name: string; requiresImage: boolean }[] = [
-    { id: 'imagen-4.0-ultra-generate-001', name: 'Imagen 4 Ultra', requiresImage: false },
-    { id: 'imagen-4.0-generate-001', name: 'Imagen 4', requiresImage: false },
-    { id: 'imagen-4.0-fast-generate-001', name: 'Imagen 4 Fast', requiresImage: false },
-    { id: 'gemini-2.5-flash-image', name: 'Nano Banana (Gemini Edit)', requiresImage: true },
-    { id: 'nano-banana', name: 'Nano Banana (Webhook)', requiresImage: true },
-    { id: 'seedream', name: 'Seedream 4.0', requiresImage: true },
-    { id: 'flux-kontext-pro', name: 'Flux Kontext Pro', requiresImage: true },
-    { id: 'qwen', name: 'Qwen Image Edit', requiresImage: true },
+  { id: 'imagen-4.0-ultra-generate-001', name: 'Imagen 4 Ultra', requiresImage: false },
+  { id: 'imagen-4.0-generate-001', name: 'Imagen 4', requiresImage: false },
+  { id: 'imagen-4.0-fast-generate-001', name: 'Imagen 4 Fast', requiresImage: false },
+  { id: 'gemini-2.5-flash-image', name: 'Nano Banana (Gemini Edit)', requiresImage: true },
+  { id: 'nano-banana', name: 'Nano Banana (Webhook)', requiresImage: true },
+  { id: 'seedream', name: 'Seedream 4.0', requiresImage: true },
+  { id: 'flux-kontext-pro', name: 'Flux Kontext Pro', requiresImage: true },
+  { id: 'qwen', name: 'Qwen Image Edit', requiresImage: true },
 ];
 
 export const analysisModels: { id: AnalysisModel; name: string }[] = [
-    { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro' },
-    { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash' },
+  { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro' },
+  { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash' },
 ];

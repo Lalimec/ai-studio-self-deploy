@@ -52,10 +52,11 @@ export class WebhookNetworkError extends Error {
 const isWebhookProxyAvailable = (): boolean => {
     // In production, the server injects service worker registration
     // We can detect this by checking if we're served from the same origin
-    // (not a dev server like localhost:5173)
+    // (not a dev server like localhost:5173, 5174, etc.)
     if (typeof window !== 'undefined') {
-        // If we're on the server's port (3000) or a production domain, proxy is available
-        const isDevServer = window.location.port === '5173';
+        // Vite dev server uses ports in the 5173+ range
+        const port = parseInt(window.location.port, 10);
+        const isDevServer = port >= 5173 && port < 5200;
         return !isDevServer;
     }
     return false;
@@ -288,38 +289,38 @@ export async function processWithConcurrency<T>(
  * @returns The number of tasks that failed.
  */
 export async function runConcurrentTasks<T>(
-  tasks: (() => Promise<T>)[],
-  concurrencyLimit: number,
-  onTaskSuccess: (result: T) => void,
-  onTaskFail: (error: any) => void,
-  onProgressUpdate: (completed: number, total: number) => void
+    tasks: (() => Promise<T>)[],
+    concurrencyLimit: number,
+    onTaskSuccess: (result: T) => void,
+    onTaskFail: (error: any) => void,
+    onProgressUpdate: (completed: number, total: number) => void
 ): Promise<number> {
-  const totalTasks = tasks.length;
-  let completedCount = 0;
-  let failedCount = 0;
-  const taskQueue = [...tasks];
+    const totalTasks = tasks.length;
+    let completedCount = 0;
+    let failedCount = 0;
+    const taskQueue = [...tasks];
 
-  const worker = async () => {
-    while (taskQueue.length > 0) {
-      const task = taskQueue.shift();
-      if (task) {
-        try {
-          const result = await task();
-          onTaskSuccess(result);
-        } catch (error) {
-          failedCount++;
-          onTaskFail(error);
-          console.error("A generation task failed:", error);
-        } finally {
-          completedCount++;
-          onProgressUpdate(completedCount, totalTasks);
+    const worker = async () => {
+        while (taskQueue.length > 0) {
+            const task = taskQueue.shift();
+            if (task) {
+                try {
+                    const result = await task();
+                    onTaskSuccess(result);
+                } catch (error) {
+                    failedCount++;
+                    onTaskFail(error);
+                    console.error("A generation task failed:", error);
+                } finally {
+                    completedCount++;
+                    onProgressUpdate(completedCount, totalTasks);
+                }
+            }
         }
-      }
-    }
-  };
+    };
 
-  const workers = Array.from({ length: Math.min(concurrencyLimit, totalTasks) }, worker);
-  await Promise.all(workers);
+    const workers = Array.from({ length: Math.min(concurrencyLimit, totalTasks) }, worker);
+    await Promise.all(workers);
 
-  return failedCount;
+    return failedCount;
 }

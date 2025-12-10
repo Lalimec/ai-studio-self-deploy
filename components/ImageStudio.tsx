@@ -8,7 +8,7 @@ import { CropChoiceModal } from './imageStudio/CropChoiceModal';
 import { MultiCropView } from './imageStudio/MultiCropView';
 import { AdvancedOptions } from './imageStudio/AdvancedOptions';
 import GenerationToolbar from './GenerationToolbar';
-import { NANO_BANANA_RATIOS, FLUX_KONTEXT_PRO_RATIOS, ASPECT_RATIO_PRESETS } from '../constants';
+import { NANO_BANANA_RATIOS, FLUX_KONTEXT_PRO_RATIOS, SEEDREAM_HIGGSFIELD_RATIOS, ASPECT_RATIO_PRESETS } from '../constants';
 import { HelpIcon, PiSpinnerIcon, PiDownloadSimpleIcon, PiCubeIcon, BananaIcon, WavesIcon, ZapIcon, FlowerIcon } from './Icons';
 import { ImageStudioConfirmationDialog } from './imageStudio/ImageStudioConfirmationDialog';
 import { AspectRatio, ImageStudioResultImage } from '../types';
@@ -39,27 +39,17 @@ const ImageStudio: React.FC<ImageStudioProps> = ({ logic, onImageClick, onShowHe
             isGeneratingVideo: false,
         }));
 
-    // Get aspect ratio options based on selected model
+    // Get aspect ratio options based on model
     const getAspectRatioOptions = () => {
-        if (logic.model === 'nano-banana' || logic.model === 'nano-banana-pro') {
-            return NANO_BANANA_RATIOS.map(ratio => ({
-                label: ratio === 'auto' ? 'Auto' : ratio,
-                value: ratio as AspectRatio
-            }));
-        } else if (logic.model === 'flux-kontext-pro') {
-            return FLUX_KONTEXT_PRO_RATIOS.map(ratio => ({ label: ratio, value: ratio as AspectRatio }));
-        } else if (logic.model === 'seedream') {
-            // Seedream uses presets, show basic ratios
-            return ASPECT_RATIO_PRESETS.map(preset => ({ label: preset.label, value: preset.label as AspectRatio }));
-        } else {
-            // Qwen or other models - use default ratios
-            return [
-                { label: '1:1', value: '1:1' as AspectRatio },
-                { label: '4:5', value: '4:5' as AspectRatio },
-                { label: '3:4', value: '3:4' as AspectRatio },
-                { label: '16:9', value: '16:9' as AspectRatio }
-            ];
+        if (logic.model === 'flux') {
+            return FLUX_KONTEXT_PRO_RATIOS.map(r => ({ value: r, label: r }));
         }
+        if (logic.model === 'seedream' && logic.seedreamProvider === 'higgsfield') {
+            return SEEDREAM_HIGGSFIELD_RATIOS.map(r => ({ value: r, label: r }));
+        }
+        // For all other models (nano-banana, nano-banana-pro, gemini, qwen, seedream FAL)
+        // NANO_BANANA_RATIOS already includes 'auto' as first element
+        return NANO_BANANA_RATIOS.map(r => ({ value: r, label: r === 'auto' ? 'Auto' : r }));
     };
 
     const modelButtons = [
@@ -262,7 +252,7 @@ const ImageStudio: React.FC<ImageStudioProps> = ({ logic, onImageClick, onShowHe
                 aspectRatio={(logic.aspectRatio || '1:1') as AspectRatio}
                 onAspectRatioChange={(ratio) => logic.setAspectRatio(ratio)}
                 aspectRatioOptions={getAspectRatioOptions()}
-                showAspectRatio={logic.model !== 'seedream'}
+                showAspectRatio={logic.model !== 'seedream' || logic.seedreamProvider === 'higgsfield'}
                 showImageCount={false}
                 imageCount={1}
                 onImageCountChange={() => { }}
@@ -289,6 +279,21 @@ const ImageStudio: React.FC<ImageStudioProps> = ({ logic, onImageClick, onShowHe
                         isActive: logic.resolution === '4K',
                         tooltip: '4096x4096 resolution'
                     }
+                ] : (logic.model === 'seedream' && logic.seedreamProvider === 'higgsfield') ? [
+                    {
+                        key: '2k',
+                        text: '2K',
+                        onClick: () => logic.setSeedreamResolution('2k'),
+                        isActive: logic.seedreamResolution === '2k',
+                        tooltip: '2K resolution'
+                    },
+                    {
+                        key: '4k',
+                        text: '4K',
+                        onClick: () => logic.setSeedreamResolution('4k'),
+                        isActive: logic.seedreamResolution === '4k',
+                        tooltip: '4K resolution'
+                    }
                 ] : undefined}
                 generateButtonText="Generate"
                 onGenerate={logic.handleGenerate}
@@ -298,7 +303,7 @@ const ImageStudio: React.FC<ImageStudioProps> = ({ logic, onImageClick, onShowHe
                 onStartOver={logic.handleStartOver}
                 startOverDisabled={logic.isLoading || logic.generationResults.length === 0}
                 studioMode="image"
-                seedreamSettings={logic.model === 'seedream' ? {
+                seedreamSettings={(logic.model === 'seedream' && logic.seedreamProvider === 'fal') ? {
                     imageSizePreset: logic.imageSizePreset,
                     onImageSizePresetChange: logic.setImageSizePreset,
                     imageSizePresets: logic.imageSizePresets,

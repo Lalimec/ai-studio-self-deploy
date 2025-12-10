@@ -4,7 +4,7 @@ import JSZip from 'jszip';
 import {
     GeneratedImage, GeneratedBabyImage, Toast as ToastType,
     DisplayImage, StudioImage, ImageStudioResultImage, VariationState,
-    NanoBananaWebhookSettings, DownloadSettings
+    NanoBananaWebhookSettings, DownloadSettings, SeedreamProvider
 } from './types';
 
 import { useHairStudio } from './hooks/useHairStudio';
@@ -143,6 +143,28 @@ function App() {
         }
     };
 
+    // Seedream Provider State (FAL vs Higgsfield)
+    const [seedreamProvider, setSeedreamProvider] = useState<SeedreamProvider>(() => {
+        try {
+            const stored = localStorage.getItem('seedreamProvider');
+            if (stored === 'fal' || stored === 'higgsfield') {
+                return stored;
+            }
+        } catch (error) {
+            console.error("Could not load seedream provider from localStorage", error);
+        }
+        return 'fal'; // Default to FAL
+    });
+
+    const handleSetSeedreamProvider = (provider: SeedreamProvider) => {
+        setSeedreamProvider(provider);
+        try {
+            localStorage.setItem('seedreamProvider', provider);
+        } catch (error) {
+            console.error("Could not save seedream provider to localStorage", error);
+        }
+    };
+
     const handleSetShowBetaFeatures = (enabled: boolean) => {
         setShowBetaFeatures(enabled);
         try {
@@ -189,7 +211,7 @@ function App() {
     const architectureStudioLogic = useArchitectureStudio({ addToast, setConfirmAction, withMultiDownloadWarning, setDownloadProgress, useNanoBananaWebhook: nanoBananaWebhookSettings.architecture, downloadSettings });
     const videoStudioLogic = useVideoStudio({ addToast, setConfirmAction, setDownloadProgress, withMultiDownloadWarning, downloadSettings });
     const timelineStudioLogic = useTimelineStudio({ addToast, setConfirmAction, setDownloadProgress, withMultiDownloadWarning, downloadSettings });
-    const imageStudioLogic = useImageStudioLogic(addToast, setConfirmAction, setDownloadProgress, withMultiDownloadWarning, nanoBananaWebhookSettings.image, downloadSettings);
+    const imageStudioLogic = useImageStudioLogic(addToast, setConfirmAction, setDownloadProgress, withMultiDownloadWarning, nanoBananaWebhookSettings.image, downloadSettings, seedreamProvider);
     const adClonerLogic = useAdCloner({ addToast, setConfirmAction, withMultiDownloadWarning, setDownloadProgress, useNanoBananaWebhook: nanoBananaWebhookSettings.adCloner });
     const videoAnalyzerLogic = useVideoAnalyzerStudio({ addToast, setConfirmAction, setDownloadProgress, withMultiDownloadWarning, useNanoBananaWebhook: nanoBananaWebhookSettings.videoAnalyzer, downloadSettings });
     const nanoBananaProLogic = useNanoBananaProStudio(addToast, setConfirmAction, setDownloadProgress, withMultiDownloadWarning, downloadSettings);
@@ -853,6 +875,8 @@ function App() {
                     onToggleNanoBananaWebhookSetting={handleSetNanoBananaWebhookSetting}
                     downloadSettings={downloadSettings}
                     onUpdateDownloadSettings={handleSetDownloadSettings}
+                    seedreamProvider={seedreamProvider}
+                    onSeedreamProviderChange={handleSetSeedreamProvider}
                 />
             )}
         </div>

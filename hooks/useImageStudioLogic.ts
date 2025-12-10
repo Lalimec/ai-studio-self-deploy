@@ -1,13 +1,13 @@
 /// <reference lib="dom" />
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { generateFigureImage, translateToEnglish, generatePromptList, generatePromptVariation, enhancePrompt } from '../services/geminiService';
-import { ImageStudioRunResult, ImageStudioGenerationResult, AppFile, Toast, DownloadSettings } from '../types';
+import { ImageStudioRunResult, ImageStudioGenerationResult, AppFile, Toast, DownloadSettings, SeedreamProvider, SeedreamResolution } from '../types';
 import { fileToBase64, blobToDataUrl, generateSetId, generateShortId, sanitizeFilename, getTimestamp } from '../services/imageUtils';
 import { uploadImageFromDataUrl } from '../services/imageUploadService';
 import { runConcurrentTasks } from '../services/apiUtils';
 import { logUserAction } from '../services/loggingService';
 import { downloadImageWithMetadata, downloadBulkImages } from '../services/downloadService';
-import { NANO_BANANA_RATIOS, FLUX_KONTEXT_PRO_RATIOS, ASPECT_RATIO_PRESETS_2K, ASPECT_RATIO_PRESETS_4K } from '../constants';
+import { NANO_BANANA_RATIOS, FLUX_KONTEXT_PRO_RATIOS, SEEDREAM_HIGGSFIELD_RATIOS, ASPECT_RATIO_PRESETS_2K, ASPECT_RATIO_PRESETS_4K } from '../constants';
 import { Constance } from '../services/endpoints';
 
 declare const JSZip: any;
@@ -18,7 +18,8 @@ export const useImageStudioLogic = (
     setDownloadProgress: React.Dispatch<React.SetStateAction<{ visible: boolean; message: string; progress: number }>>,
     withMultiDownloadWarning: (action: () => void) => void,
     useNanoBananaWebhook: boolean,
-    downloadSettings: DownloadSettings = { includeMetadataFiles: false }
+    downloadSettings: DownloadSettings = { includeMetadataFiles: false },
+    seedreamProvider: SeedreamProvider = 'fal'
 ) => {
     const [numberOfVersions, setNumberOfVersions] = useState<number>(1);
     const [promptContents, setPromptContents] = useState<string[]>(['']);
@@ -34,7 +35,7 @@ export const useImageStudioLogic = (
 
     const [pendingFiles, setPendingFiles] = useState<File[] | null>(null);
     const [setId, setSetId] = useState<string>('');
-    
+
     const [showCropChoiceModal, setShowCropChoiceModal] = useState<boolean>(false);
     const [filesAwaitingCropChoice, setFilesAwaitingCropChoice] = useState<File[] | null>(null);
     const [croppingFiles, setCroppingFiles] = useState<File[] | null>(null);
@@ -43,6 +44,7 @@ export const useImageStudioLogic = (
     const [model, setModel] = useState<string>('nano-banana');
     const [aspectRatio, setAspectRatio] = useState<string | null>('auto');
     const [resolution, setResolution] = useState<string>('2K'); // For nano-banana-pro
+    const [seedreamResolution, setSeedreamResolution] = useState<SeedreamResolution>('2k'); // For Higgsfield Seedream
     const [imageSizePreset, setImageSizePreset] = useState<string>('auto_4K');
     const [customWidth, setCustomWidth] = useState<number>(1024);
     const [customHeight, setCustomHeight] = useState<number>(1024);
@@ -130,8 +132,24 @@ export const useImageStudioLogic = (
         return nearestRatio;
     };
 
-    // Auto-adjust aspect ratio when model changes
+    // Auto-adjust aspect ratio when model changes or when seedream provider changes
     useEffect(() => {
+        // Special handling for Seedream with Higgsfield provider
+        if (model === 'seedream' && seedreamProvider === 'higgsfield') {
+            // Higgsfield doesn't support 'auto', map to '1:1' if needed
+            if (!aspectRatio || aspectRatio === 'auto') {
+                setAspectRatio('1:1');
+                return;
+            }
+            // Check if current ratio is supported by Higgsfield
+            const nearestRatio = findNearestAspectRatio(aspectRatio, SEEDREAM_HIGGSFIELD_RATIOS);
+            if (nearestRatio !== aspectRatio) {
+                setAspectRatio(nearestRatio);
+                addToast(`Aspect ratio adjusted to ${nearestRatio} for Higgsfield compatibility`, 'warning');
+            }
+            return;
+        }
+
         if (!aspectRatio || aspectRatio === 'auto') {
             // If no aspect ratio is set or it's auto, don't change it
             return;
@@ -143,7 +161,7 @@ export const useImageStudioLogic = (
         } else if (model === 'nano-banana') {
             supportedRatios = NANO_BANANA_RATIOS;
         } else {
-            // For other models (gemini, seedream), no automatic adjustment needed
+            // For other models (gemini, seedream FAL), no automatic adjustment needed
             return;
         }
 
@@ -152,7 +170,7 @@ export const useImageStudioLogic = (
             setAspectRatio(nearestRatio);
             addToast(`Aspect ratio adjusted to ${nearestRatio} for ${model === 'flux-kontext-pro' ? 'Flux Kontext Pro' : 'Nano Banana'} compatibility`, 'warning');
         }
-    }, [model]); // Only run when model changes
+    }, [model, seedreamProvider]); // Run when model or seedream provider changes
 
     useEffect(() => {
         const preset = imageSizePresets[imageSizePreset];
@@ -171,7 +189,7 @@ export const useImageStudioLogic = (
         const preset = imageSizePresets[imageSizePreset] || imageSizePresets['custom'];
         return { width: preset.width, height: preset.height };
     }, [imageSizePreset, imageSizePresets]);
-    
+
     useEffect(() => {
         if (!isLoading) {
             const failedCount = generationResults.filter(r => r.status === 'error').length;
@@ -227,11 +245,11 @@ export const useImageStudioLogic = (
     const imagePreviewUrls = useMemo(() => {
         return imageFiles.map(appFile => URL.createObjectURL(appFile.file));
     }, [imageFiles]);
-    
+
     useEffect(() => {
-      return () => {
-        imagePreviewUrls.forEach(url => URL.revokeObjectURL(url));
-      }
+        return () => {
+            imagePreviewUrls.forEach(url => URL.revokeObjectURL(url));
+        }
     }, [imagePreviewUrls]);
 
     const handleNumberOfVersionsChange = (newVersionCount: number) => {
@@ -333,7 +351,7 @@ export const useImageStudioLogic = (
             });
         }
     };
-    
+
     const handleTranslateInstructions = async () => {
         if (!promptGenerationInstructions.trim() || isTranslatingInstructions) return;
         setIsTranslatingInstructions(true);
@@ -354,7 +372,7 @@ export const useImageStudioLogic = (
             const jsonString = await generatePromptList(promptGenerationInstructions);
             const prettyJson = JSON.stringify(JSON.parse(jsonString), null, 2);
             setJsonPrompts(prettyJson);
-            setJsonError(null); 
+            setJsonError(null);
         } catch (e) {
             addToast(`Prompt generation failed: ${e instanceof Error ? e.message : "Unknown error"}`, 'error');
         } finally {
@@ -417,7 +435,7 @@ export const useImageStudioLogic = (
             proceedToCropChoice(newFiles);
         }
     }, [generationResults.length, proceedToCropChoice]);
-    
+
     const handleStartCropping = () => {
         if (filesAwaitingCropChoice) {
             setCroppingFiles(filesAwaitingCropChoice);
@@ -513,7 +531,7 @@ export const useImageStudioLogic = (
             });
         }
     }, [imageFiles.length, generationResults.length, setConfirmAction, setId]);
-    
+
     const getDownloadFilename = useCallback((result: ImageStudioGenerationResult): string => {
         const { originalImageIndex, originalPromptIndex, batchTimestamp } = result;
         const appFile = imageFiles[originalImageIndex];
@@ -565,7 +583,7 @@ export const useImageStudioLogic = (
             }
         });
     }, [generationResults, withMultiDownloadWarning, addToast, getDownloadFilename, downloadSettings]);
-    
+
     const handleDownloadAll = useCallback(async () => {
         withMultiDownloadWarning(async () => {
             const successfulResults = generationResults.filter(r => r.status === 'success');
@@ -637,7 +655,7 @@ export const useImageStudioLogic = (
         const key = `${newImage.batchTimestamp}-${newImage.originalImageIndex}-${newImage.originalPromptIndex}`;
         setGenerationResults(prev => prev.map(r => r.key === key ? { ...r, status: 'success', url: newImage.url, prompt: newImage.prompt } : r));
     }, []);
-    
+
     const handleFail = useCallback((error: any) => {
         const { originalImageIndex, originalPromptIndex, batchTimestamp, prompt } = error.context || {};
         if (batchTimestamp !== undefined) {
@@ -646,9 +664,9 @@ export const useImageStudioLogic = (
             const message = error instanceof Error ? error.message : "An unknown error occurred.";
 
             if (modelText) {
-                setGenerationResults(prev => prev.map(r => r.key === key ? { 
-                    ...r, 
-                    status: 'warning', 
+                setGenerationResults(prev => prev.map(r => r.key === key ? {
+                    ...r,
+                    status: 'warning',
                     error: message,
                     modelResponse: modelText,
                     prompt: prompt,
@@ -705,11 +723,24 @@ export const useImageStudioLogic = (
                     // Handle both string and string[] return types
                     imageUrl = Array.isArray(result) ? result[0] : result;
                 } else {
+                    // For seedream with Higgsfield, pass provider-specific options
+                    const seedreamOptions = model === 'seedream' ? {
+                        seedreamProvider: seedreamProvider,
+                        seedreamResolution: seedreamResolution,
+                        aspectRatio: aspectRatio || undefined,
+                    } : {};
+
                     const result = await generateFigureImage(
                         model,
                         finalPrompt,
                         [imageSource],
-                        { width, height, imageSizePreset, aspectRatio: aspectRatio || undefined },
+                        {
+                            width,
+                            height,
+                            imageSizePreset,
+                            aspectRatio: aspectRatio || undefined,
+                            ...seedreamOptions
+                        },
                         useNanoBananaWebhook
                     );
                     // Handle both string and string[] return types
@@ -718,13 +749,13 @@ export const useImageStudioLogic = (
 
                 return { url: imageUrl, originalImageIndex: imageIndex, originalPromptIndex: promptIndex, prompt: finalPrompt, batchTimestamp: timestamp };
             } catch (error) {
-                 const contextualError = error instanceof Error ? error : new Error("Unknown error during generation");
-                 (contextualError as any).context = { originalImageIndex: imageIndex, originalPromptIndex: promptIndex, batchTimestamp: timestamp, prompt: finalPrompt };
-                 throw contextualError;
+                const contextualError = error instanceof Error ? error : new Error("Unknown error during generation");
+                (contextualError as any).context = { originalImageIndex: imageIndex, originalPromptIndex: promptIndex, batchTimestamp: timestamp, prompt: finalPrompt };
+                throw contextualError;
             }
         };
-    }, [imageFiles, prependPrompt, appendPrompt, model, width, height, imageSizePreset, aspectRatio, resolution, useNanoBananaWebhook]);
-    
+    }, [imageFiles, prependPrompt, appendPrompt, model, width, height, imageSizePreset, aspectRatio, resolution, seedreamProvider, seedreamResolution, useNanoBananaWebhook]);
+
     const runGenerations = useCallback(async (tasks: (() => Promise<ImageStudioRunResult>)[]) => {
         if (tasks.length === 0) {
             setIsLoading(false);
@@ -800,7 +831,7 @@ export const useImageStudioLogic = (
         const tasks = failed.map(r => createGenerationTask(r.originalImageIndex, r.originalPromptIndex, prompts, r.batchTimestamp));
         await runGenerations(tasks);
     }, [isLoading, generationResults, getActivePrompts, createGenerationTask, runGenerations, setId, ensurePublicUrls, addToast]);
-    
+
     const handleRetryOne = useCallback(async (key: string) => {
         const toRetry = generationResults.find(r => r.key === key);
         if (!toRetry || toRetry.status === 'pending') return;
@@ -864,6 +895,7 @@ export const useImageStudioLogic = (
         aspectRatio, setAspectRatio, getDownloadFilename, handleRemoveAllUploadedImages,
         isSeedreamAspectRatioInvalid,
         inputImageWarnings,
-        resolution, setResolution
+        resolution, setResolution,
+        seedreamProvider, seedreamResolution, setSeedreamResolution
     };
 };

@@ -286,6 +286,9 @@ export const generateFigureImage = async (
         num_images?: number;
         output_format?: string;
         resolution?: string;
+        // Seedream Higgsfield specific options
+        seedreamProvider?: 'fal' | 'higgsfield';
+        seedreamResolution?: '2k' | '4k';
     },
     useNanoBananaWebhook?: boolean
 ): Promise<string | string[]> => {
@@ -355,6 +358,44 @@ export const generateFigureImage = async (
         if (model === Constance.models.image.seedream) {
             if (publicUrls.length > 1) throw new Error(`${model} only supports one input image.`);
 
+            // Check if using Higgsfield provider (async polling like NanoBananaPro)
+            if (options.seedreamProvider === 'higgsfield') {
+                payload = {
+                    prompt,
+                    image_urls: [publicUrls[0]],
+                    aspect_ratio: options.aspectRatio || '4:3',
+                    resolution: options.seedreamResolution || '2k',
+                };
+                endpoint = Constance.endpoints.image.seedreamHiggsfield;
+
+                // Step 1: Initiate generation and get request_id
+                const initialResult = await fetchViaWebhookProxy<{
+                    request_id?: string;
+                    Error?: string;
+                }>(endpoint, payload);
+
+                if (initialResult.Error) {
+                    throw new NanoBananaProGenerationError(initialResult.Error);
+                }
+
+                if (!initialResult.request_id) {
+                    throw new NanoBananaProGenerationError('Higgsfield API response did not contain a request_id.');
+                }
+
+                console.log(`Seedream Higgsfield: Generation initiated, request_id: ${initialResult.request_id}`);
+
+                // Step 2: Poll for results using the Higgsfield status endpoint
+                const imageUrls = await pollForNanoBananaResult(
+                    initialResult.request_id,
+                    0,
+                    Constance.endpoints.image.seedreamHiggsfieldStatus
+                );
+
+                // Return the first image URL
+                return imageUrls[0];
+            }
+
+            // FAL provider (synchronous, existing behavior)
             // Determine image_size format based on preset
             let imageSize: string | { width: number; height: number };
 

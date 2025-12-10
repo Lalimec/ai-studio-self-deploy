@@ -31,6 +31,10 @@ export type AspectRatio = typeof ASPECT_RATIOS[number];
 export type NanoBananaModel = 'nano-banana' | 'nano-banana-pro';
 export type NanoBananaResolution = '1K' | '2K' | '4K';
 
+// Seedream (C-Dream) provider selection
+export type SeedreamProvider = 'fal' | 'higgsfield';
+export type SeedreamResolution = '2k' | '4k';
+
 export type Hairstyle = {
   id: string;
   name: string;
