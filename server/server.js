@@ -21,8 +21,8 @@ const externalWsBaseUrl = 'wss://generativelanguage.googleapis.com';
 // Support either API key env-var variant
 const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
 
-const staticPath = path.join(__dirname,'dist');
-const publicPath = path.join(__dirname,'public');
+const staticPath = path.join(__dirname, 'dist');
+const publicPath = path.join(__dirname, 'public');
 
 
 if (!apiKey) {
@@ -30,13 +30,41 @@ if (!apiKey) {
     console.error("Warning: GEMINI_API_KEY or API_KEY environment variable is not set! Proxy functionality will be disabled.");
 }
 else {
-  console.log("API KEY FOUND (proxy will use this)")
+    console.log("API KEY FOUND (proxy will use this)")
 }
 
 // Limit body size to 50mb
 app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({extended: true, limit: '50mb'}));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.set('trust proxy', 1 /* number of proxies between user and server */)
+
+/**
+ * Extract user email from IAP (Identity-Aware Proxy) headers.
+ * IAP adds these headers server-side after authenticating the user.
+ * Format: "accounts.google.com:user@domain.com"
+ * @param {object} headers - Request headers
+ * @returns {string|null} - User email or null if not available
+ */
+const getIAPUserEmail = (headers) => {
+    const iapEmail = headers['x-goog-authenticated-user-email'];
+    if (iapEmail && typeof iapEmail === 'string') {
+        // Remove the "accounts.google.com:" prefix
+        const parts = iapEmail.split(':');
+        return parts.length > 1 ? parts[1] : iapEmail;
+    }
+    return null;
+};
+
+/**
+ * Log request with user information from IAP headers.
+ * @param {object} req - Express request object
+ * @param {string} routeName - Name of the route for logging
+ */
+const logRequestWithUser = (req, routeName) => {
+    const userEmail = getIAPUserEmail(req.headers);
+    const userInfo = userEmail ? `[User: ${userEmail}]` : '[User: unknown]';
+    console.log(`${routeName} ${userInfo} IP: ${req.ip} Path: ${req.path}`);
+};
 
 // Rate limiter for the proxy
 const proxyLimiter = rateLimit({
@@ -45,8 +73,21 @@ const proxyLimiter = rateLimit({
     message: 'Too many requests from this IP, please try again after 5 minutes',
     standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
     legacyHeaders: false, // no `X-RateLimit-*` headers
+    // Skip rate limiting for status check requests (polling)
+    skip: (req) => {
+        const targetUrl = req.headers['x-target-url'];
+        if (targetUrl && typeof targetUrl === 'string') {
+            // All status check URLs contain "/check/" in their path
+            if (targetUrl.includes('/check/')) {
+                return true; // Skip rate limiting for status checks
+            }
+        }
+        return false;
+    },
     handler: (req, res, next, options) => {
-        console.warn(`Rate limit exceeded for IP: ${req.ip}. Path: ${req.path}`);
+        const userEmail = getIAPUserEmail(req.headers);
+        const userInfo = userEmail ? `[User: ${userEmail}]` : '';
+        console.warn(`Rate limit exceeded ${userInfo} IP: ${req.ip}. Path: ${req.path}`);
         res.status(options.statusCode).send(options.message);
     }
 });
@@ -59,7 +100,7 @@ app.use('/webhook-proxy', proxyLimiter);
 
 // Proxy route for Gemini API calls (HTTP)
 app.use('/api-proxy', async (req, res, next) => {
-    console.log(req.ip);
+    logRequestWithUser(req, '[API-PROXY]');
     // If the request is an upgrade request, it's for WebSockets, so pass to next middleware/handler
     if (req.headers.upgrade && req.headers.upgrade.toLowerCase() === 'websocket') {
         return next(); // Pass to the WebSocket upgrade handler
@@ -266,7 +307,10 @@ app.use('/webhook-proxy', async (req, res) => {
     // Check if client expects binary response (e.g., video stitcher)
     const expectBinary = req.headers['x-response-type'] === 'binary';
 
-    console.log(`Webhook Proxy: Forwarding ${req.method} request to ${targetUrl}${expectBinary ? ' (binary)' : ''}`);
+    // Log with user info
+    const userEmail = getIAPUserEmail(req.headers);
+    const userInfo = userEmail ? `[User: ${userEmail}]` : '[User: unknown]';
+    console.log(`[WEBHOOK-PROXY] ${userInfo} Forwarding ${req.method} request to ${targetUrl}${expectBinary ? ' (binary)' : ''}`);
 
     try {
         const axiosConfig = {
@@ -369,8 +413,8 @@ app.get('/', (req, res) => {
 
         // If API key is not set, serve original HTML without injection
         if (!apiKey) {
-          console.log("LOG: API key not set. Serving original index.html without script injections.");
-          return res.sendFile(indexPath);
+            console.log("LOG: API key not set. Serving original index.html without script injections.");
+            return res.sendFile(indexPath);
         }
 
         // index.html found and apiKey set, inject scripts
@@ -394,7 +438,7 @@ app.get('/', (req, res) => {
 });
 
 app.get('/service-worker.js', (req, res) => {
-   return res.sendFile(path.join(publicPath, 'service-worker.js'));
+    return res.sendFile(path.join(publicPath, 'service-worker.js'));
 });
 
 app.use('/public', express.static(publicPath));
