@@ -65,6 +65,118 @@ const logRequestWithUser = (req, routeName) => {
     const userInfo = userEmail ? `[User: ${userEmail}]` : '[User: unknown]';
     console.log(`${routeName} ${userInfo} IP: ${req.ip} Path: ${req.path}`);
 };
+/**
+ * Sanitize request body for logging.
+ * Replaces data URLs with placeholders to avoid bloated logs.
+ * @param {object} body - Request body
+ * @returns {object} - Sanitized body safe for logging
+ */
+const sanitizeBodyForLogging = (body) => {
+    if (!body || typeof body !== 'object') return body;
+
+    const sanitized = {};
+    for (const [key, value] of Object.entries(body)) {
+        if (typeof value === 'string' && value.startsWith('data:')) {
+            // Replace data URL with placeholder showing type and size
+            const match = value.match(/^data:([^;]+)/);
+            const mimeType = match ? match[1] : 'unknown';
+            const sizeKB = Math.round(value.length / 1024);
+            sanitized[key] = `[DATA_URL: ${mimeType}, ${sizeKB}KB]`;
+        } else if (Array.isArray(value)) {
+            // Handle arrays (e.g., image_urls)
+            sanitized[key] = value.map(item => {
+                if (typeof item === 'string' && item.startsWith('data:')) {
+                    const match = item.match(/^data:([^;]+)/);
+                    const mimeType = match ? match[1] : 'unknown';
+                    const sizeKB = Math.round(item.length / 1024);
+                    return `[DATA_URL: ${mimeType}, ${sizeKB}KB]`;
+                }
+                return item;
+            });
+        } else {
+            sanitized[key] = value;
+        }
+    }
+    return sanitized;
+};
+
+/**
+ * Log structured analytics event for Cloud Logging.
+ * Outputs JSON format that Cloud Logging can parse and filter.
+ * @param {string} eventType - Type of event (e.g., 'generation_start', 'generation_complete')
+ * @param {object} data - Event data
+ */
+const logAnalyticsEvent = (eventType, data) => {
+    // Sanitize body if present
+    const sanitizedData = { ...data };
+    if (sanitizedData.body) {
+        sanitizedData.body = sanitizeBodyForLogging(sanitizedData.body);
+    }
+
+    const event = {
+        severity: sanitizedData.error ? 'ERROR' : 'INFO',
+        eventType,
+        ...sanitizedData,
+        timestamp: new Date().toISOString()
+    };
+    console.log(JSON.stringify(event));
+};
+
+/**
+ * Extract model name from n8n webhook URL.
+ * @param {string} url - The webhook URL
+ * @returns {string} - Model name or 'unknown'
+ */
+const extractModelFromUrl = (url) => {
+    if (!url) return 'unknown';
+
+    // Map URL patterns to model names
+    const patterns = [
+        { match: 'nano-banana-pro', model: 'nano-banana-pro' },
+        { match: 'nano-banana', model: 'nano-banana' },
+        { match: 'seedream-v4.5', model: 'seedream-higgsfield' },
+        { match: 'seedream', model: 'seedream' },
+        { match: 'flux-kontext', model: 'flux' },
+        { match: 'qwen', model: 'qwen' },
+        { match: 'video-seedance', model: 'seedance-video' },
+        { match: 'crystal-upscaler', model: 'crystal-upscaler' },
+        { match: 'seedvr2-upscaler', model: 'seedvr-upscaler' },
+        { match: 'marigold-depth', model: 'depth-map' },
+        { match: 'stitch', model: 'video-stitcher' },
+        { match: 'image-upload', model: 'image-upload' },
+        { match: 'gcs-upload', model: 'video-upload' },
+    ];
+
+    for (const { match, model } of patterns) {
+        if (url.includes(match)) return model;
+    }
+
+    return 'unknown';
+};
+
+/**
+ * Determine studio from model name.
+ * @param {string} model - Model name
+ * @returns {string} - Studio name
+ */
+const getStudioFromModel = (model) => {
+    const studioMap = {
+        'nano-banana': 'image-studio',
+        'nano-banana-pro': 'image-studio',
+        'seedream': 'image-studio',
+        'seedream-higgsfield': 'image-studio',
+        'flux': 'image-studio',
+        'qwen': 'image-studio',
+        'seedance-video': 'video-studio',
+        'crystal-upscaler': 'upscaler',
+        'seedvr-upscaler': 'upscaler',
+        'depth-map': 'depth-studio',
+        'video-stitcher': 'video-studio',
+        'image-upload': 'upload',
+        'video-upload': 'upload',
+    };
+    return studioMap[model] || 'unknown';
+};
 
 // Rate limiter for the proxy
 const proxyLimiter = rateLimit({
@@ -97,6 +209,32 @@ app.use('/api-proxy', proxyLimiter);
 
 // Apply the rate limiter to the /webhook-proxy route
 app.use('/webhook-proxy', proxyLimiter);
+
+// Analytics endpoint for frontend event tracking
+// This allows the frontend to send structured events that get logged to Cloud Logging
+app.post('/analytics', (req, res) => {
+    const userEmail = getIAPUserEmail(req.headers);
+    const event = req.body;
+
+    if (!event || !event.eventType) {
+        return res.status(400).json({ error: 'Missing eventType in request body' });
+    }
+
+    // Log the event with user context
+    logAnalyticsEvent(event.eventType, {
+        user: userEmail || event.user || 'unknown',
+        studio: event.studio || 'unknown',
+        model: event.model || 'unknown',
+        action: event.action,
+        count: event.count,
+        duration_ms: event.duration_ms,
+        error: event.error,
+        metadata: event.metadata,
+        source: 'frontend'
+    });
+
+    res.status(200).json({ success: true });
+});
 
 // Proxy route for Gemini API calls (HTTP)
 app.use('/api-proxy', async (req, res, next) => {
@@ -307,10 +445,24 @@ app.use('/webhook-proxy', async (req, res) => {
     // Check if client expects binary response (e.g., video stitcher)
     const expectBinary = req.headers['x-response-type'] === 'binary';
 
-    // Log with user info
+    // Extract analytics context
     const userEmail = getIAPUserEmail(req.headers);
-    const userInfo = userEmail ? `[User: ${userEmail}]` : '[User: unknown]';
-    console.log(`[WEBHOOK-PROXY] ${userInfo} Forwarding ${req.method} request to ${targetUrl}${expectBinary ? ' (binary)' : ''}`);
+    const model = extractModelFromUrl(targetUrl);
+    const studio = getStudioFromModel(model);
+    const isStatusCheck = targetUrl.includes('/check/');
+    const startTime = Date.now();
+
+    // Log request start (skip status checks to reduce noise)
+    if (!isStatusCheck) {
+        logAnalyticsEvent('webhook_request', {
+            user: userEmail || 'unknown',
+            model,
+            studio,
+            targetUrl,
+            method: req.method,
+            body: req.body || {}
+        });
+    }
 
     try {
         const axiosConfig = {
@@ -333,8 +485,19 @@ app.use('/webhook-proxy', async (req, res) => {
         }
 
         const apiResponse = await axios(axiosConfig);
+        const duration = Date.now() - startTime;
 
-        console.log(`Webhook Proxy: Response status ${apiResponse.status} from ${targetUrl}`);
+        // Log success event (skip status checks)
+        if (!isStatusCheck) {
+            logAnalyticsEvent('webhook_response', {
+                user: userEmail || 'unknown',
+                model,
+                studio,
+                status: apiResponse.status,
+                duration_ms: duration,
+                success: apiResponse.status >= 200 && apiResponse.status < 300
+            });
+        }
 
         // Pass through response headers
         for (const header in apiResponse.headers) {
@@ -359,7 +522,17 @@ app.use('/webhook-proxy', async (req, res) => {
         }
 
     } catch (error) {
-        console.error('Webhook proxy error:', error.message);
+        const duration = Date.now() - startTime;
+
+        // Log error event
+        logAnalyticsEvent('webhook_error', {
+            user: userEmail || 'unknown',
+            model,
+            studio,
+            error: error.message,
+            errorCode: error.code,
+            duration_ms: duration
+        });
 
         if (error.code === 'ECONNREFUSED') {
             return res.status(503).json({ error: 'Webhook service unavailable' });
